@@ -191,7 +191,20 @@ enum GraphQLQueries {
             createIssue(input: {
                 repositoryId: $repositoryId, title: $title, body: $body,
                 labelIds: $labelIds, assigneeIds: $assigneeIds
-            }) { issue { id url } }
+            }) {
+                issue {
+                    id
+                    url
+                    number
+                    updatedAt
+                    assignees(first: 100) {
+                        nodes { login avatarUrl name }
+                    }
+                    labels(first: 100) {
+                        nodes { id name color }
+                    }
+                }
+            }
         }
         """
 

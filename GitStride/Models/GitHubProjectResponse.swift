@@ -129,6 +129,10 @@ extension GitHubResponse {
         struct Issue: Decodable {
             let id: String
             let url: String
+            let number: Int?
+            let updatedAt: String?
+            let assignees: GitHubResponse.ItemNode.AssigneesConnection?
+            let labels: GitHubResponse.ItemNode.LabelsConnection?
         }
     }
 

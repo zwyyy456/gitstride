@@ -71,6 +71,34 @@ struct GitHubAccount: Codable, Equatable, Sendable {
     let login: String
 }
 
+struct CreatedIssue {
+    let contentID: String
+    let title: String
+    let number: Int
+    let url: String
+    let updatedAt: String?
+    let assignees: [Assignee]
+    let labels: [IssueLabel]
+
+    func projectItem(id: String) -> ProjectItem {
+        ProjectItem(
+            id: id,
+            contentId: contentID,
+            contentType: .issue,
+            title: title,
+            number: number,
+            url: url,
+            issueState: .open,
+            prState: nil,
+            updatedAt: updatedAt,
+            status: nil,
+            statusOptionId: nil,
+            assignees: assignees,
+            labels: labels
+        )
+    }
+}
+
 enum GitHubSessionState: Equatable, Sendable {
     case checking
     case missingCLI
@@ -607,7 +635,7 @@ actor GitHubService {
         body: String,
         labels: [String] = [],
         assignees: [String] = []
-    ) async throws -> String {
+    ) async throws -> CreatedIssue {
         guard let repository = parseRepository(repository) else {
             throw GitHubError.invalidRepository
         }
@@ -680,11 +708,23 @@ actor GitHubService {
             arrayVariables: ["labelIds": labelIDs, "assigneeIds": assigneeIDs],
             as: GitHubResponse.CreateIssuePayload.self
         )
-        let issueURL = payload.createIssue.issue.url
-        guard GitHubItemAddress(issueURL) != nil else {
+        let issue = payload.createIssue.issue
+        guard let address = GitHubItemAddress(issue.url) else {
             throw GitHubError.issueCreationUnconfirmed
         }
-        return issueURL
+        return CreatedIssue(
+            contentID: issue.id,
+            title: title,
+            number: issue.number ?? address.number,
+            url: issue.url,
+            updatedAt: issue.updatedAt,
+            assignees: issue.assignees?.nodes.map {
+                Assignee(login: $0.login, avatarUrl: $0.avatarUrl, name: $0.name)
+            } ?? [],
+            labels: issue.labels?.nodes.map {
+                IssueLabel(id: $0.id, name: $0.name, color: $0.color)
+            } ?? []
+        )
     }
 
     func searchItems(query: String) async throws -> [GitHubItemCandidate] {
@@ -727,27 +767,11 @@ actor GitHubService {
         return candidate
     }
 
-    func addExistingItem(projectId: String, url: String) async throws -> String {
-        guard let item = GitHubItemAddress(url) else {
-            throw GitHubError.invalidItemURL
-        }
-        let endpoint = URL(string: "https://api.github.com/repos")!
-            .appendingPathComponent(item.owner).appendingPathComponent(item.repository)
-            .appendingPathComponent("issues").appendingPathComponent(String(item.number))
-        let data = try await send(url: endpoint, method: "GET", body: nil, allowsAuthenticationRetry: true)
-        struct IssueIdentity: Decodable { let node_id: String }
-        guard let identity = try? decoder.decode(IssueIdentity.self, from: data), !identity.node_id.isEmpty else {
-            throw GitHubError.decodingError(String(localized: "GitHub returned no item identifier."))
-        }
-        let contentId = identity.node_id
-        return try await addExistingItem(projectId: projectId, contentId: contentId)
-    }
-
     func addExistingItem(projectId: String, candidate: GitHubItemCandidate) async throws {
         _ = try await addExistingItem(projectId: projectId, contentId: candidate.id)
     }
 
-    private func addExistingItem(projectId: String, contentId: String) async throws -> String {
+    func addExistingItem(projectId: String, contentId: String) async throws -> String {
         let payload: GitHubResponse.AddProjectItemPayload = try await request(
             GraphQLQueries.addItemToProject,
             variables: ["projectId": projectId, "contentId": contentId],

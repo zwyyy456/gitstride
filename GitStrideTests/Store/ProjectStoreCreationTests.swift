@@ -53,7 +53,7 @@ extension ProjectStoreTests {
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .failure(.timedOut),
             .response(repositoryWithLabel), .response(Self.createdIssueResponse),
-            .response(#"{"node_id":"CONTENT1"}"#), .response(Self.addedIssueResponse),
+            .response(Self.addedIssueResponse),
             .response(Self.mutationFieldsResponse), .response(Self.mutationItemsResponse)
         ])
         let (store, cleanup) = makeStore(runner: runner)
@@ -138,38 +138,33 @@ extension ProjectStoreTests {
         #expect(await runner.recordedRequests().count == 3)
     }
 
-    @Test(arguments: [true, false])
-    func createdIssueAppliesFieldsBeforeRefreshingItsProject(setsStatus: Bool) async throws {
+    @Test func createdIssueIsCommittedBeforeStaleReconciliation() async throws {
         var initial = Self.mutationProjectResponses
         initial[4] = Self.emptyItemsResponse
-        let runner = FixtureGitHubHTTPClient(responses: initial + [
-            Self.issueRepositoryResponse, Self.createdIssueResponse, #"{"node_id":"CONTENT1"}"#,
-            Self.addedIssueResponse
-        ] + (setsStatus ? [Self.graphQLSuccessResponse] : []) + [
-            Self.mutationFieldsResponse, Self.emptyItemsResponse
+        let runner = SuspendingGitHubHTTPClient(steps: initial.map { .response($0) } + [
+            .response(Self.issueRepositoryResponse), .response(Self.createdIssueResponse),
+            .response(Self.addedIssueResponse), .response(Self.graphQLSuccessResponse),
+            .suspended("reconcile", Self.mutationFieldsResponse), .response(Self.emptyItemsResponse)
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
         await store.loadProjects()
         let operation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
-                                                       labels: [], assignees: [], status: setsStatus ? "Todo" : nil)
+                                                       labels: [], assignees: [], status: "Todo")
 
         try await store.resumeIssueCreation(operation)
+        await runner.waitUntilSuspended("reconcile")
 
         #expect(operation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))
         #expect(operation.errorMessage == nil)
-        let calls = Array(await runner.recordedRequests().dropFirst(initial.count + 1))
-        #expect(calls.count == (setsStatus ? 6 : 5))
-        let fieldWrites = calls.filter { $0.hasVariable("optionId", "TODO") }
-        if setsStatus {
-            let fieldWrite = try #require(fieldWrites.first)
-            #expect(fieldWrite.hasVariable("itemId", "NEW_ITEM"))
-            #expect(fieldWrite.hasVariable("projectId", "P1"))
-            #expect(calls[3] == fieldWrite)
-        } else {
-            #expect(fieldWrites.isEmpty)
-        }
-        #expect(store.selectedProject?.items.isEmpty == true)
+        #expect(store.selectedProject?.items.first?.id == "NEW_ITEM")
+        #expect(store.selectedProject?.items.first?.status == "Todo")
+
+        let release = Task { await runner.release("reconcile") }
+        await store.loadProjectDetails(id: "P1")
+        await release.value
+        #expect(store.selectedProject?.items.first?.id == "NEW_ITEM")
+        #expect(store.selectedProject?.items.first?.status == "Todo")
     }
 
     @Test func createdIssueFinishesInOriginalProjectAndRetryDoesNotRecreateIt() async throws {
@@ -177,7 +172,7 @@ extension ProjectStoreTests {
         let items = Self.mutationItemsResponse
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .suspended("create", Self.createdIssueResponse),
-            .response(#"{"node_id":"CONTENT1"}"#), .response(Self.addedIssueResponse),
+            .response(Self.addedIssueResponse),
             .response(Self.graphQLFailureResponse),
             .response(Self.graphQLSuccessResponse),
             .response(fields), .response(items)
@@ -217,8 +212,8 @@ extension ProjectStoreTests {
         let fields = Self.mutationFieldsResponse
         let items = Self.mutationItemsResponse
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
-            Self.issueRepositoryResponse, Self.createdIssueResponse, #"{"node_id":"CONTENT1"}"#, Self.graphQLFailureResponse,
-            #"{"node_id":"CONTENT1"}"#, Self.addedIssueResponse,
+            Self.issueRepositoryResponse, Self.createdIssueResponse, Self.graphQLFailureResponse,
+            Self.addedIssueResponse,
             Self.graphQLSuccessResponse, fields, items
         ])
         let (store, cleanup) = makeStore(runner: runner)
@@ -235,7 +230,6 @@ extension ProjectStoreTests {
         }
         store.selectedProjectId = "P2"
         try await store.resumeIssueCreation(operation)
-        try await store.resumeIssueCreation(operation)
         #expect(operation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))
         let calls = await runner.recordedRequests()
         #expect(issueCreationCount(await runner.recordedBodies()) == 1)
@@ -246,7 +240,7 @@ extension ProjectStoreTests {
         #expect(store.selectedProjectId == "P2")
     }
 
-    @Test func creationRetriesOnlyUnfinishedFieldsAndThenOnlyTheRefresh() async throws {
+    @Test func creationRetriesOnlyUnfinishedFields() async throws {
         let priority = #"{"__typename":"ProjectV2SingleSelectField","id":"PRIORITY","name":"Priority","dataType":"SINGLE_SELECT","options":[{"id":"HIGH","name":"High","color":"RED"}]},"#
         let fields = Self.mutationFieldsResponse.replacingOccurrences(
             of: #""fields":{"nodes":["#, with: #""fields":{"nodes":[\#(priority)"#
@@ -255,9 +249,9 @@ extension ProjectStoreTests {
         var initial = Self.mutationProjectResponses
         initial[3] = fields
         let runner = FixtureGitHubHTTPClient(responses: initial + [
-            Self.issueRepositoryResponse, Self.createdIssueResponse, #"{"node_id":"CONTENT1"}"#, Self.addedIssueResponse,
+            Self.issueRepositoryResponse, Self.createdIssueResponse, Self.addedIssueResponse,
             Self.graphQLSuccessResponse, Self.graphQLFailureResponse,
-            Self.graphQLSuccessResponse, Self.graphQLFailureResponse,
+            Self.graphQLSuccessResponse,
             fields, items
         ])
         let (store, cleanup) = makeStore(runner: runner)
@@ -270,12 +264,6 @@ extension ProjectStoreTests {
             Issue.record("Expected the second field to fail")
         } catch {
             #expect(operation.phase == .applyingFields(issueURL: "https://github.com/acme/app/issues/1", itemID: "NEW_ITEM"))
-        }
-        do {
-            try await store.resumeIssueCreation(operation)
-            Issue.record("Expected the final refresh to fail")
-        } catch {
-            #expect(operation.phase == .refreshingProject(issueURL: "https://github.com/acme/app/issues/1"))
         }
         try await store.resumeIssueCreation(operation)
         #expect(operation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))

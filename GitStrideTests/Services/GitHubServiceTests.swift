@@ -240,39 +240,40 @@ struct GitHubServiceTests {
         let runner = FixtureGitHubHTTPClient(responses: [
             #"{"data":{"repository":{"id":"REPO1","labels":{"nodes":[{"id":"BUG","name":"bug"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}"#,
             #"{"data":{"user":{"id":"USER1"}}}"#,
-            #"{"data":{"createIssue":{"issue":{"id":"ISSUE_NODE_42","url":"https://github.com/acme/widgets/issues/42"}}}}"#,
-            #"{"node_id":"ISSUE_NODE_42"}"#,
+            #"{"data":{"createIssue":{"issue":{"id":"ISSUE_NODE_42","url":"https://github.com/acme/widgets/issues/42","number":42,"updatedAt":"2026-09-15T00:00:00Z","assignees":{"nodes":[{"login":"octocat","avatarUrl":"https://example.com/avatar","name":"Octocat"}]},"labels":{"nodes":[{"id":"BUG","name":"bug","color":"ff0000"}]}}}}}"#,
             """
             {"data":{"addProjectV2ItemById":{"item":{"id":"PROJECT_ITEM_42"}}}}
             """
         ])
         let service = GitHubService(http: runner)
 
-        let issueURL = try await service.createIssue(
+        let issue = try await service.createIssue(
             repository: "acme/widgets",
             title: "Repair login",
             body: "Login fails after token refresh.",
             labels: ["bug"],
             assignees: ["octocat"]
         )
-        let itemID = try await service.addExistingItem(projectId: "PROJECT_1", url: issueURL)
+        let itemID = try await service.addExistingItem(projectId: "PROJECT_1", contentId: issue.contentID)
         let calls = await runner.recordedRequests()
         let input = try #require(await runner.recordedBodies()[2])
         let request = try #require(JSONSerialization.jsonObject(with: input) as? [String: Any])
         let variables = try #require(request["variables"] as? [String: Any])
 
-        #expect(issueURL == "https://github.com/acme/widgets/issues/42")
+        #expect(issue.url == "https://github.com/acme/widgets/issues/42")
+        #expect(issue.contentID == "ISSUE_NODE_42")
+        #expect(issue.assignees.map(\.login) == ["octocat"])
+        #expect(issue.labels.map(\.id) == ["BUG"])
         #expect(itemID == "PROJECT_ITEM_42")
-        #expect(calls.count == 5)
+        #expect(calls.count == 4)
         #expect(calls[0].hasVariable("owner", "acme") && calls[0].hasVariable("name", "widgets"))
         #expect(variables["repositoryId"] as? String == "REPO1")
         #expect(variables["title"] as? String == "Repair login")
         #expect(variables["body"] as? String == "Login fails after token refresh.")
         #expect(variables["labelIds"] as? [String] == ["BUG"])
         #expect(variables["assigneeIds"] as? [String] == ["USER1"])
-        #expect(calls[3].url?.path == "/repos/acme/widgets/issues/42")
-        #expect(calls[4].hasVariable("contentId", "ISSUE_NODE_42"))
-        #expect(calls[4].hasVariable("projectId", "PROJECT_1"))
+        #expect(calls[3].hasVariable("contentId", "ISSUE_NODE_42"))
+        #expect(calls[3].hasVariable("projectId", "PROJECT_1"))
     }
 
     @Test func issueCreationReusesLabelsAcrossPagesAndCreatesOnlyMissingNames() async throws {
@@ -314,14 +315,13 @@ struct GitHubServiceTests {
 
     @Test func projectMembershipRequiresReturnedItemIdentity() async throws {
         let runner = FixtureGitHubHTTPClient(responses: [
-            "ISSUE_NODE_42",
             #"{"data":{"addProjectV2ItemById":{"item":{}}}}"#
         ])
         let service = GitHubService(http: runner)
 
         do {
             _ = try await service.addExistingItem(
-                projectId: "PROJECT_1", url: "https://github.com/acme/widgets/issues/42"
+                projectId: "PROJECT_1", contentId: "ISSUE_NODE_42"
             )
             Issue.record("Expected missing project item identity to be rejected")
         } catch {

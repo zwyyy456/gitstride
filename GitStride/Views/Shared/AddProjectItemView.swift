@@ -236,7 +236,6 @@ struct AddProjectItemView: View {
             switch issueCreation.phase {
             case .addingToProject: return String(localized: "Retry Adding to Project")
             case .applyingFields: return String(localized: "Retry Project Fields")
-            case .refreshingProject: return String(localized: "Retry Refresh")
             case .unconfirmed: return String(localized: "Create Issue")
             case .ready, .completed: break
             }

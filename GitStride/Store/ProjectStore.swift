@@ -28,7 +28,6 @@ enum ProjectStoreError: LocalizedError {
     case itemDetailsFailed(String)
     case itemContentSavedRefreshFailed(String)
     case missingFieldOption(field: String, option: String)
-    case projectRefreshIncomplete
 
     var errorDescription: String? {
         switch self {
@@ -50,8 +49,6 @@ enum ProjectStoreError: LocalizedError {
             String(localized: "This item is no longer available.")
         case .missingFieldOption(let field, let option):
             String(localized: "\(field) has no option named \(option).")
-        case .projectRefreshIncomplete:
-            String(localized: "GitStride could not finish refreshing the project.")
         }
     }
 }
@@ -63,7 +60,6 @@ final class IssueCreation {
         case ready
         case addingToProject(issueURL: String)
         case applyingFields(issueURL: String, itemID: String)
-        case refreshingProject(issueURL: String)
         case completed(issueURL: String)
         case unconfirmed
     }
@@ -76,6 +72,8 @@ final class IssueCreation {
     fileprivate let labels: [String]
     fileprivate let assignees: [String]
     fileprivate var remainingFields: [(ProjectField, ProjectFieldOption)]
+    fileprivate var createdIssue: CreatedIssue?
+    fileprivate var createdItem: ProjectItem?
     fileprivate(set) var phase: Phase = .ready
     fileprivate(set) var isRunning = false
     fileprivate(set) var errorMessage: String?
@@ -134,6 +132,7 @@ private struct ProjectState {
     var mutationRevision: UInt64 = 0
     var mutations: Set<UUID> = []
     var needsRefresh = false
+    var confirmedItemsAwaitingObservation: [String: ProjectItem] = [:]
 
     var phase: ProjectContentPhase {
         switch load {
@@ -1089,12 +1088,13 @@ final class ProjectStore {
         projectStates[id]?.load = .loading
         projectStates[id]?.needsRefresh = false
         do {
-            let snapshot = try await gitHubService.fetchProjectWithItems(id: id, owner: state.owner)
+            var snapshot = try await gitHubService.fetchProjectWithItems(id: id, owner: state.owner)
             try Task.checkCancellation()
             guard canCommit(ticket) else {
                 discardRead(ticket)
                 return nil
             }
+            snapshot = mergingConfirmedItems(into: snapshot, projectID: id)
             projectStates[id]?.snapshot = snapshot
             projectStates[id]?.source = .remote
             projectStates[id]?.load = .idle
@@ -1185,6 +1185,38 @@ final class ProjectStore {
         }
     }
 
+    private func commitCreatedItem(_ item: ProjectItem, projectID: String) {
+        guard var project = projectStates[projectID]?.snapshot else { return }
+        project.items.removeAll { $0.id == item.id || $0.contentId == item.contentId }
+        project.items.append(item)
+        projectStates[projectID]?.snapshot = project
+        projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = item
+        lastUpdated = Date()
+    }
+
+    private func mergingConfirmedItems(into snapshot: Project, projectID: String) -> Project {
+        guard let confirmed = projectStates[projectID]?.confirmedItemsAwaitingObservation,
+              confirmed.isEmpty == false else { return snapshot }
+        var merged = snapshot
+        for (id, item) in confirmed {
+            let observedIndex = snapshot.items.firstIndex {
+                $0.id == item.id || (item.contentId != nil && $0.contentId == item.contentId)
+            }
+            guard let observedIndex else {
+                merged.items.append(item)
+                continue
+            }
+            let observed = snapshot.items[observedIndex]
+            let fieldsMatch = item.fieldValues.allSatisfy { observed.fieldValues[$0.key] == $0.value }
+            if fieldsMatch {
+                projectStates[projectID]?.confirmedItemsAwaitingObservation[id] = nil
+            } else {
+                merged.items[observedIndex] = item
+            }
+        }
+        return merged
+    }
+
     private func replaceCatalog(with projects: [Project]) {
         let projects = projects.filter { !deletedProjectIDs.contains($0.id) }
         let newIDs = Set(projects.map(\.id))
@@ -1269,6 +1301,7 @@ final class ProjectStore {
             try await self.gitHubService.deleteItem(projectId: projectID, itemId: item.id)
         } apply: { _ in
             self.projectStates[projectID]?.snapshot?.items.removeAll { $0.id == item.id }
+            self.projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
         await persistCache()
@@ -1280,6 +1313,7 @@ final class ProjectStore {
             try await self.gitHubService.archiveItem(projectId: projectID, itemId: item.id)
         } apply: { _ in
             self.projectStates[projectID]?.snapshot?.items.removeAll { $0.id == item.id }
+            self.projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
         await persistCache()
@@ -1434,11 +1468,12 @@ final class ProjectStore {
             if creation.phase == .ready {
                 try await performProjectMutation(projectID: creation.projectID) {
                     do {
-                        let issueURL = try await self.gitHubService.createIssue(
+                        let issue = try await self.gitHubService.createIssue(
                             repository: creation.repository, title: creation.title, body: creation.body,
                             labels: creation.labels, assignees: creation.assignees
                         )
-                        creation.phase = .addingToProject(issueURL: issueURL)
+                        creation.createdIssue = issue
+                        creation.phase = .addingToProject(issueURL: issue.url)
                     } catch {
                         switch error {
                         case GitHubError.issueCreationUnconfirmed, GitHubError.decodingError:
@@ -1451,32 +1486,40 @@ final class ProjectStore {
                 }
             }
             if case .addingToProject(let issueURL) = creation.phase {
-                try await performProjectMutation(projectID: creation.projectID) {
-                    let itemID = try await self.gitHubService.addExistingItem(
-                        projectId: creation.projectID, url: issueURL
+                guard let issue = creation.createdIssue else { throw GitHubError.issueCreationUnconfirmed }
+                let itemID = try await performProjectMutation(projectID: creation.projectID) {
+                    try await self.gitHubService.addExistingItem(
+                        projectId: creation.projectID, contentId: issue.contentID
                     )
-                    creation.phase = creation.remainingFields.isEmpty
-                        ? .refreshingProject(issueURL: issueURL)
-                        : .applyingFields(issueURL: issueURL, itemID: itemID)
                 }
+                creation.createdItem = issue.projectItem(id: itemID)
+                creation.phase = creation.remainingFields.isEmpty
+                    ? .completed(issueURL: issueURL)
+                    : .applyingFields(issueURL: issueURL, itemID: itemID)
             }
             if case .applyingFields(let issueURL, let itemID) = creation.phase {
                 try await performProjectMutation(projectID: creation.projectID, itemID: itemID) {
                     while let (field, option) = creation.remainingFields.first {
+                        let value = ProjectFieldValue.singleSelect(optionId: option.id, name: option.name)
                         try await self.gitHubService.updateItemField(
                             projectId: creation.projectID, itemId: itemID, fieldId: field.id,
-                            value: .singleSelect(optionId: option.id, name: option.name)
+                            value: value
                         )
+                        creation.createdItem?.fieldValues[field.id] = value
+                        if field.name.caseInsensitiveCompare("Status") == .orderedSame {
+                            creation.createdItem?.status = option.name
+                            creation.createdItem?.statusOptionId = option.id
+                        }
                         creation.remainingFields.removeFirst()
                     }
-                    creation.phase = .refreshingProject(issueURL: issueURL)
-                }
-            }
-            if case .refreshingProject(let issueURL) = creation.phase {
-                guard try await refreshProjectSnapshot(id: creation.projectID) != nil else {
-                    throw ProjectStoreError.projectRefreshIncomplete
                 }
                 creation.phase = .completed(issueURL: issueURL)
+            }
+            if case .completed = creation.phase, let item = creation.createdItem {
+                commitCreatedItem(item, projectID: creation.projectID)
+                await persistCache()
+                projectStates[creation.projectID]?.needsRefresh = true
+                scheduleReconciliation()
             }
         } catch {
             let context: String
@@ -1485,8 +1528,6 @@ final class ProjectStore {
                 context = String(localized: "The issue was created at \(url). Retry to add it to the original project. ")
             case .applyingFields(let url, _):
                 context = String(localized: "The issue at \(url) was added. Retry to finish its Project fields. ")
-            case .refreshingProject:
-                context = String(localized: "The issue and its Project fields were saved. Retry to refresh the project. ")
             case .unconfirmed:
                 context = GitHubError.issueCreationUnconfirmed.localizedDescription + " "
             case .ready, .completed:
@@ -1677,6 +1718,10 @@ final class ProjectStore {
             guard var project = projectStates[id]?.snapshot else { continue }
             for index in project.items.indices where project.items[index].contentId == contentID {
                 transform(&project.items[index])
+                let item = project.items[index]
+                if projectStates[id]?.confirmedItemsAwaitingObservation[item.id] != nil {
+                    projectStates[id]?.confirmedItemsAwaitingObservation[item.id] = item
+                }
             }
             projectStates[project.id]?.snapshot = project
         }
@@ -1690,6 +1735,10 @@ final class ProjectStore {
         guard var project = projectStates[projectID]?.snapshot,
               let itemIndex = project.items.firstIndex(where: { $0.id == itemID }) else { return }
         transform(&project.items[itemIndex])
+        let item = project.items[itemIndex]
+        if projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] != nil {
+            projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = item
+        }
         projectStates[project.id]?.snapshot = project
     }
 
