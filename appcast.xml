@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
     <channel>
         <title>GitStride Updates</title>
-        <link>https://gitstride.zwyyy456.tech</link>
+        <link>https://gitstride.hyperseek.tech</link>
         <description>GitStride releases maintained by zwyyy456.</description>
         <language>en</language>
         <!-- Entries are generated from notarized release DMGs by update_appcast.sh. -->

@@ -1,6 +1,6 @@
 # Releasing GitStride
 
-This guide covers local distribution through [gitstride.zwyyy456.tech](https://gitstride.zwyyy456.tech) and [zwyyy456/GitStride Releases](https://github.com/zwyyy456/GitStride/releases). It does not deploy the website or Automation Worker.
+This guide covers local distribution through [gitstride.hyperseek.tech](https://gitstride.hyperseek.tech) and [zwyyy456/GitStride Releases](https://github.com/zwyyy456/GitStride/releases). It does not deploy the website or Automation Worker.
 
 The client and release artifacts use GitStride. The repository, website, and Sparkle feed still use their existing URLs. When those resources move, update `GitStride/Info.plist` (`SUFeedURL`), the download prefix and website link in `update_appcast.sh`, and the channel link in `appcast.xml` together. Existing feed entries must continue to point to their published assets.
 
@@ -74,7 +74,7 @@ Generate the feed **after** stapling: changes to the DMG bytes after signing inv
 
 1. Create a GitHub Release tagged `vVERSION` from the intended source commit and attach the final notarized DMG. Use the same public version that appears in the app and DMG filename.
 2. Verify the release asset is downloadable, then commit and publish the generated `appcast.xml` to `main`.
-3. Update the download link on `gitstride.zwyyy456.tech` to the release. Website/DNS changes are separate from these scripts.
+3. Update the download link on `gitstride.hyperseek.tech` to the release. Website/DNS changes are separate from these scripts.
 4. Verify installation and an older-to-newer Sparkle update on a separate test Mac or test account, including every CPU architecture advertised for the release. Use screenshots supplied from the running app when visual review is needed.
 
 The scripts do not create releases, push commits, upload files, or modify DNS. Keep the archive and dSYMs so crash reports from the distributed build can be symbolicated.

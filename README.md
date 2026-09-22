@@ -4,7 +4,7 @@ English · [简体中文](README.zh-CN.md)
 
 A native macOS app for GitHub Projects. Keep your board in the menu bar, organize work in Board or Table, and edit issues without switching to the browser.
 
-[Website & download](https://gitstride.zwyyy456.tech) · [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) · [User guide](docs/usage.md)
+[Website & download](https://gitstride.hyperseek.tech) · [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) · [User guide](docs/usage.md)
 
 ## Features
 
@@ -24,8 +24,8 @@ A native macOS app for GitHub Projects. Keep your board in the menu bar, organiz
 
 ## Install and connect
 
-1. Download GitStride from [gitstride.zwyyy456.tech](https://gitstride.zwyyy456.tech) or [GitHub Releases](https://github.com/zwyyy456/GitStride/releases).
-2. Open the DMG and drag GitStride into Applications.
+1. Download GitStride from [gitstride.hyperseek.tech](https://gitstride.hyperseek.tech) or [GitHub Releases](https://github.com/zwyyy456/GitStride/releases).
+2. Extract the ZIP and drag GitStride into Applications.
 3. On first launch, choose **Open GitHub Settings** in the welcome window, then **Log In to GitHub**. You can also open **Settings → GitHub → Account** directly.
 4. Choose **Copy Code and Open GitHub**, paste the code into GitHub’s Device activation page, and approve access.
 5. Choose your personal account or organization and select a Project.

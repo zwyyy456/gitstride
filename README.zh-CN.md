@@ -4,7 +4,7 @@
 
 GitStride 是一款原生 macOS 应用，让你在菜单栏中快速查看 GitHub Projects，也可以在 app 中通过看板或表格整理工作，并直接编辑 Issue。
 
-[官网与下载](https://gitstride.zwyyy456.tech) · [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) · [使用指南（英文）](docs/usage.md)
+[官网与下载](https://gitstride.hyperseek.tech) · [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) · [使用指南（英文）](docs/usage.md)
 
 ## 功能
 
@@ -22,8 +22,8 @@ GitStride 是一款原生 macOS 应用，让你在菜单栏中快速查看 GitHu
 
 ## 安装与登录
 
-1. 从 [官网](https://gitstride.zwyyy456.tech) 或 [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) 下载 GitStride。
-2. 打开 DMG，将 GitStride 拖入“应用程序”文件夹。
+1. 从 [官网](https://gitstride.hyperseek.tech) 或 [GitHub Releases](https://github.com/zwyyy456/GitStride/releases) 下载 GitStride。
+2. 解压 ZIP，将 GitStride 拖入“应用程序”文件夹。
 3. 首次启动时，在欢迎窗口中选择 **打开 GitHub 设置**，然后点击 **登录 GitHub…**。也可以直接进入 **设置 → GitHub → 账户**。
 4. 点击 **复制代码并打开 GitHub**，在 GitHub 的设备激活页面粘贴验证码，并确认授权。
 5. 选择你的个人账号或组织，再选择要查看的 Project。

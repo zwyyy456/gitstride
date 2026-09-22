@@ -36,7 +36,7 @@ fi
 "$SPARKLE_BIN/generate_appcast" \
     --account gitstride \
     --download-url-prefix "https://github.com/zwyyy456/GitStride/releases/download/v$VERSION/" \
-    --link "https://gitstride.zwyyy456.tech" \
+    --link "https://gitstride.hyperseek.tech" \
     --embed-release-notes --maximum-deltas 0 --maximum-versions 0 \
     "$STAGING_DIR"
 
