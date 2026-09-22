@@ -1,10 +1,31 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>GitStride Updates</title>
         <link>https://gitstride.hyperseek.tech</link>
         <description>GitStride releases maintained by zwyyy456.</description>
         <language>en</language>
-        <!-- Entries are generated from notarized release DMGs by update_appcast.sh. -->
+        <!-- Entries are generated from release archives by Sparkle generate_appcast. -->
+        <item>
+            <title>1.0</title>
+            <pubDate>Tue, 22 Sep 2026 18:37:46 +0800</pubDate>
+            <link>https://gitstride.hyperseek.tech</link>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<h2>GitStride 1.0</h2>
+<p>First public release. Requires macOS 14 (Sonoma) or later.</p>
+<ul>
+<li>Native menu bar access and a full workspace for GitHub Projects.</li>
+<li>Board, Table, My Work, saved local views, and issue creation and editing.</li>
+<li>Optional project notifications and pull request automation.</li>
+<li>English and Simplified Chinese.</li>
+</ul>
+<h3>GitHub access and privacy</h3>
+<p>Desktop OAuth requests repo, project, read:org, and offline_access. The repo scope includes read and write access to repository code, including private repositories; it is broader than board access. OAuth credentials are stored in macOS Keychain. The GitHub Release build can alternatively use an existing GitHub CLI login.</p>
+<p>Project snapshots are cached locally and can contain private project data. Optional pull request automation requires separate authorization and processes data on its hosted service. See the website privacy policy before enabling it.</p>
+]]></description>
+            <enclosure url="https://github.com/zwyyy456/GitStride/releases/download/v1.0/GitStride-1.0.zip" length="7896326" type="application/octet-stream" sparkle:edSignature="uNwxMRHWpMkJaVl27GJJY9Sm7cfB8vWpPYosBwZ71dJX64TTB0O8ksiNMWwVluTXC7hn7F7UXLzZt8kBDwOqDQ=="/>
+        </item>
     </channel>
 </rss>
