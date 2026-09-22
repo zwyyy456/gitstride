@@ -21,6 +21,12 @@ struct GitStrideApp: App {
     @State private var requestsProjectBoard = false
     @State private var requestedItemReference: ItemInspectorReference?
 
+    init() {
+        #if !APP_STORE && canImport(Sparkle)
+        _ = UpdateController.shared
+        #endif
+    }
+
     var body: some Scene {
         Window("GitStride", id: "kanban-board") {
             MainWorkspaceView(

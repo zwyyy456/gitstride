@@ -10,13 +10,18 @@ final class UpdateController: ObservableObject {
     private var updaterController: SPUStandardUpdaterController
 
     private init() {
-        // Initialize Sparkle updater
-        // startingUpdater: true means it will automatically check for updates on launch
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: false,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
+        // Apply the saved preference before starting any automatic checks.
+        updater.automaticallyChecksForUpdates =
+            UserDefaults.standard.object(forKey: "autoCheckForUpdates") as? Bool ?? true
+        updaterController.startUpdater()
+        if updater.automaticallyChecksForUpdates && updater.canCheckForUpdates {
+            updater.checkForUpdatesInBackground()
+        }
     }
 
     /// Check for updates manually (user-initiated via menu)
