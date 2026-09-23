@@ -2,11 +2,11 @@
 
 This guide covers ZIP distribution through [gitstride.hyperseek.tech](https://gitstride.hyperseek.tech) and [zwyyy456/GitStride Releases](https://github.com/zwyyy456/GitStride/releases). It does not deploy the website or Automation Worker.
 
-The client and release artifacts use GitStride. The repository, website, and Sparkle feed still use their existing URLs. When those resources move, update `GitStride/Info.plist` (`SUFeedURL`), the download prefix and website link in `update_appcast.sh`, and the channel link in `appcast.xml` together. Existing feed entries must continue to point to their published assets.
+The client and release artifacts use GitStride. The repository, website, and Sparkle feed still use their existing URLs. When those resources move, update `GitStride/Info.plist` (`SUFeedURL`), the download prefix and website link in `update_appcast.sh`, and the channel link in `appcast.xml` together. Feed entries must match the exact published ZIP bytes.
 
 ## Distribution targets and desktop OAuth
 
-`GitStride` is the Developer ID / GitHub Release target. `GitStrideAppStore` shares the app sources, enables App Sandbox with outgoing network access, and excludes the CLI runner and Sparkle. Use its shared scheme to archive for App Store Connect; the ZIP and appcast script remain specific to the Release target. Update version and build numbers on both targets when shipping both distributions.
+`GitStride` is the Developer ID / GitHub Release target. `GitStrideAppStore` shares the app sources, enables App Sandbox with outgoing network access, and excludes the CLI runner and Sparkle. Both targets use bundle ID `tech.hyperseek.gitstride`. Use the App Store target's shared scheme to archive for App Store Connect; the ZIP and appcast script remain specific to the Release target. Update version and build numbers on both targets when shipping both distributions.
 
 Both targets use the public `GITSTRIDE_OAUTH_CLIENT_ID` build setting. Register a desktop OAuth App separately from the Worker OAuth App and enable Device Flow. Never embed a Client Secret or reuse Worker access/refresh tokens. Signed Keychain access and container behavior must be checked with the actual distribution signing setup; unsigned builds do not validate these permissions.
 
@@ -17,6 +17,8 @@ Set **Version** (`MARKETING_VERSION`) and **Build** (`CURRENT_PROJECT_VERSION`) 
 `update_appcast.sh` reads the exported app's version and build number, packages the app as `GitStride-VERSION.zip`, and uses Sparkle to generate the update entry and sign the ZIP. It checks the generated URL, versions, archive length, and signature before uploading.
 
 `appcast.xml` is Sparkle's update catalog. The application reads it from this repository's `main` branch and downloads the referenced packages from GitHub Releases. An empty feed advertises no updates. It should contain only entries for packages that are available to users.
+
+If an existing GitHub Release asset is deliberately replaced, regenerate its appcast entry from the exact replacement ZIP using Sparkle's `generate_appcast` and the `gitstride` signing account. Verify the enclosure URL, byte length, versions, and signature with `sign_update --verify`. Publish the regenerated feed only after the replacement asset is downloadable. Repacking the app creates different ZIP bytes and requires a new signature. `update_appcast.sh` refuses to overwrite existing assets; use it for new releases.
 
 ## One-time signing setup
 

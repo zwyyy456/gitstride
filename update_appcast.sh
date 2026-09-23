@@ -49,7 +49,7 @@ fi
 BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO_PLIST")
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")
 BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")
-if [ "$BUNDLE_ID" != "tech.hyperseek.gboard" ] || [ -z "$VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+if [ "$BUNDLE_ID" != "tech.hyperseek.gitstride" ] || [ -z "$VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
     echo "Expected a versioned GitStride Release app, found bundle ID: $BUNDLE_ID" >&2
     exit 1
 fi
