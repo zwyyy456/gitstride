@@ -1,0 +1,12 @@
+GitStride brings GitHub Projects into a native Mac workspace. Open a Project from the menu bar for a quick check, or use the main window to focus on the work ahead.
+
+• Organize personal and organization Projects in Board or Table view.
+• See assigned work and review requests across Projects in My Work.
+• Search by title, issue number, or assignee. Create and edit Issues without switching to a browser.
+• Choose the fields and filters that matter to you. Saved display preferences stay on your Mac.
+• Get optional notifications for status and assignment changes, upcoming deadlines, and overdue items while GitStride is running.
+• Optionally connect a separate PR automation service to update matching personal Project statuses as pull requests progress, even when GitStride is closed.
+
+A GitHub.com account is required. Sign in through GitHub's device code flow. The App Store edition uses OAuth login and does not require GitHub CLI. PR automation requires a separate, optional GitHub authorization.
+
+GitStride is independent software and is not affiliated with GitHub, Inc.

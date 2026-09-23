@@ -27,3 +27,11 @@ Pods/
 
 # Generated icon script
 generate_icon.swift
+
+# Private App Review contact details
+fastlane/metadata/review_information/first_name.txt
+fastlane/metadata/review_information/last_name.txt
+fastlane/metadata/review_information/email_address.txt
+fastlane/metadata/review_information/phone_number.txt
+fastlane/.env
+fastlane/report.xml

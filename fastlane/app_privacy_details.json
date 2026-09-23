@@ -1,0 +1,12 @@
+[
+  {
+    "category": "USER_ID",
+    "purposes": ["APP_FUNCTIONALITY"],
+    "data_protections": ["DATA_LINKED_TO_YOU"]
+  },
+  {
+    "category": "OTHER_DATA",
+    "purposes": ["APP_FUNCTIONALITY"],
+    "data_protections": ["DATA_LINKED_TO_YOU"]
+  }
+]

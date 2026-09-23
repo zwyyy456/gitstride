@@ -1,0 +1,12 @@
+GitStride 迹程把 GitHub Projects 带到原生 Mac 工作区。你可以从菜单栏快速查看项目，也可以在主窗口集中处理手头工作。
+
+• 使用看板或表格整理个人和组织的 Project。
+• 在「我的工作」中集中查看多个 Project 的待办与审查请求。
+• 按标题、Issue 编号或负责人搜索，直接创建和编辑 Issue。
+• 自定义字段和筛选条件；显示偏好保存在本机。
+• App 运行时，可选择接收状态、负责人、临近截止日期和逾期提醒。
+• 可选连接独立的 PR 自动化服务，让关联拉取请求的进展更新匹配的个人 Project 状态；关闭 App 后仍可继续运行。
+
+需要 GitHub.com 账号。通过 GitHub 设备验证码登录。App Store 版本使用 OAuth，不需要 GitHub CLI。PR 自动化需要另行授权，可不启用。
+
+GitStride 是独立软件，与 GitHub, Inc. 无关联关系。

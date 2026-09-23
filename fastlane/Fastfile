@@ -1,0 +1,60 @@
+default_platform(:mac)
+opt_out_usage
+skip_docs
+
+FASTLANE_DIR = File.expand_path(__dir__)
+METADATA_PATH = File.join(FASTLANE_DIR, "metadata")
+APP_IDENTIFIER = "tech.hyperseek.gitstride"
+
+desc "Validate the Mac App Store metadata without contacting Apple."
+lane :verify_metadata do
+  shared = %w[primary_category.txt copyright.txt]
+  localized = %w[name.txt subtitle.txt description.txt keywords.txt promotional_text.txt support_url.txt marketing_url.txt privacy_url.txt]
+  files = shared + %w[en-US zh-Hans].flat_map { |locale| localized.map { |file| File.join(locale, file) } }
+  missing = files.reject { |file| File.file?(File.join(METADATA_PATH, file)) }
+  UI.user_error!("Missing metadata: #{missing.join(', ')}") unless missing.empty?
+
+  limits = { "name.txt" => 30, "subtitle.txt" => 30, "description.txt" => 4000, "keywords.txt" => 100, "promotional_text.txt" => 170 }
+  %w[en-US zh-Hans].each do |locale|
+    limits.each do |file, limit|
+      value = File.read(File.join(METADATA_PATH, locale, file), encoding: "UTF-8").strip
+      length = file == "keywords.txt" ? value.bytesize : value.length
+      UI.user_error!("#{locale}/#{file} is #{length}, limit #{limit}") if length > limit
+    end
+  end
+  UI.success("Mac App Store metadata is within field limits.")
+end
+
+private_lane :asc_api_key do
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_PATH")
+  )
+end
+
+platform :mac do
+  desc "Upload Mac App Store text and URLs without a binary or screenshots."
+  lane :upload_metadata do
+    verify_metadata
+    deliver(
+      api_key: asc_api_key,
+      app_identifier: APP_IDENTIFIER,
+      metadata_path: METADATA_PATH,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      submit_for_review: false,
+      run_precheck_before_submit: false,
+      platform: "osx",
+      force: true
+    )
+  end
+
+  desc "Upload App Privacy answers using Apple ID authentication."
+  lane :upload_privacy_details do
+    upload_app_privacy_details_to_app_store(
+      username: ENV.fetch("ASC_APPLE_ID"),
+      app_identifier: APP_IDENTIFIER,
+      json_path: File.join(FASTLANE_DIR, "app_privacy_details.json")
+    )
+  end
+end
