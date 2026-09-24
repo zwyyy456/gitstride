@@ -27,7 +27,7 @@ struct MenuBarPopoverView: View {
                 message: operationErrorMessage ?? store.operationErrorMessage,
                 dismiss: dismissOperationError
             )
-
+            PendingItemFailureBanner(store: store)
             if store.isLoading && store.projects.isEmpty {
                 loadingView
             } else if let error = store.error {

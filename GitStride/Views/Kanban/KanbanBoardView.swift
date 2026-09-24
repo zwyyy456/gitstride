@@ -140,7 +140,7 @@ struct KanbanBoardView: View {
                 message: operationErrorMessage ?? store.operationErrorMessage,
                 dismiss: dismissOperationError
             )
-
+            PendingItemFailureBanner(store: store)
             if isQuickCreating {
                 Text(canEditSelectedProject
                      ? String(localized: "Press Return to review the new item. Press Esc to cancel.")

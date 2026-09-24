@@ -20,6 +20,7 @@ struct ItemDetailView: View {
     private var isRefreshing: Bool { store.isRefreshingItem(reference) }
     private var canEdit: Bool {
         store.canEditItemContent(reference) && !isRefreshing && !isArchiving && editingDetail == nil
+            && item?.contentId.flatMap { store.pendingContentEdits[$0] } == nil
     }
     private var canArchive: Bool {
         item != nil && store.canEditProject(id: reference.projectID)
@@ -164,10 +165,10 @@ struct ItemDetailView: View {
             )
         }
         .focusedValue(\.workspaceCommandContext, commandContext)
-        .task(id: item?.contentId) {
-            if let item {
-                await store.loadItemDetail(for: item)
-            }
+        .task(id: item.map { "\($0.contentId ?? ""):\($0.updatedAt ?? "")" }) {
+            guard let item,
+                  item.contentId.flatMap({ store.pendingContentEdits[$0] }) == nil else { return }
+            await store.loadItemDetail(for: item)
         }
         .onDisappear {
             pendingInspectorWidthUpdate?.cancel()

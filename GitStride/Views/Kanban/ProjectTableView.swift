@@ -73,14 +73,18 @@ struct ProjectTableView: View {
             .alternatingRowBackgrounds(.disabled)
             .font(.system(size: 13))
             .contextMenu(forSelectionType: ProjectTableRow.ID.self) { ids in
-                itemContextMenu(ids)
+                if !ids.contains(where: { $0.itemID.map { store.pendingCreationState(for: $0) != nil } == true }) {
+                    itemContextMenu(ids)
+                }
             } primaryAction: { ids in
                 guard !isSelecting, ids.count == 1, let id = ids.first?.itemID,
+                      store.pendingCreationState(for: id) == nil,
                       let item = items.first(where: { $0.id == id }) else { return }
                 open(item)
             }
             .onKeyPress(.return) {
                 guard !isSelecting, selectedItemIDs.count == 1,
+                      selectedItemIDs.allSatisfy({ store.pendingCreationState(for: $0) == nil }),
                       let item = items.first(where: { selectedItemIDs.contains($0.id) }) else { return .ignored }
                 open(item)
                 return .handled
@@ -284,10 +288,16 @@ struct ProjectTableView: View {
     @ViewBuilder
     private func titleCell(_ row: ProjectTableRow) -> some View {
         if let item = row.item {
-            Text(item.displayTitle)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
-                .help(item.displayTitle)
+            HStack(spacing: 6) {
+                Text(item.displayTitle).lineLimit(1)
+                if let syncState = store.pendingSyncState(for: item) {
+                    Text(syncTitle(for: syncState))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
+            .help(item.displayTitle)
         } else {
             HStack(spacing: 8) {
                 Circle().fill(row.status?.swiftUIColor ?? .secondary).frame(width: 8, height: 8)
@@ -343,7 +353,16 @@ struct ProjectTableView: View {
     }
 
     private func open(_ item: ProjectItem) {
+        guard store.pendingCreationState(for: item.id) == nil else { return }
         showItemDetail(ItemInspectorReference(projectID: project.id, itemID: item.id))
+    }
+
+    private func syncTitle(for state: PendingSyncState) -> String {
+        switch state {
+        case .syncing: String(localized: "Syncing")
+        case .failed: String(localized: "Failed")
+        case .unconfirmed: String(localized: "Check GitHub")
+        }
     }
 }
 

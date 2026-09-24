@@ -8,7 +8,6 @@ struct ItemContentEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var description: String
-    @State private var isSaving = false
     @State private var errorMessage: String?
     @FocusState private var isTitleFocused: Bool
 
@@ -32,7 +31,6 @@ struct ItemContentEditorView: View {
                     .textFieldStyle(.roundedBorder)
                     .focused($isTitleFocused)
             }
-            .disabled(isSaving)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -52,7 +50,6 @@ struct ItemContentEditorView: View {
                     .frame(minHeight: 160)
                     .accessibilityLabel("Description")
             }
-            .disabled(isSaving)
 
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -63,23 +60,18 @@ struct ItemContentEditorView: View {
             }
 
             HStack {
-                if isSaving {
-                    ProgressView().controlSize(.small)
-                    Text("Saving…").foregroundStyle(.secondary)
-                }
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                    .disabled(isSaving)
                 Button("Save", action: save)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.return, modifiers: .command)
-                    .disabled(isSaving || trimmedTitle.isEmpty || !hasChanges)
+                    .disabled(trimmedTitle.isEmpty || !hasChanges)
             }
         }
         .padding(20)
         .frame(minWidth: 520, idealWidth: 640, minHeight: 360, idealHeight: 440)
-        .interactiveDismissDisabled(isSaving || hasChanges)
+        .interactiveDismissDisabled(hasChanges)
         .onAppear { isTitleFocused = true }
     }
 
@@ -87,20 +79,15 @@ struct ItemContentEditorView: View {
     private var hasChanges: Bool { trimmedTitle != detail.title || description != detail.body }
 
     private func save() {
-        guard !isSaving, !trimmedTitle.isEmpty, hasChanges else { return }
-        isSaving = true
+        guard !trimmedTitle.isEmpty, hasChanges else { return }
         errorMessage = nil
         let title = trimmedTitle
         let description = description
-        Task {
-            defer { isSaving = false }
-            do {
-                try await store.updateItemContent(reference, contentID: detail.id, title: title, body: description)
-                dismiss()
-            } catch is CancellationError {
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+        do {
+            try store.beginContentEdit(reference, contentID: detail.id, title: title, body: description)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

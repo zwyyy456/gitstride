@@ -99,12 +99,12 @@ struct ProjectItem: Identifiable, Codable, Hashable {
     let id: String
     let contentId: String?
     let contentType: ItemContentType
-    let title: String
+    var title: String
     let number: Int?
     let url: String?
     let issueState: IssueState?
     let prState: PullRequestState?
-    let updatedAt: String?
+    var updatedAt: String?
     var status: String?
     var statusOptionId: String?
     var assignees: [Assignee]

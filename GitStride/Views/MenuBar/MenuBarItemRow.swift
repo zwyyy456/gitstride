@@ -12,7 +12,7 @@ struct ItemRow: View {
 
     var body: some View {
         Button {
-            showInspector()
+            if store.pendingCreationState(for: item.id) == nil { showInspector() }
         } label: {
             HStack(alignment: .center, spacing: 10) {
                 itemTypeIcon.frame(width: 16)
@@ -21,6 +21,11 @@ struct ItemRow: View {
                     Text(item.displayTitle)
                         .font(.callout.weight(.medium))
                         .lineLimit(1)
+                    if let syncState = store.pendingSyncState(for: item) {
+                        Label(syncTitle(for: syncState), systemImage: "arrow.triangle.2.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     HStack(spacing: 4) {
                         if let number = item.number {
@@ -54,6 +59,7 @@ struct ItemRow: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(store.pendingCreationState(for: item.id) != nil)
         .accessibilityLabel(item.number.map { String(localized: "\(item.displayTitle), number \($0)") } ?? item.displayTitle)
         .accessibilityHint("Show item details")
         .onHover { isHovered = $0 }
@@ -68,6 +74,7 @@ struct ItemRow: View {
 
     @ViewBuilder
     private var contextMenu: some View {
+        if store.pendingCreationState(for: item.id) == nil {
         Button("Show Details", systemImage: "sidebar.right", action: showInspector)
         Button("Open in New Window", systemImage: "macwindow", action: openInNewWindow)
         Button("Open in Browser", systemImage: "safari", action: openInBrowser)
@@ -132,6 +139,15 @@ struct ItemRow: View {
                     }
                 }
             }
+        }
+        }
+    }
+
+    private func syncTitle(for state: PendingSyncState) -> String {
+        switch state {
+        case .syncing: String(localized: "Syncing with GitHub…")
+        case .failed: String(localized: "Sync failed")
+        case .unconfirmed: String(localized: "Check GitHub before retrying")
         }
     }
 

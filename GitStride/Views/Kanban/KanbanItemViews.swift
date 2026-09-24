@@ -75,6 +75,21 @@ struct KanbanColumn: View {
                                         ItemInspectorReference(projectID: projectID, itemID: item.id)
                                     )
                                 } reportError: { reportError($0) }
+                            } else if store.pendingCreationState(for: item.id) != nil {
+                                KanbanCard(
+                                    projectID: projectID,
+                                    preferenceID: preferenceID,
+                                    showsRepository: showsRepository,
+                                    availableFields: availableFields,
+                                    item: item,
+                                    allStatuses: allStatuses,
+                                    store: store,
+                                    isSelecting: false,
+                                    isSelected: false,
+                                    onSelect: {},
+                                    showInspector: {},
+                                    reportError: reportError
+                                )
                             } else {
                                 KanbanCard(
                                     projectID: projectID,
@@ -166,8 +181,15 @@ struct KanbanCard: View {
 
     var body: some View {
         Button(action: activateCard) {
-            KanbanCardContent(item: item, showsRepository: showsRepository,
-                              availableFields: availableFields, preferenceID: preferenceID)
+            VStack(alignment: .leading, spacing: 4) {
+                KanbanCardContent(item: item, showsRepository: showsRepository,
+                                  availableFields: availableFields, preferenceID: preferenceID)
+                if let syncState = store.pendingSyncState(for: item) {
+                    Label(syncTitle(for: syncState), systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
                 .padding(.trailing, isSelecting ? 20 : 0)
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,6 +204,7 @@ struct KanbanCard: View {
                 }
         }
             .buttonStyle(.plain)
+            .disabled(store.pendingCreationState(for: item.id) != nil)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isHovered)
             .onHover { isHovered = $0 }
             .accessibilityElement(children: .ignore)
@@ -189,6 +212,7 @@ struct KanbanCard: View {
             .accessibilityValue(accessibilityValue)
             .accessibilityHint(isSelecting ? String(localized: "Toggles selection") : String(localized: "Shows details"))
         .contextMenu {
+            if store.pendingCreationState(for: item.id) == nil {
             KanbanCardContextMenu(
                 projectID: projectID,
                 item: item,
@@ -198,6 +222,7 @@ struct KanbanCard: View {
                 showInspector: showInspector,
                 reportError: reportError
             )
+            }
         }
         .confirmationDialog(
             removalConfirmationTitle,
@@ -272,10 +297,19 @@ struct KanbanCard: View {
     }
 
     private func activateCard() {
+        guard store.pendingCreationState(for: item.id) == nil else { return }
         if isSelecting {
             onSelect()
         } else {
             showInspector()
+        }
+    }
+
+    private func syncTitle(for state: PendingSyncState) -> String {
+        switch state {
+        case .syncing: String(localized: "Syncing with GitHub…")
+        case .failed: String(localized: "Sync failed")
+        case .unconfirmed: String(localized: "Check GitHub before retrying")
         }
     }
 

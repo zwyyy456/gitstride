@@ -1,150 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "All features are free. Support is optional and can be repeated." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All features are free. Support is optional and can be repeated."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有功能均可免费使用。支持开发完全自愿，也可以多次支持。"
-          }
-        }
-      }
-    },
-    "Support GitStride" : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Support GitStride"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支持 GitStride"
-          }
-        }
-      }
-    },
-    "Loading support option…" : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loading support option…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载支持选项…"
-          }
-        }
-      }
-    },
-    "Support purchase is currently unavailable." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Support purchase is currently unavailable."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂时无法购买支持项目。"
-          }
-        }
-      }
-    },
-    "Could not load the support purchase. Please try again later." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not load the support purchase. Please try again later."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载支持项目，请稍后再试。"
-          }
-        }
-      }
-    },
-    "Purchase pending approval." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Purchase pending approval."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "购买正在等待批准。"
-          }
-        }
-      }
-    },
-    "Could not complete the purchase." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not complete the purchase."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法完成购买。"
-          }
-        }
-      }
-    },
-    "Could not verify the purchase." : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not verify the purchase."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法验证购买。"
-          }
-        }
-      }
-    },
-    "Thank you for supporting GitStride!" : {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thank you for supporting GitStride!"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "感谢支持 GitStride！"
-          }
-        }
-      }
-    },
     "" : {
       "shouldTranslate" : false
     },
@@ -1059,6 +915,22 @@
         }
       }
     },
+    "All features are free. Support is optional and can be repeated." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All features are free. Support is optional and can be repeated."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有功能均可免费使用。支持开发完全自愿，也可以多次支持。"
+          }
+        }
+      }
+    },
     "All Statuses" : {
       "localizations" : {
         "en" : {
@@ -1889,6 +1761,12 @@
         }
       }
     },
+    "Check GitHub" : {
+
+    },
+    "Check GitHub before retrying" : {
+
+    },
     "Check interval" : {
       "localizations" : {
         "en" : {
@@ -2509,6 +2387,38 @@
         }
       }
     },
+    "Could not complete the purchase." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not complete the purchase."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法完成购买。"
+          }
+        }
+      }
+    },
+    "Could not load the support purchase. Please try again later." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load the support purchase. Please try again later."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载支持项目，请稍后再试。"
+          }
+        }
+      }
+    },
     "Could not remove the previous account’s project cache." : {
       "localizations" : {
         "en" : {
@@ -2521,6 +2431,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法移除上一个账户的项目缓存。"
+          }
+        }
+      }
+    },
+    "Could not verify the purchase." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not verify the purchase."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证购买。"
           }
         }
       }
@@ -3005,6 +2931,15 @@
           }
         }
       }
+    },
+    "Discard" : {
+
+    },
+    "Discard this pending edit?" : {
+
+    },
+    "Discard this pending item?" : {
+
     },
     "Disconnect GitStride" : {
       "localizations" : {
@@ -3864,6 +3799,9 @@
         }
       }
     },
+    "GitHub may have created this item. %@" : {
+
+    },
     "GitHub organization access requires additional SSO authorization." : {
       "localizations" : {
         "en" : {
@@ -4056,6 +3994,9 @@
           }
         }
       }
+    },
+    "GitHub sync needs attention" : {
+
     },
     "GitHub URL or search issues and pull requests" : {
       "localizations" : {
@@ -4963,6 +4904,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在加载仓库…"
+          }
+        }
+      }
+    },
+    "Loading support option…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading support option…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载支持选项…"
           }
         }
       }
@@ -6874,6 +6831,22 @@
         }
       }
     },
+    "Purchase pending approval." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchase pending approval."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "购买正在等待批准。"
+          }
+        }
+      }
+    },
     "Queued" : {
       "localizations" : {
         "en" : {
@@ -7665,6 +7638,7 @@
       }
     },
     "Retry Adding to Project" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7697,6 +7671,7 @@
       }
     },
     "Retry Project Fields" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -9087,6 +9062,53 @@
         }
       }
     },
+    "Support GitStride" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support GitStride"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "支持 GitStride"
+          }
+        }
+      }
+    },
+    "Support purchase is currently unavailable." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support purchase is currently unavailable."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂时无法购买支持项目。"
+          }
+        }
+      }
+    },
+    "Sync failed" : {
+
+    },
+    "Sync failed: %@" : {
+
+    },
+    "Sync status unknown" : {
+
+    },
+    "Syncing" : {
+
+    },
+    "Syncing with GitHub…" : {
+
+    },
     "Syntax Help" : {
       "localizations" : {
         "en" : {
@@ -9115,6 +9137,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "表格"
+          }
+        }
+      }
+    },
+    "Thank you for supporting GitStride!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thank you for supporting GitStride!"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "感谢支持 GitStride！"
           }
         }
       }
@@ -9327,6 +9365,12 @@
           }
         }
       }
+    },
+    "The unsynced changes will be removed from this app." : {
+
+    },
+    "The unsynced item will be removed from this app." : {
+
     },
     "This connection does not have permission for this operation. Check GitHub access in Settings." : {
       "localizations" : {
@@ -9905,6 +9949,7 @@
       }
     },
     "Use owner/repository, for example octocat/hello-world." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

@@ -131,8 +131,30 @@ extension GitHubResponse {
             let url: String
             let number: Int?
             let updatedAt: String?
+            let projectItems: ProjectItemsConnection?
             let assignees: GitHubResponse.ItemNode.AssigneesConnection?
             let labels: GitHubResponse.ItemNode.LabelsConnection?
+
+            struct ProjectItemsConnection: Decodable {
+                let nodes: [ProjectItemNode?]
+            }
+
+            struct ProjectItemNode: Decodable {
+                let id: String
+                let project: ProjectNode
+            }
+
+            struct ProjectNode: Decodable {
+                let id: String
+            }
+        }
+    }
+
+    struct IssueProjectItemsPayload: Decodable {
+        let node: IssueNode?
+
+        struct IssueNode: Decodable {
+            let projectItems: CreateIssuePayload.Issue.ProjectItemsConnection
         }
     }
 

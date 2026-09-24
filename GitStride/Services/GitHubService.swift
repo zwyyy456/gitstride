@@ -18,7 +18,7 @@ enum GitHubError: Error, LocalizedError, Equatable {
     case invalidItemURL
     case itemUnavailable
     case issueCreationUnconfirmed
-    case issueCreationNotStarted(String)
+    case issueCreationNotStarted(String, retryable: Bool)
     case graphQLError(String)
     case decodingError(String)
     case connectionError(String)
@@ -54,7 +54,7 @@ enum GitHubError: Error, LocalizedError, Equatable {
             return String(localized: "This item is unavailable or no longer accessible.")
         case .issueCreationUnconfirmed:
             return String(localized: "GitHub did not confirm the issue’s identity. Check the repository before creating another issue.")
-        case .issueCreationNotStarted(let message):
+        case .issueCreationNotStarted(let message, _):
             return String(localized: "The issue was not created. \(message)")
         case .graphQLError(let message):
             return String(localized: "GitHub API error: \(message)")
@@ -73,6 +73,7 @@ struct GitHubAccount: Codable, Equatable, Sendable {
 
 struct CreatedIssue {
     let contentID: String
+    let projectItemID: String?
     let title: String
     let number: Int
     let url: String
@@ -97,6 +98,13 @@ struct CreatedIssue {
             labels: labels
         )
     }
+}
+
+struct UpdatedItemContent: Sendable {
+    let title: String
+    let body: String
+    let bodyHTML: String
+    let updatedAt: String
 }
 
 enum GitHubSessionState: Equatable, Sendable {
@@ -369,7 +377,7 @@ actor GitHubService {
         )
     }
 
-    func updateItemContent(contentID: String, contentType: ItemContentType, title: String, body: String) async throws {
+    func updateItemContent(contentID: String, contentType: ItemContentType, title: String, body: String) async throws -> UpdatedItemContent {
         let query: String
         switch contentType {
         case .issue: query = GraphQLQueries.updateIssueContent
@@ -382,7 +390,9 @@ actor GitHubService {
             variables: ["id": contentID, "title": title, "body": body],
             as: GitHubResponse.UpdateItemContentPayload.self
         )
-        guard payload.update?.content?.id == contentID else { throw GitHubError.invalidResponse }
+        guard let content = payload.update?.content, content.id == contentID else { throw GitHubError.invalidResponse }
+        return UpdatedItemContent(title: content.title, body: content.body,
+                                  bodyHTML: content.bodyHTML, updatedAt: content.updatedAt)
     }
 
     private func makeIssueReference(_ node: GitHubResponse.ItemDetailPayload.IssueNode) -> IssueReference? {
@@ -631,6 +641,7 @@ actor GitHubService {
 
     func createIssue(
         repository: String,
+        projectID: String? = nil,
         title: String,
         body: String,
         labels: [String] = [],
@@ -640,8 +651,9 @@ actor GitHubService {
             throw GitHubError.invalidRepository
         }
         let repositoryID: String
+        let resolvedAssigneeIDs: [String]
         var labelIDs: [String] = []
-        var assigneeIDs: [String] = []
+        async let assigneeIDs = resolveIssueAssignees(assignees)
         do {
             let parts = repository.split(separator: "/").map(String.init)
             var after: String?
@@ -666,17 +678,7 @@ actor GitHubService {
             guard let resolvedRepositoryID else { throw GitHubError.invalidRepository }
             repositoryID = resolvedRepositoryID
 
-            for login in Set(assignees).sorted() {
-                try Task.checkCancellation()
-                let payload: GitHubResponse.IssueAssigneePayload = try await request(
-                    GraphQLQueries.issueAssignee, variables: ["login": login],
-                    as: GitHubResponse.IssueAssigneePayload.self
-                )
-                guard let user = payload.user else {
-                    throw GitHubError.graphQLError(String(localized: "Assignee @\(login) was not found."))
-                }
-                assigneeIDs.append(user.id)
-            }
+            resolvedAssigneeIDs = try await assigneeIDs
 
             for name in labels {
                 try Task.checkCancellation()
@@ -699,13 +701,24 @@ actor GitHubService {
             try Task.checkCancellation()
         } catch {
             // Reads and label creation cannot create an issue, even if interrupted.
-            throw GitHubError.issueCreationNotStarted(error.localizedDescription)
+            let retryable: Bool
+            if let urlError = error as? URLError {
+                retryable = urlError.code != .cancelled
+            } else if case GitHubError.httpError(let status) = error {
+                retryable = status >= 500
+            } else if case GitHubError.connectionError = error {
+                retryable = true
+            } else {
+                retryable = false
+            }
+            throw GitHubError.issueCreationNotStarted(error.localizedDescription, retryable: retryable)
         }
 
         let payload: GitHubResponse.CreateIssuePayload = try await request(
             GraphQLQueries.createIssue,
             variables: ["repositoryId": repositoryID, "title": title, "body": body],
-            arrayVariables: ["labelIds": labelIDs, "assigneeIds": assigneeIDs],
+            arrayVariables: ["labelIds": labelIDs, "assigneeIds": resolvedAssigneeIDs,
+                             "projectV2Ids": projectID.map { [$0] } ?? []],
             as: GitHubResponse.CreateIssuePayload.self
         )
         let issue = payload.createIssue.issue
@@ -714,6 +727,7 @@ actor GitHubService {
         }
         return CreatedIssue(
             contentID: issue.id,
+            projectItemID: issue.projectItems?.nodes.compactMap { $0 }.first { $0.project.id == projectID }?.id,
             title: title,
             number: issue.number ?? address.number,
             url: issue.url,
@@ -725,6 +739,22 @@ actor GitHubService {
                 IssueLabel(id: $0.id, name: $0.name, color: $0.color)
             } ?? []
         )
+    }
+
+    private func resolveIssueAssignees(_ assignees: [String]) async throws -> [String] {
+        var ids: [String] = []
+        for login in Set(assignees).sorted() {
+            try Task.checkCancellation()
+            let payload: GitHubResponse.IssueAssigneePayload = try await request(
+                GraphQLQueries.issueAssignee, variables: ["login": login],
+                as: GitHubResponse.IssueAssigneePayload.self
+            )
+            guard let user = payload.user else {
+                throw GitHubError.graphQLError(String(localized: "Assignee @\(login) was not found."))
+            }
+            ids.append(user.id)
+        }
+        return ids
     }
 
     func searchItems(query: String) async throws -> [GitHubItemCandidate] {
@@ -767,8 +797,8 @@ actor GitHubService {
         return candidate
     }
 
-    func addExistingItem(projectId: String, candidate: GitHubItemCandidate) async throws {
-        _ = try await addExistingItem(projectId: projectId, contentId: candidate.id)
+    func addExistingItem(projectId: String, candidate: GitHubItemCandidate) async throws -> String {
+        try await addExistingItem(projectId: projectId, contentId: candidate.id)
     }
 
     func addExistingItem(projectId: String, contentId: String) async throws -> String {
@@ -778,6 +808,16 @@ actor GitHubService {
             as: GitHubResponse.AddProjectItemPayload.self
         )
         return payload.addProjectV2ItemById.item.id
+    }
+
+    func projectItemID(issueID: String, projectID: String) async throws -> String? {
+        let payload: GitHubResponse.IssueProjectItemsPayload = try await request(
+            GraphQLQueries.issueProjectItems,
+            variables: ["issueId": issueID],
+            as: GitHubResponse.IssueProjectItemsPayload.self
+        )
+        return payload.node?.projectItems.nodes.compactMap { $0 }
+            .first { $0.project.id == projectID }?.id
     }
 
     private func fetchProjectFields(projectID: String) async throws -> ProjectFieldsResult {

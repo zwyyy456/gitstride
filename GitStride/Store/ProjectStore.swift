@@ -26,7 +26,6 @@ enum ProjectStoreError: LocalizedError {
     case operationInProgress
     case emptyItemTitle
     case itemDetailsFailed(String)
-    case itemContentSavedRefreshFailed(String)
     case missingFieldOption(field: String, option: String)
 
     var errorDescription: String? {
@@ -43,8 +42,6 @@ enum ProjectStoreError: LocalizedError {
             String(localized: "Enter a title.")
         case .itemDetailsFailed(let message):
             message
-        case .itemContentSavedRefreshFailed(let message):
-            String(localized: "Changes were saved to GitHub, but refreshing the project failed: \(message)")
         case .itemUnavailable:
             String(localized: "This item is no longer available.")
         case .missingFieldOption(let field, let option):
@@ -66,6 +63,7 @@ final class IssueCreation {
 
     fileprivate let sessionID: UUID
     let projectID: String
+    var displayTitle: String { title }
     let repository: String
     fileprivate let title: String
     fileprivate let body: String
@@ -99,6 +97,34 @@ final class IssueCreation {
     }
 }
 
+enum PendingSyncState {
+    case syncing
+    case failed(String)
+    case unconfirmed(String)
+}
+
+struct PendingItemCreation: Identifiable {
+    enum Kind {
+        case issue(IssueCreation)
+        case draft(title: String, body: String)
+    }
+
+    let id: UUID
+    let projectID: String
+    let title: String
+    let kind: Kind
+    var state: PendingSyncState = .syncing
+}
+
+struct PendingContentEdit: Identifiable {
+    let id: String
+    let reference: ItemInspectorReference
+    let title: String
+    let body: String
+    let author: ItemAuthor?
+    var state: PendingSyncState = .syncing
+}
+
 private struct ItemDetailEntry {
     let sourceUpdatedAt: String?
     let state: ItemDetailState
@@ -120,6 +146,11 @@ private struct PendingStatusMove {
     let status: StatusOption
 }
 
+private struct ConfirmedContentVersion {
+    let title: String
+    let updatedAt: String
+}
+
 private struct ProjectState {
     enum Source { case catalog, cache, remote }
     enum Load { case idle, loading, failed(String) }
@@ -133,6 +164,7 @@ private struct ProjectState {
     var mutations: Set<UUID> = []
     var needsRefresh = false
     var confirmedItemsAwaitingObservation: [String: ProjectItem] = [:]
+    var confirmedContentAwaitingObservation: [String: ConfirmedContentVersion] = [:]
 
     var phase: ProjectContentPhase {
         switch load {
@@ -216,6 +248,10 @@ final class ProjectStore {
     private var pendingItemMutations: [ItemMutationKey: UUID] = [:]
     private var pendingStatusMoves: [ItemMutationKey: PendingStatusMove] = [:]
     private var pendingContentMutations: [String: UUID] = [:]
+    private(set) var pendingCreations: [UUID: PendingItemCreation] = [:]
+    private(set) var pendingContentEdits: [String: PendingContentEdit] = [:]
+    private var pendingCreationTasks: [UUID: Task<Void, Never>] = [:]
+    private var pendingEditTasks: [String: Task<Void, Never>] = [:]
     private var hiddenKanbanStatusIDsByProject: [String: Set<String>]
 
     private let gitHubService: GitHubService
@@ -278,6 +314,14 @@ final class ProjectStore {
 
     func project(id: String) -> Project? {
         guard var project = projectStates[id]?.snapshot else { return nil }
+        project.items += pendingCreations.values
+            .filter { $0.projectID == id }
+            .map(makePendingProjectItem)
+        for edit in pendingContentEdits.values {
+            for index in project.items.indices where project.items[index].contentId == edit.id {
+                project.items[index].title = edit.title
+            }
+        }
         for (key, move) in pendingStatusMoves where key.projectID == id {
             guard let index = project.items.firstIndex(where: { $0.id == key.itemID }) else { continue }
             project.items[index].status = move.status.name
@@ -287,6 +331,42 @@ final class ProjectStore {
             )
         }
         return project
+    }
+
+    func pendingCreationState(for itemID: String) -> PendingSyncState? {
+        guard itemID.hasPrefix("pending:"),
+              let id = UUID(uuidString: String(itemID.dropFirst("pending:".count))) else { return nil }
+        return pendingCreations[id]?.state
+    }
+
+    func pendingSyncState(for item: ProjectItem) -> PendingSyncState? {
+        if let state = pendingCreationState(for: item.id) { return state }
+        return item.contentId.flatMap { pendingContentEdits[$0]?.state }
+    }
+
+    private func makePendingProjectItem(_ operation: PendingItemCreation) -> ProjectItem {
+        let contentType: ItemContentType
+        let status: String?
+        let statusOptionID: String?
+        switch operation.kind {
+        case .issue(let creation):
+            contentType = .issue
+            let selectedStatus = creation.remainingFields.first {
+                $0.0.name.caseInsensitiveCompare("Status") == .orderedSame
+            }?.1
+            status = creation.createdItem?.status ?? selectedStatus?.name
+            statusOptionID = creation.createdItem?.statusOptionId ?? selectedStatus?.id
+        case .draft:
+            contentType = .draftIssue
+            status = nil
+            statusOptionID = nil
+        }
+        return ProjectItem(
+            id: "pending:\(operation.id.uuidString)", contentId: nil,
+            contentType: contentType, title: operation.title, number: nil, url: nil,
+            issueState: contentType == .issue ? .open : nil, prState: nil,
+            status: status, statusOptionId: statusOptionID, assignees: []
+        )
     }
 
     var allProjects: [Project] {
@@ -348,30 +428,116 @@ final class ProjectStore {
         try Task.checkCancellation()
         guard isActive else { throw CancellationError() }
         guard self.item(for: reference)?.contentId == contentID else { throw ProjectStoreError.itemUnavailable }
+        let previousDetail: ProjectItemDetail
         switch itemDetailState(for: item) {
-        case .loaded: break
+        case .loaded(let detail): previousDetail = detail
         case .failed(let message): throw ProjectStoreError.itemDetailsFailed(message)
         case .idle, .loading: throw ProjectStoreError.operationInProgress
         }
         guard canEditItemContent(reference) else { throw GitHubError.insufficientPermissions }
 
-        var saved = false
         do {
-            try await performContentMutation([contentID], synchronization: .reloadProjects, reloadingDetailFor: item) {
-                try await self.gitHubService.updateItemContent(
+            var updatedContent: UpdatedItemContent?
+            try await performContentMutation([contentID], synchronization: .patch { item in
+                if let updatedContent {
+                    item.title = updatedContent.title
+                    item.updatedAt = updatedContent.updatedAt
+                }
+            }) {
+                updatedContent = try await self.gitHubService.updateItemContent(
                     contentID: contentID, contentType: item.contentType, title: title, body: body
                 )
-                saved = true
             }
+            guard let updatedContent else { throw GitHubError.invalidResponse }
+            itemDetailTasks.removeValue(forKey: contentID)?.cancel()
+            itemDetailGenerations[contentID, default: 0] += 1
+            itemDetailEntries[contentID] = ItemDetailEntry(
+                sourceUpdatedAt: updatedContent.updatedAt,
+                state: .loaded(ProjectItemDetail(
+                    id: previousDetail.id, title: updatedContent.title,
+                    body: updatedContent.body, bodyHTML: updatedContent.bodyHTML,
+                    viewerCanUpdate: previousDetail.viewerCanUpdate,
+                    author: previousDetail.author, createdAt: previousDetail.createdAt,
+                    updatedAt: updatedContent.updatedAt,
+                    issueMetadata: previousDetail.issueMetadata
+                ))
+            )
         } catch {
             // Restore the description and permissions after mutation invalidation, including on failure.
             if isActive, let currentItem = self.item(for: reference) {
                 await loadItemDetail(for: currentItem, forceRefresh: true)
             }
-            if saved, !(error is CancellationError) {
-                throw ProjectStoreError.itemContentSavedRefreshFailed(error.localizedDescription)
-            }
             throw error
+        }
+    }
+
+    var pendingEditList: [PendingContentEdit] {
+        pendingContentEdits.values.sorted { $0.title < $1.title }
+    }
+
+    func beginContentEdit(_ reference: ItemInspectorReference, contentID: String,
+                          title: String, body: String) throws {
+        guard isActive, let item = item(for: reference), item.contentId == contentID else {
+            throw ProjectStoreError.itemUnavailable
+        }
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
+        guard pendingContentEdits[contentID] == nil,
+              pendingContentMutations[contentID] == nil else { throw ProjectStoreError.operationInProgress }
+        guard canEditItemContent(reference) else { throw GitHubError.insufficientPermissions }
+        guard case .loaded(let detail) = itemDetailState(for: item) else {
+            throw ProjectStoreError.operationInProgress
+        }
+        pendingContentEdits[contentID] = PendingContentEdit(
+            id: contentID, reference: reference, title: title, body: body, author: detail.author
+        )
+        startPendingEdit(contentID)
+    }
+
+    func retryPendingEdit(_ contentID: String) {
+        guard var edit = pendingContentEdits[contentID], pendingEditTasks[contentID] == nil else { return }
+        edit.state = .syncing
+        pendingContentEdits[contentID] = edit
+        startPendingEdit(contentID)
+    }
+
+    func dismissPendingEdit(_ contentID: String) {
+        guard pendingEditTasks[contentID] == nil else { return }
+        let reference = pendingContentEdits.removeValue(forKey: contentID)?.reference
+        if let reference, let item = item(for: reference) {
+            Task { await self.loadItemDetail(for: item, forceRefresh: true) }
+        }
+    }
+
+    private func startPendingEdit(_ contentID: String) {
+        pendingEditTasks[contentID] = Task { [weak self] in
+            await self?.runPendingEdit(contentID)
+        }
+    }
+
+    private func runPendingEdit(_ contentID: String) async {
+        defer { pendingEditTasks[contentID] = nil }
+        var retryCount = 0
+        while let edit = pendingContentEdits[contentID] {
+            do {
+                try await updateItemContent(edit.reference, contentID: contentID,
+                                            title: edit.title, body: edit.body)
+                pendingContentEdits[contentID] = nil
+                return
+            } catch is CancellationError {
+                return
+            } catch {
+                if shouldRetryTransientWrite(error), retryCount < 2 {
+                    retryCount += 1
+                    do { try await Task.sleep(for: .milliseconds(retryCount == 1 ? 500 : 1_000)) }
+                    catch { return }
+                    continue
+                }
+                guard var current = pendingContentEdits[contentID] else { return }
+                current.state = .failed(error.localizedDescription)
+                pendingContentEdits[contentID] = current
+                return
+            }
         }
     }
 
@@ -667,6 +833,12 @@ final class ProjectStore {
         followedProjectIDs = []
         pendingItemMutations = [:]
         pendingContentMutations = [:]
+        pendingCreationTasks.values.forEach { $0.cancel() }
+        pendingEditTasks.values.forEach { $0.cancel() }
+        pendingCreationTasks = [:]
+        pendingEditTasks = [:]
+        pendingCreations = [:]
+        pendingContentEdits = [:]
         pendingStatusMoves = [:]
         owners = []
         repositoryLists = [:]
@@ -1095,6 +1267,7 @@ final class ProjectStore {
                 return nil
             }
             snapshot = mergingConfirmedItems(into: snapshot, projectID: id)
+            snapshot = mergingConfirmedContent(into: snapshot, projectID: id)
             projectStates[id]?.snapshot = snapshot
             projectStates[id]?.source = .remote
             projectStates[id]?.load = .idle
@@ -1187,7 +1360,7 @@ final class ProjectStore {
 
     private func commitCreatedItem(_ item: ProjectItem, projectID: String) {
         guard var project = projectStates[projectID]?.snapshot else { return }
-        project.items.removeAll { $0.id == item.id || $0.contentId == item.contentId }
+        project.items.removeAll { $0.id == item.id || (item.contentId != nil && $0.contentId == item.contentId) }
         project.items.append(item)
         projectStates[projectID]?.snapshot = project
         projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = item
@@ -1215,6 +1388,37 @@ final class ProjectStore {
             }
         }
         return merged
+    }
+
+    private func mergingConfirmedContent(into snapshot: Project, projectID: String) -> Project {
+        guard let versions = projectStates[projectID]?.confirmedContentAwaitingObservation,
+              !versions.isEmpty else { return snapshot }
+        var merged = snapshot
+        for (contentID, version) in versions {
+            guard let index = snapshot.items.firstIndex(where: { $0.contentId == contentID }) else { continue }
+            if (snapshot.items[index].title == version.title &&
+                snapshot.items[index].updatedAt == version.updatedAt) ||
+                isNewerGitHubTimestamp(snapshot.items[index].updatedAt, than: version.updatedAt) {
+                projectStates[projectID]?.confirmedContentAwaitingObservation[contentID] = nil
+            } else {
+                merged.items[index].title = version.title
+                merged.items[index].updatedAt = version.updatedAt
+            }
+        }
+        return merged
+    }
+
+    private func isNewerGitHubTimestamp(_ observed: String?, than confirmed: String) -> Bool {
+        guard let observed else { return false }
+        let formatter = ISO8601DateFormatter()
+        func date(_ value: String) -> Date? {
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let parsed = formatter.date(from: value) { return parsed }
+            formatter.formatOptions = [.withInternetDateTime]
+            return formatter.date(from: value)
+        }
+        guard let observedDate = date(observed), let confirmedDate = date(confirmed) else { return false }
+        return observedDate > confirmedDate
     }
 
     private func replaceCatalog(with projects: [Project]) {
@@ -1456,6 +1660,96 @@ final class ProjectStore {
                              labels: labels, assignees: assignees, fields: resolvedFields)
     }
 
+    var pendingCreationList: [PendingItemCreation] {
+        pendingCreations.values.sorted { $0.id.uuidString < $1.id.uuidString }
+    }
+
+    func beginIssueCreation(_ creation: IssueCreation) throws {
+        guard isActive, creation.sessionID == sessionID,
+              projectStates[creation.projectID] != nil else { throw GitHubError.accountChanged }
+        let operation = PendingItemCreation(id: UUID(), projectID: creation.projectID,
+                                            title: creation.displayTitle, kind: .issue(creation))
+        pendingCreations[operation.id] = operation
+        startPendingCreation(operation.id)
+    }
+
+    func beginDraftCreation(title: String, body: String) throws {
+        let project = try editableSelectedProject()
+        let operation = PendingItemCreation(id: UUID(), projectID: project.id,
+                                            title: title, kind: .draft(title: title, body: body))
+        pendingCreations[operation.id] = operation
+        startPendingCreation(operation.id)
+    }
+
+    func retryPendingCreation(_ id: UUID) {
+        guard var operation = pendingCreations[id], pendingCreationTasks[id] == nil else { return }
+        if case .unconfirmed = operation.state { return }
+        operation.state = .syncing
+        pendingCreations[id] = operation
+        startPendingCreation(id)
+    }
+
+    func dismissPendingCreation(_ id: UUID) {
+        guard pendingCreationTasks[id] == nil else { return }
+        pendingCreations[id] = nil
+    }
+
+    private func startPendingCreation(_ id: UUID) {
+        pendingCreationTasks[id] = Task { [weak self] in
+            await self?.runPendingCreation(id)
+        }
+    }
+
+    private func runPendingCreation(_ id: UUID) async {
+        defer { pendingCreationTasks[id] = nil }
+        var retryCount = 0
+        while let operation = pendingCreations[id] {
+            do {
+                switch operation.kind {
+                case .issue(let creation):
+                    try await resumeIssueCreation(creation)
+                case .draft(let title, let body):
+                    try await createDraftIssue(title: title, body: body, projectID: operation.projectID)
+                }
+                pendingCreations[id] = nil
+                return
+            } catch is CancellationError {
+                return
+            } catch {
+                let canRetry: Bool
+                switch operation.kind {
+                case .issue(let creation):
+                    if case .ready = creation.phase,
+                       case GitHubError.issueCreationNotStarted(_, let retryable) = error {
+                        canRetry = retryable
+                    } else if case .applyingFields = creation.phase {
+                        canRetry = shouldRetryTransientWrite(error)
+                    } else {
+                        canRetry = false
+                    }
+                case .draft:
+                    canRetry = false
+                }
+                if canRetry, retryCount < 2 {
+                    retryCount += 1
+                    do { try await Task.sleep(for: .milliseconds(retryCount == 1 ? 500 : 1_000)) }
+                    catch { return }
+                    continue
+                }
+                guard var current = pendingCreations[id] else { return }
+                if case .issue(let creation) = current.kind, creation.phase == .unconfirmed {
+                    current.state = .unconfirmed(creation.errorMessage ?? error.localizedDescription)
+                } else if case .draft = current.kind, requiresReconciliation(error) {
+                    current.state = .unconfirmed(error.localizedDescription)
+                } else {
+                    current.state = .failed(error.localizedDescription)
+                }
+                pendingCreations[id] = current
+                return
+            }
+        }
+    }
+
     func resumeIssueCreation(_ creation: IssueCreation) async throws {
         guard isActive, creation.sessionID == sessionID else { throw GitHubError.accountChanged }
         guard !creation.isRunning else { throw ProjectStoreError.operationInProgress }
@@ -1469,7 +1763,8 @@ final class ProjectStore {
                 try await performProjectMutation(projectID: creation.projectID) {
                     do {
                         let issue = try await self.gitHubService.createIssue(
-                            repository: creation.repository, title: creation.title, body: creation.body,
+                            repository: creation.repository, projectID: creation.projectID,
+                            title: creation.title, body: creation.body,
                             labels: creation.labels, assignees: creation.assignees
                         )
                         creation.createdIssue = issue
@@ -1487,10 +1782,30 @@ final class ProjectStore {
             }
             if case .addingToProject(let issueURL) = creation.phase {
                 guard let issue = creation.createdIssue else { throw GitHubError.issueCreationUnconfirmed }
-                let itemID = try await performProjectMutation(projectID: creation.projectID) {
-                    try await self.gitHubService.addExistingItem(
-                        projectId: creation.projectID, contentId: issue.contentID
+                let itemID: String
+                if let projectItemID = issue.projectItemID {
+                    itemID = projectItemID
+                } else {
+                    let existingID = try await gitHubService.projectItemID(
+                        issueID: issue.contentID, projectID: creation.projectID
                     )
+                    if let existingID {
+                        itemID = existingID
+                    } else {
+                        do {
+                            itemID = try await performProjectMutation(projectID: creation.projectID) {
+                                try await self.gitHubService.addExistingItem(
+                                    projectId: creation.projectID, contentId: issue.contentID
+                                )
+                            }
+                        } catch {
+                            // Membership may have appeared between the read and add request.
+                            guard let confirmedID = try? await gitHubService.projectItemID(
+                                issueID: issue.contentID, projectID: creation.projectID
+                            ) else { throw error }
+                            itemID = confirmedID
+                        }
+                    }
                 }
                 creation.createdItem = issue.projectItem(id: itemID)
                 creation.phase = creation.remainingFields.isEmpty
@@ -1539,12 +1854,17 @@ final class ProjectStore {
         }
     }
 
-    func createDraftIssue(title: String, body: String) async throws {
-        let project = try editableSelectedProject()
-        _ = try await performProjectMutation(projectID: project.id) {
+    func createDraftIssue(title: String, body: String, projectID: String? = nil) async throws {
+        let project = try projectID.map { try editableProject(id: $0) } ?? editableSelectedProject()
+        let itemID = try await performProjectMutation(projectID: project.id) {
             try await self.gitHubService.createDraftIssue(projectId: project.id, title: title, body: body)
         }
-        try await refreshProjectSnapshot(id: project.id)
+        commitCreatedItem(ProjectItem(id: itemID, contentId: nil, contentType: .draftIssue,
+                                      title: title, number: nil, url: nil, issueState: nil, prState: nil,
+                                      status: nil, statusOptionId: nil, assignees: []), projectID: project.id)
+        await persistCache()
+        projectStates[project.id]?.needsRefresh = true
+        scheduleReconciliation()
     }
 
     func searchItems(query: String) async throws -> [GitHubItemCandidate] {
@@ -1557,10 +1877,16 @@ final class ProjectStore {
 
     func addExistingItem(_ candidate: GitHubItemCandidate) async throws {
         let project = try editableSelectedProject()
-        try await performProjectMutation(projectID: project.id) {
+        let itemID = try await performProjectMutation(projectID: project.id) {
             try await self.gitHubService.addExistingItem(projectId: project.id, candidate: candidate)
         }
-        try await refreshProjectSnapshot(id: project.id)
+        commitCreatedItem(ProjectItem(id: itemID, contentId: candidate.id, contentType: candidate.contentType,
+                                      title: candidate.title, number: candidate.number, url: candidate.url,
+                                      issueState: nil, prState: nil, status: nil,
+                                      statusOptionId: nil, assignees: []), projectID: project.id)
+        await persistCache()
+        projectStates[project.id]?.needsRefresh = true
+        scheduleReconciliation()
     }
 
     func clearOperationError() {
@@ -1586,6 +1912,9 @@ final class ProjectStore {
         operation: () async throws -> Result,
         apply: (Result) -> Void = { _ in }
     ) async throws -> Result {
+        if let itemID, pendingCreationState(for: itemID) != nil {
+            throw ProjectStoreError.operationInProgress
+        }
         guard !deletingProjectIDs.contains(projectID), projectStates[projectID] != nil else { throw ProjectStoreError.itemUnavailable }
         let key = itemID.map { ItemMutationKey(projectID: projectID, itemID: $0) }
         if let key, pendingItemMutations[key] != nil { throw ProjectStoreError.operationInProgress }
@@ -1688,13 +2017,25 @@ final class ProjectStore {
         return false
     }
 
+    private func shouldRetryTransientWrite(_ error: Error) -> Bool {
+        if error is CancellationError { return false }
+        if let urlError = error as? URLError { return urlError.code != .cancelled }
+        if case GitHubError.httpError(let status) = error { return status >= 500 }
+        if case GitHubError.connectionError = error { return true }
+        return false
+    }
+
     private func refreshContentProjects(_ contentIDs: Set<String>) async throws {
         let ids = Set(contentIDs.flatMap { projectsContaining(contentID: $0) })
         var failure: Error?
         for id in ids.sorted() {
-            do { try await refreshProjectSnapshot(id: id) }
+            do {
+                try await refreshProjectSnapshot(id: id)
+            }
             catch is CancellationError { throw CancellationError() }
-            catch { failure = error }
+            catch {
+                failure = error
+            }
         }
         if let failure { throw failure }
     }
@@ -1717,8 +2058,15 @@ final class ProjectStore {
         for id in projectsContaining(contentID: contentID) {
             guard var project = projectStates[id]?.snapshot else { continue }
             for index in project.items.indices where project.items[index].contentId == contentID {
+                let originalTitle = project.items[index].title
+                let originalUpdatedAt = project.items[index].updatedAt
                 transform(&project.items[index])
                 let item = project.items[index]
+                if (item.title != originalTitle || item.updatedAt != originalUpdatedAt),
+                   let updatedAt = item.updatedAt {
+                    projectStates[id]?.confirmedContentAwaitingObservation[contentID] =
+                        ConfirmedContentVersion(title: item.title, updatedAt: updatedAt)
+                }
                 if projectStates[id]?.confirmedItemsAwaitingObservation[item.id] != nil {
                     projectStates[id]?.confirmedItemsAwaitingObservation[item.id] = item
                 }

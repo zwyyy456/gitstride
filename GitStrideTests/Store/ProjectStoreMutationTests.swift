@@ -42,7 +42,7 @@ extension ProjectStoreTests {
         let updatedItems = Self.mutationItemsResponse.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
             detail, Self.graphQLFailureResponse, detail,
-            #"{"data":{"update":{"content":{"id":"CONTENT1"}}}}"#,
+            #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","bodyHTML":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#,
             Self.mutationFieldsResponse, updatedItems,
             detail.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         ])
@@ -61,13 +61,11 @@ extension ProjectStoreTests {
         #expect(store.item(for: reference)?.title == "Changed")
     }
 
-    @Test func confirmedContentSaveReportsARefreshFailureWithoutRepeatingTheMutation() async throws {
+    @Test func confirmedContentSaveUsesTheMutationResponse() async throws {
         let detail = Self.itemDetailResponse(body: "Original")
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
-        let updatedDetail = detail.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
-            detail, #"{"data":{"update":{"content":{"id":"CONTENT1"}}}}"#,
-            Self.graphQLFailureResponse, updatedDetail
+            detail, #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","bodyHTML":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -75,18 +73,78 @@ extension ProjectStoreTests {
         let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
         let item = try #require(store.item(for: reference))
         await store.loadItemDetail(for: item)
-        do {
-            try await store.updateItemContent(reference, contentID: "CONTENT1", title: "Changed", body: "Original")
-            Issue.record("Expected the project refresh failure to be reported")
-        } catch ProjectStoreError.itemContentSavedRefreshFailed {
-        }
-        let mutations = await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.updateIssueContent }
+        try await store.updateItemContent(reference, contentID: "CONTENT1", title: "Changed", body: "Original")
+        #expect(store.item(for: reference)?.title == "Changed")
+        let requests = await runner.recordedRequests()
+        let mutations = requests.filter { $0.graphQLQuery == GraphQLQueries.updateIssueContent }
         #expect(mutations.count == 1)
-        guard case .loaded(let currentDetail) = store.itemDetailState(for: item) else {
-            Issue.record("Expected the description to recover even though the project refresh failed")
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.itemDetail }.count == 1)
+    }
+
+    @Test func confirmedContentSaveKeepsTheEditedDescriptionVisible() async throws {
+        let detail = Self.itemDetailResponse(body: "Original")
+            .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
+        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","bodyHTML":"<p>Updated</p>","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [detail, mutation])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let item = try #require(store.item(for: reference))
+        await store.loadItemDetail(for: item)
+
+        try await store.updateItemContent(reference, contentID: "CONTENT1", title: "Changed", body: "Updated")
+
+        let currentItem = try #require(store.item(for: reference))
+        #expect(currentItem.updatedAt == "2026-08-02T00:00:00Z")
+        guard case .loaded(let currentDetail) = store.itemDetailState(for: currentItem) else {
+            Issue.record("The edited description should stay loaded after GitHub confirms the write")
             return
         }
-        #expect(currentDetail.title == "Changed")
+        #expect(currentDetail.bodyHTML == "<p>Updated</p>")
+        try await Task.sleep(for: .milliseconds(50))
+        let refreshedItem = try #require(store.item(for: reference))
+        #expect(refreshedItem.updatedAt == "2026-08-02T00:00:00Z")
+        #expect(store.itemDetailState(for: refreshedItem) == .loaded(currentDetail))
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
+        let detailRequests = requests.filter { $0.graphQLQuery == GraphQLQueries.itemDetail }
+        #expect(detailRequests.count == 1)
+    }
+
+    @Test func optimisticEditKeepsTheDraftAfterGitHubRejectsIt() async throws {
+        let detail = Self.itemDetailResponse(body: "Original")
+            .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(detail),
+            .suspended("write", Self.graphQLFailureResponse),
+            .response(detail)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let item = try #require(store.item(for: reference))
+        await store.loadItemDetail(for: item)
+
+        try store.beginContentEdit(reference, contentID: "CONTENT1", title: "Changed", body: "Draft body")
+        #expect(store.item(for: reference)?.title == "Changed")
+        #expect(store.pendingContentEdits["CONTENT1"]?.body == "Draft body")
+        await runner.waitUntilSuspended("write")
+        await runner.release("write")
+
+        for _ in 0..<100 {
+            if let edit = store.pendingContentEdits["CONTENT1"], case .failed = edit.state { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard let edit = store.pendingContentEdits["CONTENT1"], case .failed = edit.state else {
+            Issue.record("Expected the rejected edit to remain available for retry")
+            return
+        }
+        #expect(edit.body == "Draft body")
+        #expect(store.item(for: reference)?.title == "Changed")
+        store.dismissPendingEdit("CONTENT1")
+        #expect(store.item(for: reference)?.title == "Item")
     }
 
     @Test func itemRejectsASecondStatusMoveWhileOneIsPending() async throws {

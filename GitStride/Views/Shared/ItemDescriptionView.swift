@@ -3,8 +3,18 @@ import SwiftUI
 struct ItemDescriptionView: View {
     @Bindable var store: ProjectStore
     let reference: ItemInspectorReference
+    @State private var presentedEdit: PresentedEdit?
+
+    private struct PresentedEdit {
+        let contentID: String
+        let title: String
+        let body: String
+    }
 
     private var item: ProjectItem? { store.item(for: reference) }
+    private var pendingEdit: PendingContentEdit? {
+        item?.contentId.flatMap { store.pendingContentEdits[$0] }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -15,6 +25,18 @@ struct ItemDescriptionView: View {
             } else {
                 unavailable
             }
+        }
+        .onChange(of: pendingEdit?.id, initial: true) { _, _ in
+            guard let pendingEdit else { return }
+            presentedEdit = PresentedEdit(
+                contentID: pendingEdit.id, title: pendingEdit.title, body: pendingEdit.body
+            )
+        }
+        .onChange(of: reference) { _, _ in
+            if pendingEdit == nil { presentedEdit = nil }
+        }
+        .onChange(of: store.isRefreshingItem(reference)) { _, isRefreshing in
+            if isRefreshing && pendingEdit == nil { presentedEdit = nil }
         }
     }
 
@@ -65,47 +87,85 @@ struct ItemDescriptionView: View {
 
     @ViewBuilder
     private func descriptionContent(for item: ProjectItem) -> some View {
-        switch store.itemDetailState(for: item) {
-        case .idle, .loading:
-            ProgressView("Loading description…")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        case .loaded(let detail):
-            if detail.bodyHTML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ContentUnavailableView(
-                    "No Description",
-                    systemImage: "text.alignleft",
-                    description: Text("This item does not have a description.")
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                GitHubHTMLBodyView(html: detail.bodyHTML)
+        if let body = locallyPresentedBody(for: item) {
+            ScrollView {
+                Text(body.isEmpty ? String(localized: "No Description") : body)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: 760, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(24)
             }
+        } else {
+            switch store.itemDetailState(for: item) {
+            case .idle, .loading:
+                ProgressView("Loading description…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        case .failed(let message):
-            VStack(spacing: 12) {
-                ContentUnavailableView(
-                    "Description Unavailable",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(message)
-                )
-
-                Button("Retry") {
-                    Task { await store.loadItemDetail(for: item, forceRefresh: true) }
+            case .loaded(let detail):
+                if detail.bodyHTML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ContentUnavailableView(
+                        "No Description",
+                        systemImage: "text.alignleft",
+                        description: Text("This item does not have a description.")
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    GitHubHTMLBodyView(html: detail.bodyHTML)
                 }
+
+            case .failed(let message):
+                VStack(spacing: 12) {
+                    ContentUnavailableView(
+                        "Description Unavailable",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(message)
+                    )
+
+                    Button("Retry") {
+                        Task { await store.loadItemDetail(for: item, forceRefresh: true) }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
+        }
+    }
+
+    private func locallyPresentedBody(for item: ProjectItem) -> String? {
+        if let contentID = item.contentId, let edit = store.pendingContentEdits[contentID] {
+            return edit.body
+        }
+        // A confirmed write only removes the sync label; it must not rebuild the visible body.
+        guard let presentedEdit, presentedEdit.contentID == item.contentId,
+              item.title == presentedEdit.title,
+              case .loaded(let detail) = store.itemDetailState(for: item),
+              detail.body == presentedEdit.body else { return nil }
+        return presentedEdit.body
+    }
+
+    private func syncStatusText(for state: PendingSyncState) -> String {
+        switch state {
+        case .syncing: String(localized: "Syncing with GitHub…")
+        case .failed: String(localized: "Sync failed")
+        case .unconfirmed: String(localized: "Sync status unknown")
         }
     }
 
     private func detailMetadata(for item: ProjectItem) -> String? {
-        guard case .loaded(let detail) = store.itemDetailState(for: item) else { return nil }
+        let detail: ProjectItemDetail?
+        if case .loaded(let loaded) = store.itemDetailState(for: item) {
+            detail = loaded
+        } else {
+            detail = nil
+        }
+        let edit = item.contentId.flatMap { store.pendingContentEdits[$0] }
         var values: [String] = []
-        if let author = detail.author {
+        if let author = edit?.author ?? detail?.author {
             values.append("@\(author.login)")
         }
-        if let updated = detail.updatedAt.flatMap(formattedDate) {
+        if let edit {
+            values.append(syncStatusText(for: edit.state))
+        } else if let updated = detail?.updatedAt.flatMap(formattedDate) {
             values.append(String(localized: "Updated \(updated)"))
         }
         return values.isEmpty ? nil : values.joined(separator: " · ")

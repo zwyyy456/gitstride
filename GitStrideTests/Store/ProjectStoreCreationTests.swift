@@ -18,6 +18,86 @@ extension ProjectStoreTests {
     private static let addedIssueResponse =
         #"{"data":{"addProjectV2ItemById":{"item":{"id":"NEW_ITEM"}}}}"#
 
+    private static let missingProjectMembershipResponse =
+        #"{"data":{"node":{"projectItems":{"nodes":[]}}}}"#
+
+    private static let confirmedProjectMembershipResponse =
+        #"{"data":{"node":{"projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}"#
+
+    @Test func missingMembershipInCreateResponseDoesNotAddTheIssueTwice() async throws {
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.issueRepositoryResponse, Self.createdIssueResponse,
+            Self.confirmedProjectMembershipResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
+                                                      labels: [], assignees: [])
+
+        try await store.resumeIssueCreation(creation)
+
+        #expect(creation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))
+        #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" } == true)
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.issueProjectItems }.count == 1)
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.addItemToProject }.isEmpty)
+    }
+
+    @Test func membershipAppearingDuringAddIsTreatedAsCreated() async throws {
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.issueRepositoryResponse, Self.createdIssueResponse,
+            Self.missingProjectMembershipResponse,
+            #"{"errors":[{"message":"Content already exists in this project"}]}"#,
+            Self.confirmedProjectMembershipResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
+                                                      labels: [], assignees: [])
+
+        try await store.resumeIssueCreation(creation)
+
+        #expect(creation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))
+        #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" } == true)
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.issueProjectItems }.count == 2)
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.addItemToProject }.count == 1)
+    }
+
+    @Test func optimisticIssueCreationUsesTheProjectItemReturnedByCreateIssue() async throws {
+        let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(Self.issueRepositoryResponse), .suspended("create", createdWithProject)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "Draft body",
+                                                      labels: [], assignees: [])
+
+        try store.beginIssueCreation(creation)
+        #expect(store.pendingCreationList.map(\.title) == ["New"])
+        #expect(store.selectedProject?.items.contains { $0.id.hasPrefix("pending:") && $0.title == "New" } == true)
+        await runner.waitUntilSuspended("create")
+        await runner.release("create")
+        for _ in 0..<100 {
+            if store.pendingCreationList.isEmpty { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(store.pendingCreationList.isEmpty)
+        #expect(store.selectedProject?.items.contains { $0.id.hasPrefix("pending:") } == false)
+        #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" } == true)
+        let calls = await runner.recordedRequests()
+        #expect(calls.filter { $0.graphQLQuery == GraphQLQueries.addItemToProject }.isEmpty)
+        let create = try #require(calls.first { $0.graphQLQuery == GraphQLQueries.createIssue })
+        let data = try #require(create.httpBody)
+        let request = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let variables = try #require(request["variables"] as? [String: Any])
+        #expect(variables["projectV2Ids"] as? [String] == ["P1"])
+    }
+
     @Test(arguments: [true, false])
     func linkedRepositoryIsDefaultEvenWithoutMatchingItems(hasItems: Bool) async throws {
         var responses = Self.mutationProjectResponses
@@ -53,6 +133,7 @@ extension ProjectStoreTests {
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .failure(.timedOut),
             .response(repositoryWithLabel), .response(Self.createdIssueResponse),
+            .response(Self.missingProjectMembershipResponse),
             .response(Self.addedIssueResponse),
             .response(Self.mutationFieldsResponse), .response(Self.mutationItemsResponse)
         ])
@@ -143,6 +224,7 @@ extension ProjectStoreTests {
         initial[4] = Self.emptyItemsResponse
         let runner = SuspendingGitHubHTTPClient(steps: initial.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .response(Self.createdIssueResponse),
+            .response(Self.missingProjectMembershipResponse),
             .response(Self.addedIssueResponse), .response(Self.graphQLSuccessResponse),
             .suspended("reconcile", Self.mutationFieldsResponse), .response(Self.emptyItemsResponse)
         ])
@@ -172,6 +254,7 @@ extension ProjectStoreTests {
         let items = Self.mutationItemsResponse
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .suspended("create", Self.createdIssueResponse),
+            .response(Self.missingProjectMembershipResponse),
             .response(Self.addedIssueResponse),
             .response(Self.graphQLFailureResponse),
             .response(Self.graphQLSuccessResponse),
@@ -212,7 +295,10 @@ extension ProjectStoreTests {
         let fields = Self.mutationFieldsResponse
         let items = Self.mutationItemsResponse
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
-            Self.issueRepositoryResponse, Self.createdIssueResponse, Self.graphQLFailureResponse,
+            Self.issueRepositoryResponse, Self.createdIssueResponse,
+            Self.missingProjectMembershipResponse, Self.graphQLFailureResponse,
+            Self.missingProjectMembershipResponse,
+            Self.missingProjectMembershipResponse,
             Self.addedIssueResponse,
             Self.graphQLSuccessResponse, fields, items
         ])
@@ -249,7 +335,8 @@ extension ProjectStoreTests {
         var initial = Self.mutationProjectResponses
         initial[3] = fields
         let runner = FixtureGitHubHTTPClient(responses: initial + [
-            Self.issueRepositoryResponse, Self.createdIssueResponse, Self.addedIssueResponse,
+            Self.issueRepositoryResponse, Self.createdIssueResponse,
+            Self.missingProjectMembershipResponse, Self.addedIssueResponse,
             Self.graphQLSuccessResponse, Self.graphQLFailureResponse,
             Self.graphQLSuccessResponse,
             fields, items

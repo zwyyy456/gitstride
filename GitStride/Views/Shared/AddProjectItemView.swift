@@ -24,7 +24,6 @@ struct AddProjectItemView: View {
     @State private var maximumSheetHeight: CGFloat?
     @State private var isSubmitting = false
     @State private var validationMessage: String?
-    @State private var issueCreation: IssueCreation?
     @State private var draft = NewProjectItemDraft()
     @State private var search = ExistingItemSearchState()
 
@@ -42,7 +41,7 @@ struct AddProjectItemView: View {
         case existing
     }
 
-    private var isWorking: Bool { isSubmitting || issueCreation?.isRunning == true }
+    private var isWorking: Bool { isSubmitting }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +60,7 @@ struct AddProjectItemView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .disabled(isWorking || issueCreation != nil)
+            .disabled(isWorking)
 
             Divider()
             actionBar
@@ -97,7 +96,7 @@ struct AddProjectItemView: View {
             }
         }
         .onChange(of: store.selectedProjectId) { _, _ in
-            guard presentation == .window, issueCreation == nil else { return }
+            guard presentation == .window else { return }
             draft.repository = store.defaultIssueRepository
             draft.status = defaultStatus
             draft.priority = ""
@@ -106,7 +105,7 @@ struct AddProjectItemView: View {
             updateStatusSelection()
         }
         .onChange(of: store.defaultIssueRepository) { oldValue, newValue in
-            guard issueCreation == nil, draft.repository.isEmpty || draft.repository == oldValue else { return }
+            guard draft.repository.isEmpty || draft.repository == oldValue else { return }
             draft.repository = newValue
         }
         .onChange(of: mode) { _, _ in
@@ -118,7 +117,7 @@ struct AddProjectItemView: View {
     }
 
     private var sheetTitle: String {
-        if let project = store.project(id: issueCreation?.projectID ?? store.selectedProjectId ?? "") {
+        if let project = store.project(id: store.selectedProjectId ?? "") {
             return String(localized: "Add Item to “\(project.title)”")
         }
         return String(localized: "Add Item to Project")
@@ -127,7 +126,7 @@ struct AddProjectItemView: View {
     private var header: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                if presentation == .sheet || issueCreation != nil {
+                if presentation == .sheet {
                     Text(sheetTitle)
                         .font(.headline)
                         .lineLimit(2)
@@ -153,7 +152,7 @@ struct AddProjectItemView: View {
         .padding(.horizontal, Self.horizontalPadding)
         .padding(.top, 20)
         .padding(.bottom, 20)
-        .disabled(isWorking || issueCreation != nil)
+        .disabled(isWorking)
     }
 
     private var preferredSheetHeight: CGFloat {
@@ -162,14 +161,11 @@ struct AddProjectItemView: View {
 
     private var actionBar: some View {
         HStack(spacing: 10) {
-            if let issueCreation, issueCreation.phase == .unconfirmed,
-               let repositoryURL = URL(string: "https://github.com/\(issueCreation.repository)/issues") {
-                Link("Check Repository", destination: repositoryURL)
-            } else if mode == .create {
+            if mode == .create {
                 Button(draft.usesQuickEntry ? String(localized: "Show Full Form") : String(localized: "Quick Entry…")) {
                     draft.usesQuickEntry.toggle()
                 }
-                .disabled(isWorking || issueCreation != nil)
+                .disabled(isWorking)
             }
 
             if isWorking, search.isSearching == false {
@@ -232,19 +228,10 @@ struct AddProjectItemView: View {
 
     private var createActionTitle: String {
         if isWorking { return String(localized: "Creating…") }
-        if let issueCreation {
-            switch issueCreation.phase {
-            case .addingToProject: return String(localized: "Retry Adding to Project")
-            case .applyingFields: return String(localized: "Retry Project Fields")
-            case .unconfirmed: return String(localized: "Create Issue")
-            case .ready, .completed: break
-            }
-        }
         return draft.itemType == .issue ? String(localized: "Create Issue") : String(localized: "Create Draft")
     }
 
     private var createActionIsDisabled: Bool {
-        if let issueCreation { return isWorking || !issueCreation.canResume }
         return isWorking || draft.title.trimmed.isEmpty
             || (draft.itemType == .issue && (draft.repository.trimmed.isEmpty || needsStatusSelection))
     }
@@ -262,7 +249,6 @@ struct AddProjectItemView: View {
     }
 
     private func updateStatusSelection() {
-        guard issueCreation == nil else { return }
         if statusOptions.contains(draft.status) == false {
             draft.status = defaultStatus
         }
@@ -281,39 +267,20 @@ struct AddProjectItemView: View {
         validationMessage = nil
         draft.repositoryValidationMessage = nil
         do {
-            if draft.itemType == .issue, issueCreation == nil {
-                issueCreation = try store.prepareIssueCreation(
+            if draft.itemType == .issue {
+                let creation = try store.prepareIssueCreation(
                     repository: draft.repository.trimmed, title: draft.title.trimmed, body: draft.bodyText,
                     labels: draft.labelNames,
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
                     status: draft.status.trimmed.nilIfEmpty, priority: draft.priority.trimmed.nilIfEmpty
                 )
+                try store.beginIssueCreation(creation)
+            } else {
+                try store.beginDraftCreation(title: draft.title.trimmed, body: draft.bodyText)
             }
+            close()
         } catch {
             validationMessage = error.localizedDescription
-            return
-        }
-        isSubmitting = true
-        Task {
-            do {
-                if let issueCreation {
-                    try await store.resumeIssueCreation(issueCreation)
-                } else {
-                    try await store.createDraftIssue(title: draft.title.trimmed, body: draft.bodyText)
-                }
-                close()
-            } catch {
-                if (error as? GitHubError) == .invalidRepository {
-                    issueCreation = nil
-                    draft.repositoryValidationMessage = String(localized: "Use owner/repository, for example octocat/hello-world.")
-                } else if let issueCreation {
-                    validationMessage = issueCreation.errorMessage ?? error.localizedDescription
-                    if issueCreation.phase == .ready { self.issueCreation = nil }
-                } else if !(error is CancellationError) {
-                    validationMessage = error.localizedDescription
-                }
-            }
-            isSubmitting = false
         }
     }
 
@@ -355,6 +322,146 @@ struct AddProjectItemView: View {
     }
 
 
+}
+
+struct PendingItemFailureBanner: View {
+    @Bindable var store: ProjectStore
+    @State private var showsOperations = false
+
+    private var failureCount: Int {
+        (store.pendingCreationList.map(\.state) + store.pendingEditList.map(\.state)).filter { state in
+            if case .syncing = state { return false }
+            return true
+        }.count
+    }
+
+    var body: some View {
+        if failureCount > 0 {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("GitHub sync needs attention")
+                    .font(.caption)
+                Spacer(minLength: 8)
+                Button("Review") { showsOperations = true }
+                    .buttonStyle(.borderless)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.12))
+            .popover(isPresented: $showsOperations, arrowEdge: .bottom) {
+                PendingItemOperationsView(store: store)
+                    .frame(width: 360)
+            }
+        }
+    }
+}
+
+private struct PendingItemOperationsView: View {
+    @Bindable var store: ProjectStore
+    @State private var itemToDiscard: UUID?
+    @State private var editToDiscard: String?
+
+    var body: some View {
+        if !store.pendingCreationList.isEmpty || !store.pendingEditList.isEmpty {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(store.pendingEditList) { edit in
+                        HStack(spacing: 8) {
+                            if case .syncing = edit.state {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(edit.title).lineLimit(1)
+                                Text(statusText(for: edit.state))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 0)
+                            if case .failed = edit.state {
+                                Button("Retry") { store.retryPendingEdit(edit.id) }
+                                    .controlSize(.small)
+                                Button("Discard") { editToDiscard = edit.id }
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                    ForEach(store.pendingCreationList) { operation in
+                        HStack(spacing: 8) {
+                            if case .syncing = operation.state {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(operation.title).lineLimit(1)
+                                Text(statusText(for: operation.state))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 0)
+                            if case .failed = operation.state {
+                                Button("Retry") { store.retryPendingCreation(operation.id) }
+                                    .controlSize(.small)
+                                Button("Discard") { itemToDiscard = operation.id }
+                                    .controlSize(.small)
+                            } else if case .unconfirmed = operation.state {
+                                if case .issue(let creation) = operation.kind,
+                                   let url = URL(string: "https://github.com/\(creation.repository)/issues") {
+                                    Link("Check Repository", destination: url)
+                                        .controlSize(.small)
+                                }
+                                Button("Dismiss") { itemToDiscard = operation.id }
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .frame(maxHeight: 160)
+            .background(.orange.opacity(0.08))
+            .confirmationDialog("Discard this pending item?", isPresented: Binding(
+                get: { itemToDiscard != nil },
+                set: { if !$0 { itemToDiscard = nil } }
+            )) {
+                Button("Discard", role: .destructive) {
+                    if let itemToDiscard { store.dismissPendingCreation(itemToDiscard) }
+                    itemToDiscard = nil
+                }
+                Button("Cancel", role: .cancel) { itemToDiscard = nil }
+            } message: {
+                Text("The unsynced item will be removed from this app.")
+            }
+            .confirmationDialog("Discard this pending edit?", isPresented: Binding(
+                get: { editToDiscard != nil },
+                set: { if !$0 { editToDiscard = nil } }
+            )) {
+                Button("Discard", role: .destructive) {
+                    if let editToDiscard { store.dismissPendingEdit(editToDiscard) }
+                    editToDiscard = nil
+                }
+                Button("Cancel", role: .cancel) { editToDiscard = nil }
+            } message: {
+                Text("The unsynced changes will be removed from this app.")
+            }
+        }
+    }
+
+    private func statusText(for state: PendingSyncState) -> String {
+        switch state {
+        case .syncing: String(localized: "Syncing with GitHub…")
+        case .failed(let message): String(localized: "Sync failed: \(message)")
+        case .unconfirmed(let message): String(localized: "GitHub may have created this item. \(message)")
+        }
+    }
 }
 
 private extension String {

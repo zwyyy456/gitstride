@@ -187,21 +187,36 @@ enum GraphQLQueries {
         """
 
     static let createIssue = """
-        mutation($repositoryId: ID!, $title: String!, $body: String!, $labelIds: [ID!]!, $assigneeIds: [ID!]!) {
+        mutation($repositoryId: ID!, $title: String!, $body: String!, $labelIds: [ID!]!, $assigneeIds: [ID!]!, $projectV2Ids: [ID!]!) {
             createIssue(input: {
                 repositoryId: $repositoryId, title: $title, body: $body,
-                labelIds: $labelIds, assigneeIds: $assigneeIds
+                labelIds: $labelIds, assigneeIds: $assigneeIds, projectV2Ids: $projectV2Ids
             }) {
                 issue {
                     id
                     url
                     number
                     updatedAt
+                    projectItems(first: 100) {
+                        nodes { id project { id } }
+                    }
                     assignees(first: 100) {
                         nodes { login avatarUrl name }
                     }
                     labels(first: 100) {
                         nodes { id name color }
+                    }
+                }
+            }
+        }
+        """
+
+    static let issueProjectItems = """
+        query($issueId: ID!) {
+            node(id: $issueId) {
+                ... on Issue {
+                    projectItems(first: 100) {
+                        nodes { id project { id } }
                     }
                 }
             }
@@ -429,7 +444,7 @@ enum GraphQLQueries {
     static let updateIssueContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updateIssue(input: { id: $id, title: $title, body: $body }) {
-                content: issue { id }
+                content: issue { id title body bodyHTML updatedAt }
             }
         }
         """
@@ -437,7 +452,7 @@ enum GraphQLQueries {
     static let updatePullRequestContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updatePullRequest(input: { pullRequestId: $id, title: $title, body: $body }) {
-                content: pullRequest { id }
+                content: pullRequest { id title body bodyHTML updatedAt }
             }
         }
         """
@@ -445,7 +460,7 @@ enum GraphQLQueries {
     static let updateDraftIssueContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updateProjectV2DraftIssue(input: { draftIssueId: $id, title: $title, body: $body }) {
-                content: draftIssue { id }
+                content: draftIssue { id title body bodyHTML updatedAt }
             }
         }
         """
