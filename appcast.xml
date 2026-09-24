@@ -3,6 +3,15 @@
     <channel>
         <title>GitStride</title>
         <item>
+            <title>1.0.1</title>
+            <pubDate>Thu, 24 Sep 2026 21:50:12 +0800</pubDate>
+            <link>https://gitstride.hyperseek.tech</link>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/zwyyy456/GitStride/releases/download/v1.0.1/GitStride-1.0.1.zip" length="6109854" type="application/octet-stream" sparkle:edSignature="dfggzY3wN6RWN3WFe2b6gXhhx7fLzI6JHCD2pJ8+bsNNaffmI27NoMJ04iZUSu615RUZ/YfavsF/1WOE22lXAA=="/>
+        </item>
+        <item>
             <title>1.0</title>
             <pubDate>Wed, 23 Sep 2026 12:24:33 +0800</pubDate>
             <link>https://gitstride.hyperseek.tech</link>
