@@ -44,14 +44,25 @@ if [ -e "$RELEASE_DIR/GitStride-$VERSION.zip" ]; then
     exit 1
 fi
 
-# The release and tag must already identify the intended source commit.
-RELEASE_ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
-while IFS= read -r ASSET_NAME; do
-    if [ "$ASSET_NAME" = "GitStride-$VERSION.zip" ]; then
-        echo "GitHub release $TAG already has GitStride-$VERSION.zip." >&2
-        exit 1
-    fi
-done <<< "$RELEASE_ASSETS"
+SOURCE_COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD)
+LOCAL_TAG_COMMIT=$(git -C "$REPO_ROOT" rev-parse -q --verify "refs/tags/$TAG^{commit}" 2>/dev/null || true)
+if [ -n "$LOCAL_TAG_COMMIT" ] && [ "$LOCAL_TAG_COMMIT" != "$SOURCE_COMMIT" ]; then
+    echo "Local tag $TAG does not point to the source commit being archived." >&2
+    exit 1
+fi
+gh api "repos/$GITHUB_REPOSITORY/commits/$SOURCE_COMMIT" --jq .sha >/dev/null
+
+if RELEASE_ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>&1); then
+    while IFS= read -r ASSET_NAME; do
+        if [ "$ASSET_NAME" = "GitStride-$VERSION.zip" ]; then
+            echo "GitHub release $TAG already has GitStride-$VERSION.zip." >&2
+            exit 1
+        fi
+    done <<< "$RELEASE_ASSETS"
+elif [[ "$RELEASE_ASSETS" != *"release not found"* ]]; then
+    printf '%s\n' "$RELEASE_ASSETS" >&2
+    exit 1
+fi
 
 PROJECT_BUILD=$(cd "$REPO_ROOT" && xcrun agvtool what-version -terse)
 BUILD_NUMBER=$(python3 - "$PROJECT_BUILD" "$REPO_ROOT/appcast.xml" "$VERSION" <<'PY'
@@ -77,6 +88,12 @@ print(max(builds) + 1)
 PY
 )
 
+# Check notarization access before the expensive archive and export steps.
+if ! xcrun notarytool history --keychain-profile gitstride-notary >/dev/null; then
+    echo "Cannot access the gitstride-notary credentials. Store them with xcrun notarytool store-credentials gitstride-notary before building." >&2
+    exit 1
+fi
+
 mkdir -p "$RELEASE_DIR"
 RUN_DIR=$(mktemp -d "$RELEASE_DIR/GitStride-$VERSION-build$BUILD_NUMBER.XXXXXX")
 ARCHIVE_PATH="$RUN_DIR/GitStride.xcarchive"
@@ -96,8 +113,7 @@ cat > "$RUN_DIR/ExportOptions.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
     <key>method</key><string>developer-id</string>
-    <key>signingStyle</key><string>manual</string>
-    <key>signingCertificate</key><string>Developer ID Application</string>
+    <key>signingStyle</key><string>automatic</string>
 </dict></plist>
 PLIST
 
@@ -147,7 +163,7 @@ xcrun stapler validate "$APP_PATH"
 rm "$NOTARIZATION_ZIP"
 
 printf 'Notarized app: %s\n' "$APP_PATH"
-UPDATE_ARGS=("$APP_PATH" --tag "$TAG")
+UPDATE_ARGS=("$APP_PATH" --tag "$TAG" --target "$SOURCE_COMMIT")
 if [ -n "$NOTES_PATH" ]; then
     UPDATE_ARGS+=(--notes "$NOTES_PATH")
 fi

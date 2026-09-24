@@ -31,7 +31,7 @@ If an existing GitHub Release asset is deliberately replaced, regenerate its app
 ## One-time signing setup
 
 1. In Xcode → Settings → Accounts, select your Apple developer account and team. The checked-in GitStride team is `G38CM6VNCC`.
-2. Under Manage Certificates, create or import a **Developer ID Application** certificate and its private key. An Apple Development or Mac App Store distribution certificate serves a different distribution method. The release export uses Developer ID and inherits the team from the archive.
+2. Ensure the Xcode account for team `G38CM6VNCC` can use Developer ID distribution signing. The release export uses automatic signing, so Xcode can use a managed distribution certificate. If using manual signing elsewhere, create or import a **Developer ID Application** certificate with its private key. An Apple Development certificate only signs the archive for development and cannot sign the exported release.
 3. Use the Sparkle tools resolved by Xcode from `Package.resolved`. Run `generate_keys` from their `bin` directory:
 
    ```bash
@@ -40,28 +40,30 @@ If an existing GitHub Release asset is deliberately replaced, regenerate its app
 
    This creates or reuses a signing key in your login Keychain and prints its **public** key. Put that public key in `GitStride/Info.plist` under `SUPublicEDKey`. Keep the private key in Keychain and back it up securely outside the repository. The ZIP release script checks the exported app's public key against this account.
 
-4. Store your notarization credentials using `xcrun notarytool store-credentials gitstride-notary` and follow its interactive prompts. Apple documents the accepted account/API-key credentials in its [notarization guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+4. Store a separate `notarytool` credential profile in Keychain before running the release script. Xcode's signing account does not create this profile. For an Apple Account, run the command below in your terminal and enter an **app-specific password** at the secure prompt (do not pass it on the command line):
+
+   ```bash
+   xcrun notarytool store-credentials gitstride-notary \
+     --apple-id 'YOUR_APPLE_ACCOUNT_EMAIL' --team-id G38CM6VNCC
+   ```
+
+   Apple also supports [App Store Connect API keys](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow) for `store-credentials`. Keep the profile name `gitstride-notary`, which the script uses for notarization.
 
 Sparkle's key signs update archives. Apple's Developer ID certificate signs the app. Both are used in this release process; neither private key belongs in Git.
 
 ## Build and publish a notarized ZIP
 
-Run the relevant build and behavior checks from [the command index](../docs-index.md). Sign in to `gh` for `zwyyy456/GitStride`, install the Developer ID Application certificate and its private key, keep the Sparkle `gitstride` key in Keychain, and store the `gitstride-notary` credentials as described above. Create the GitHub Release for the intended source commit and tag before running the script. For example, after reviewing the version and release notes:
-
-```bash
-gh release create v1.0.1 --repo zwyyy456/GitStride --target SOURCE_COMMIT \
-  --title "GitStride 1.0.1" --notes-file RELEASE_NOTES.md
-```
-
-Pass the public version and that exact tag to the script. Add `--notes /path/to/release-notes.html` when you have current HTML notes for Sparkle:
+Run the relevant build and behavior checks from [the command index](../docs-index.md). Sign in to `gh` for `zwyyy456/GitStride`, make sure the Xcode account can export with Developer ID automatic signing, keep the Sparkle `gitstride` key in Keychain, and store the `gitstride-notary` credentials as described above. Push the intended source commit before release; the script uses the current `HEAD`, and any local tag with the supplied name must point to that commit. Pass the public version and tag to the script. Add `--notes /path/to/release-notes.html` when you have current HTML notes for Sparkle:
 
 ```bash
 ./build_release.sh 1.0.1 --tag v1.0.1
 ```
 
-`build_release.sh` archives and exports the Release target with Developer ID signing, submits a temporary ZIP to Apple's notary service, staples and validates the ticket on the exported app, then calls `update_appcast.sh`. That script checks the signing identity and Sparkle key, creates and signs `build/release/GitStride-VERSION.zip`, uploads it to the existing GitHub Release, and updates local `appcast.xml`. The archive, dSYMs, exported app, and notarization result remain in a versioned directory under `build/release/`. Neither script replaces an existing release ZIP or Release asset. Delta generation is disabled. Do not change ZIP bytes after the Sparkle signature is generated.
+`build_release.sh` checks access to the `gitstride-notary` profile before building, archives and exports the Release target with Developer ID signing, submits a temporary ZIP to Apple's notary service, staples and validates the ticket on the exported app, then calls `update_appcast.sh`. That script checks the signing identity and Sparkle key, creates and signs `build/release/GitStride-VERSION.zip`. If the GitHub Release does not exist, it creates the Release and its tag at the source commit with generated notes and attaches the ZIP; otherwise it uploads the ZIP to the existing Release. It then updates local `appcast.xml`. The archive, dSYMs, exported app, and notarization result remain in a versioned directory under `build/release/`. Neither script replaces an existing release ZIP or Release asset. Delta generation is disabled. Do not change ZIP bytes after the Sparkle signature is generated.
 
-For an app that was already notarized and stapled, `update_appcast.sh /path/to/GitStride.app --tag RELEASE_TAG` remains available. Apple's notarization ticket must be stapled to the `.app` before final ZIP packaging; a ZIP cannot be stapled directly. Do not modify the app after notarization.
+For an app that was already notarized and stapled, `update_appcast.sh /path/to/GitStride.app --tag RELEASE_TAG` remains available for an existing Release. Pass `--target SOURCE_COMMIT` to let it create a missing Release. Apple's notarization ticket must be stapled to the `.app` before final ZIP packaging; a ZIP cannot be stapled directly. Do not modify the app after notarization.
+
+If notarization stops because the `gitstride-notary` profile is missing, keep the run directory: its exported app and temporary notarization ZIP can be reused after storing credentials. Submit that ZIP with `xcrun notarytool submit /path/to/GitStride-notarization.zip --keychain-profile gitstride-notary --wait`; after the status is `Accepted`, run `xcrun stapler staple /path/to/export/GitStride.app`, then `xcrun stapler validate /path/to/export/GitStride.app`. Finish with `./update_appcast.sh /path/to/export/GitStride.app --tag RELEASE_TAG --target SOURCE_COMMIT`. Use the source commit recorded by `git rev-parse HEAD` when starting the build. There is no need to archive again.
 
 ## Publish
 
@@ -69,7 +71,7 @@ For an app that was already notarized and stapled, `update_appcast.sh /path/to/G
 2. Update the download link on `gitstride.hyperseek.tech` to the same Release asset. Website/DNS changes are separate from this script.
 3. Verify an older-to-newer Sparkle update on a separate test Mac or test account, including every CPU architecture advertised for the release. Use screenshots supplied from the running app when visual review is needed.
 
-The script uploads the ZIP, but it does not create a Release, push Git commits, deploy the website, or modify DNS. Keep the exported archive and dSYMs so crash reports from the distributed build can be symbolicated.
+The script uploads the ZIP and creates the Release when needed; it does not push Git commits, publish `appcast.xml`, deploy the website, or modify DNS. Keep the exported archive and dSYMs so crash reports from the distributed build can be symbolicated.
 
 ## References
 

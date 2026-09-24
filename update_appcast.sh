@@ -1,6 +1,6 @@
 #!/bin/bash
 # Package a notarized app, upload its signed ZIP, then update the local Sparkle feed.
-# Usage: ./update_appcast.sh /path/to/GitStride.app --tag v1.0.1 [--notes release-notes.html]
+# Usage: ./update_appcast.sh /path/to/GitStride.app --tag v1.0.1 [--target SOURCE_COMMIT] [--notes release-notes.html]
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -9,7 +9,7 @@ SPARKLE_BIN="$RELEASE_DIR/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/b
 GITHUB_REPOSITORY="zwyyy456/GitStride"
 
 usage() {
-    echo "Usage: $0 /path/to/GitStride.app --tag RELEASE_TAG [--notes release-notes.html]" >&2
+    echo "Usage: $0 /path/to/GitStride.app --tag RELEASE_TAG [--target SOURCE_COMMIT] [--notes release-notes.html]" >&2
     exit 1
 }
 
@@ -17,6 +17,7 @@ APP_PATH="${1:-}"
 [ -n "$APP_PATH" ] || usage
 shift
 TAG=""
+TARGET=""
 NOTES_PATH=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -30,12 +31,20 @@ while [ "$#" -gt 0 ]; do
             NOTES_PATH="$2"
             shift 2
             ;;
+        --target)
+            [ "$#" -ge 2 ] || usage
+            TARGET="$2"
+            shift 2
+            ;;
         *) usage ;;
     esac
 done
 
 [ -d "$APP_PATH" ] && [ "$(basename "$APP_PATH")" = "GitStride.app" ] || usage
 [[ "$TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || usage
+if [ -n "$TARGET" ] && ! [[ "$TARGET" =~ ^[0-9a-f]{40}$ ]]; then
+    usage
+fi
 if [ -n "$NOTES_PATH" ] && [ ! -f "$NOTES_PATH" ]; then
     echo "Release notes file not found: $NOTES_PATH" >&2
     exit 1
@@ -87,13 +96,20 @@ if [ -e "$LOCAL_ZIP_PATH" ]; then
     echo "Local archive already exists: $LOCAL_ZIP_PATH" >&2
     exit 1
 fi
-RELEASE_ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
-while IFS= read -r ASSET_NAME; do
-    if [ "$ASSET_NAME" = "$ZIP_NAME" ]; then
-        echo "GitHub release $TAG already has $ZIP_NAME; existing assets are never replaced." >&2
-        exit 1
-    fi
-done <<< "$RELEASE_ASSETS"
+RELEASE_EXISTS=true
+if RELEASE_ASSETS=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>&1); then
+    while IFS= read -r ASSET_NAME; do
+        if [ "$ASSET_NAME" = "$ZIP_NAME" ]; then
+            echo "GitHub release $TAG already has $ZIP_NAME; existing assets are never replaced." >&2
+            exit 1
+        fi
+    done <<< "$RELEASE_ASSETS"
+elif [[ "$RELEASE_ASSETS" == *"release not found"* ]] && [ -n "$TARGET" ]; then
+    RELEASE_EXISTS=false
+else
+    printf '%s\n' "$RELEASE_ASSETS" >&2
+    exit 1
+fi
 
 python3 - "$REPO_ROOT/appcast.xml" "$BUILD_NUMBER" <<'PY'
 import sys
@@ -159,7 +175,12 @@ PY
 )
 "$SPARKLE_BIN/sign_update" --account gitstride --verify "$ZIP_PATH" "$SIGNATURE"
 
-gh release upload "$TAG" "$ZIP_PATH" --repo "$GITHUB_REPOSITORY"
+if [ "$RELEASE_EXISTS" = true ]; then
+    gh release upload "$TAG" "$ZIP_PATH" --repo "$GITHUB_REPOSITORY"
+else
+    gh release create "$TAG" "$ZIP_PATH" --repo "$GITHUB_REPOSITORY" \
+        --target "$TARGET" --title "GitStride $VERSION" --generate-notes
+fi
 mkdir -p "$RELEASE_DIR"
 cp "$ZIP_PATH" "$LOCAL_ZIP_PATH"
 cp "$STAGING_DIR/appcast.xml" "$REPO_ROOT/appcast.xml"
