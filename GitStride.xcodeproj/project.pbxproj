@@ -32,6 +32,7 @@
 		A0000015 /* OperationErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015 /* OperationErrorBanner.swift */; };
 		A0000019 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000019 /* SettingsView.swift */; };
 		A0000020 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020 /* UpdateController.swift */; };
+		E6000001 /* SupportPurchaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000002 /* SupportPurchaseModel.swift */; };
 		A0000021 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A6000001 /* Sparkle */; };
 		A0000022 /* GitHubCommandRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022 /* GitHubCommandRunner.swift */; };
 		A0000023 /* Services/GitHubServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000023 /* Services/GitHubServiceTests.swift */; };
@@ -145,6 +146,7 @@
 		A1000018 /* GitStride.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GitStride.entitlements; sourceTree = "<group>"; };
 		A1000019 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1000020 /* UpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateController.swift; sourceTree = "<group>"; };
+		E6000002 /* SupportPurchaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportPurchaseModel.swift; sourceTree = "<group>"; };
 		A1000022 /* GitHubCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCommandRunner.swift; sourceTree = "<group>"; };
 		A1000023 /* Services/GitHubServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/GitHubServiceTests.swift; sourceTree = "<group>"; };
 		A1000024 /* GitStrideTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GitStrideTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -310,6 +312,7 @@
 				A1000053 /* ManagementTokenStore.swift */,
 				D10000000000000000000002 /* AutomationServicePreferences.swift */,
 				A1000020 /* UpdateController.swift */,
+				E6000002 /* SupportPurchaseModel.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -532,6 +535,13 @@
 					A4000002 = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = A4000001;
+					};
+					DC400001 = {
+						SystemCapabilities = {
+							com.apple.InAppPurchase = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -775,6 +785,7 @@
 				A0000042 /* ProjectFieldEditor.swift in Sources */,
 				A0000015 /* OperationErrorBanner.swift in Sources */,
 				A0000019 /* SettingsView.swift in Sources */,
+				E6000001 /* SupportPurchaseModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

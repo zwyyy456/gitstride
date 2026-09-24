@@ -10,6 +10,14 @@ The client and release artifacts use GitStride. The repository, website, and Spa
 
 Both targets use the public `GITSTRIDE_OAUTH_CLIENT_ID` build setting. Register a desktop OAuth App separately from the Worker OAuth App and enable Device Flow. Never embed a Client Secret or reuse Worker access/refresh tokens. Signed Keychain access and container behavior must be checked with the actual distribution signing setup; unsigned builds do not validate these permissions.
 
+## Mac App Store support purchase
+
+The App Store target offers an optional repeatable support purchase in the About window. It does not unlock features. The `GitStrideAppStore` scheme is already the App Store archive scheme and does not link Sparkle. The GitHub Release build cannot use this StoreKit purchase; its Developer ID distribution needs a separate payment method if support payments are offered there.
+
+In App Store Connect, accept the Paid Apps Agreement and create a **Consumable** in-app purchase for bundle ID `tech.hyperseek.gitstride` with product ID `tech.hyperseek.gitstride.support`. Use a support-oriented display name and description that clearly say no features are unlocked. Set the China mainland storefront price to ¥6 and select the desired US price point near $1 separately; App Store Connect controls actual storefront prices, and the app displays the local price returned by StoreKit. Add localization and the required review screenshot, then submit this first consumable with the app version for review.
+
+Archive and upload the `GitStrideAppStore` scheme with App Store distribution signing. Before submission, test the purchase in Apple's sandbox or TestFlight, including a second purchase of the same product, cancellation, pending approval, and recovery of an unfinished transaction. An unsigned compile check does not verify App Store provisioning or live billing.
+
 ## Version and update feed
 
 Set **Version** (`MARKETING_VERSION`) and **Build** (`CURRENT_PROJECT_VERSION`) on the GitStride target in Xcode, for both Debug and Release. The app's Info.plist expands these settings. Each published update needs a higher build number; use a new public version for each release so its ZIP filename is unique. The GitHub Release tag is supplied separately; it need not match the displayed app version exactly.

@@ -25,6 +25,9 @@ struct GitStrideApp: App {
         #if !APP_STORE && canImport(Sparkle)
         _ = UpdateController.shared
         #endif
+        #if APP_STORE
+        _ = SupportPurchaseModel.shared
+        #endif
     }
 
     var body: some Scene {

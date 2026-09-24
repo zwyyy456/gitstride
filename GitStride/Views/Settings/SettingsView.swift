@@ -208,6 +208,9 @@ private struct KeyboardShortcutRow: View {
 struct AboutView: View {
     private let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
     private let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    #if APP_STORE
+    @State private var support = SupportPurchaseModel.shared
+    #endif
 
     var body: some View {
         VStack(spacing: 12) {
@@ -245,6 +248,33 @@ struct AboutView: View {
             .foregroundStyle(.blue)
             .padding(.top, 8)
 
+            #if APP_STORE
+            VStack(spacing: 8) {
+                Text("All features are free. Support is optional and can be repeated.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                if let product = support.product {
+                    Button(String(localized: "Support GitStride") + " · " + product.displayPrice) {
+                        Task { await support.purchase() }
+                    }
+                    .disabled(support.isPurchasing)
+                } else if support.isLoading {
+                    ProgressView("Loading support option…")
+                        .controlSize(.small)
+                }
+
+                if let status = support.status {
+                    Text(status)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.top, 8)
+            #endif
+
             Text("© 2025 zwyyy456 · MIT License")
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
@@ -252,5 +282,8 @@ struct AboutView: View {
         }
         .padding(24)
         .frame(width: 420)
+        #if APP_STORE
+        .task { await support.loadProduct() }
+        #endif
     }
 }
