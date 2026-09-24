@@ -6,7 +6,7 @@ The client and release artifacts use GitStride. The repository, website, and Spa
 
 ## Distribution targets and desktop OAuth
 
-`GitStride` is the Developer ID / GitHub Release target. `GitStrideAppStore` shares the app sources, enables App Sandbox with outgoing network access, and excludes the CLI runner and Sparkle. Both targets use bundle ID `tech.hyperseek.gitstride`. Use the App Store target's shared scheme to archive for App Store Connect; the ZIP and appcast script remain specific to the Release target. Update version and build numbers on both targets when shipping both distributions.
+`GitStride` is the Developer ID / GitHub Release target. `GitStrideAppStore` shares the app sources, enables App Sandbox with outgoing network access, and excludes the CLI runner and Sparkle. Both targets use bundle ID `tech.hyperseek.gitstride`. Use the App Store target's shared scheme to archive for App Store Connect; the ZIP and appcast script remain specific to the Release target. The GitHub release script sets its version and build only for that archive; set the App Store target's version and build separately when shipping it.
 
 Both targets use the public `GITSTRIDE_OAUTH_CLIENT_ID` build setting. Register a desktop OAuth App separately from the Worker OAuth App and enable Device Flow. Never embed a Client Secret or reuse Worker access/refresh tokens. Signed Keychain access and container behavior must be checked with the actual distribution signing setup; unsigned builds do not validate these permissions.
 
@@ -20,7 +20,7 @@ Archive and upload the `GitStrideAppStore` scheme with App Store distribution si
 
 ## Version and update feed
 
-Set **Version** (`MARKETING_VERSION`) and **Build** (`CURRENT_PROJECT_VERSION`) on the GitStride target in Xcode, for both Debug and Release. The app's Info.plist expands these settings. Each published update needs a higher build number; use a new public version for each release so its ZIP filename is unique. The GitHub Release tag is supplied separately; it need not match the displayed app version exactly.
+Pass the public version to `build_release.sh`. It sets `MARKETING_VERSION` for that archive and sets `CURRENT_PROJECT_VERSION` to one more than the larger of the project's current build and the builds in local `appcast.xml`. It does not edit the Xcode project. A failed attempt before the appcast is updated can reuse the same build; each published update needs a higher build number and a new public version so its ZIP filename is unique. The GitHub Release tag is supplied separately; it need not match the displayed app version exactly.
 
 `update_appcast.sh` reads the exported app's version and build number, packages the app as `GitStride-VERSION.zip`, and uses Sparkle to generate the update entry and sign the ZIP. It checks the generated URL, versions, archive length, and signature before uploading.
 
@@ -44,29 +44,24 @@ If an existing GitHub Release asset is deliberately replaced, regenerate its app
 
 Sparkle's key signs update archives. Apple's Developer ID certificate signs the app. Both are used in this release process; neither private key belongs in Git.
 
-## Export a notarized app
+## Build and publish a notarized ZIP
 
-Run the relevant build and behavior checks from [the command index](../docs-index.md). Archive the `GitStride` scheme in Xcode, distribute it with Developer ID, complete notarization, and export the notarized `GitStride.app`. The release script checks the app's code signature and stapled notarization ticket before making a ZIP. If you use `build_release.sh` to export a signed app instead, notarize and staple that app before continuing.
-
-Apple's notarization ticket must be stapled to the `.app` before ZIP packaging; a ZIP cannot be stapled directly. Do not modify the app after notarization.
-
-## Publish the ZIP and prepare the update feed
-
-Create a GitHub Release for the intended source commit and tag first. For example, after reviewing the version and release notes:
+Run the relevant build and behavior checks from [the command index](../docs-index.md). Sign in to `gh` for `zwyyy456/GitStride`, install the Developer ID Application certificate and its private key, keep the Sparkle `gitstride` key in Keychain, and store the `gitstride-notary` credentials as described above. Create the GitHub Release for the intended source commit and tag before running the script. For example, after reviewing the version and release notes:
 
 ```bash
-gh release create v1.1.0 --repo zwyyy456/GitStride --target SOURCE_COMMIT \
-  --title "GitStride 1.1.0" --notes-file RELEASE_NOTES.md
+gh release create v1.0.1 --repo zwyyy456/GitStride --target SOURCE_COMMIT \
+  --title "GitStride 1.0.1" --notes-file RELEASE_NOTES.md
 ```
 
-Pass that exact tag and the exported app to the release script. The HTML notes argument is optional:
+Pass the public version and that exact tag to the script. Add `--notes /path/to/release-notes.html` when you have current HTML notes for Sparkle:
 
 ```bash
-./update_appcast.sh /path/to/GitStride.app --tag v1.1.0 \
-  --notes build/release-notes.html
+./build_release.sh 1.0.1 --tag v1.0.1
 ```
 
-The script verifies the app's Developer ID signature and stapled ticket, confirms its Sparkle public key matches the `gitstride` Keychain signing account, creates `build/release/GitStride-VERSION.zip`, signs and verifies the archive, uploads it to the specified existing GitHub Release, and then updates local `appcast.xml`. It refuses to replace an existing local ZIP or Release asset. Delta generation is disabled. Do not change ZIP bytes after the Sparkle signature is generated.
+`build_release.sh` archives and exports the Release target with Developer ID signing, submits a temporary ZIP to Apple's notary service, staples and validates the ticket on the exported app, then calls `update_appcast.sh`. That script checks the signing identity and Sparkle key, creates and signs `build/release/GitStride-VERSION.zip`, uploads it to the existing GitHub Release, and updates local `appcast.xml`. The archive, dSYMs, exported app, and notarization result remain in a versioned directory under `build/release/`. Neither script replaces an existing release ZIP or Release asset. Delta generation is disabled. Do not change ZIP bytes after the Sparkle signature is generated.
+
+For an app that was already notarized and stapled, `update_appcast.sh /path/to/GitStride.app --tag RELEASE_TAG` remains available. Apple's notarization ticket must be stapled to the `.app` before final ZIP packaging; a ZIP cannot be stapled directly. Do not modify the app after notarization.
 
 ## Publish
 
