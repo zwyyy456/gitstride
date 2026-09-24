@@ -23,6 +23,8 @@ Type in the search bar to filter issues by title or number. Use `@username` to f
 ### Quick Create
 In the project window (Board or Table) or menu bar search field, type `>` followed by an issue title and press Return. GitStride opens the creation form with your input filled in. Confirm the repository and status, then choose **Create Issue**. Press Esc while typing to cancel quick-create input.
 
+The new Issue form offers `Backlog` whenever the Project has a Status field. If you select it and the Project lacks that option, GitStride adds a gray `Backlog` option before creating the Issue. Other status options are left intact.
+
 You can include Quick Entry qualifiers, for example `> Fix login repo:owner/repo status:Todo @me #bug`. Both `> Title` and `>Title` are accepted. Entering only `>` and pressing Return opens Quick Entry so you can finish the input there. Options that do not match the project stay in Quick Entry with a validation message.
 
 ### Project Layouts

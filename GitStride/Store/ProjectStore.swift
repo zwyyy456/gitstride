@@ -69,6 +69,8 @@ final class IssueCreation {
     fileprivate let body: String
     fileprivate let labels: [String]
     fileprivate let assignees: [String]
+    fileprivate let selectedStatusName: String?
+    fileprivate var backlogFieldToPrepare: ProjectField?
     fileprivate var remainingFields: [(ProjectField, ProjectFieldOption)]
     fileprivate var createdIssue: CreatedIssue?
     fileprivate var createdItem: ProjectItem?
@@ -85,7 +87,8 @@ final class IssueCreation {
     }
 
     fileprivate init(sessionID: UUID, projectID: String, repository: String, title: String, body: String,
-                     labels: [String], assignees: [String], fields: [(ProjectField, ProjectFieldOption)]) {
+                     labels: [String], assignees: [String], selectedStatusName: String?,
+                     backlogFieldToPrepare: ProjectField?, fields: [(ProjectField, ProjectFieldOption)]) {
         self.sessionID = sessionID
         self.projectID = projectID
         self.repository = repository
@@ -93,6 +96,8 @@ final class IssueCreation {
         self.body = body
         self.labels = labels
         self.assignees = assignees
+        self.selectedStatusName = selectedStatusName
+        self.backlogFieldToPrepare = backlogFieldToPrepare
         remainingFields = fields
     }
 }
@@ -354,7 +359,7 @@ final class ProjectStore {
             let selectedStatus = creation.remainingFields.first {
                 $0.0.name.caseInsensitiveCompare("Status") == .orderedSame
             }?.1
-            status = creation.createdItem?.status ?? selectedStatus?.name
+            status = creation.createdItem?.status ?? selectedStatus?.name ?? creation.selectedStatusName
             statusOptionID = creation.createdItem?.statusOptionId ?? selectedStatus?.id
         case .draft:
             contentType = .draftIssue
@@ -1645,19 +1650,28 @@ final class ProjectStore {
             value.map { (name, $0) }
         }
         var resolvedFields: [(ProjectField, ProjectFieldOption)] = []
+        var backlogFieldToPrepare: ProjectField?
         for (name, value) in requestedFields {
             guard let field = project.fields.first(where: {
                 $0.kind == .singleSelect && $0.name.caseInsensitiveCompare(name) == .orderedSame
-            }), let option = field.options.first(where: {
+            }) else {
+                throw ProjectStoreError.missingFieldOption(field: name, option: value)
+            }
+            guard let option = field.options.first(where: {
                 $0.name.caseInsensitiveCompare(value) == .orderedSame
             }) else {
+                if name == "Status" && value.caseInsensitiveCompare("Backlog") == .orderedSame {
+                    backlogFieldToPrepare = field
+                    continue
+                }
                 throw ProjectStoreError.missingFieldOption(field: name, option: value)
             }
             resolvedFields.append((field, option))
         }
 
         return IssueCreation(sessionID: sessionID, projectID: project.id, repository: repository, title: title, body: body,
-                             labels: labels, assignees: assignees, fields: resolvedFields)
+                             labels: labels, assignees: assignees, selectedStatusName: status,
+                             backlogFieldToPrepare: backlogFieldToPrepare, fields: resolvedFields)
     }
 
     var pendingCreationList: [PendingItemCreation] {
@@ -1760,6 +1774,45 @@ final class ProjectStore {
         defer { creation.isRunning = false }
         do {
             if creation.phase == .ready {
+                if let field = creation.backlogFieldToPrepare {
+                    do {
+                        let _: [ProjectFieldOption] = try await performProjectMutation(projectID: creation.projectID) {
+                            try await self.gitHubService.ensureProjectStatusOption(
+                                fieldID: field.id, name: "Backlog", color: "GRAY"
+                            )
+                        } apply: { options in
+                            guard let backlog = options.first(where: {
+                                $0.name.caseInsensitiveCompare("Backlog") == .orderedSame
+                            }) else { return }
+                            creation.remainingFields.insert((field, backlog), at: 0)
+                            creation.backlogFieldToPrepare = nil
+                            if var project = projectStates[creation.projectID]?.snapshot {
+                                if let index = project.fields.firstIndex(where: { $0.id == field.id }) {
+                                    project.fields[index] = ProjectField(
+                                        id: field.id, name: field.name, kind: field.kind,
+                                        options: options, iterations: field.iterations
+                                    )
+                                }
+                                if project.statusField?.id == field.id {
+                                    project.statusField = StatusField(
+                                        id: field.id, name: field.name,
+                                        options: options.map {
+                                            StatusOption(id: $0.id, name: $0.name, color: $0.color ?? "GRAY")
+                                        }
+                                    )
+                                }
+                                projectStates[creation.projectID]?.snapshot = project
+                            }
+                        }
+                        guard creation.backlogFieldToPrepare == nil else { throw GitHubError.invalidResponse }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        throw GitHubError.issueCreationNotStarted(
+                            error.localizedDescription, retryable: shouldRetryTransientWrite(error)
+                        )
+                    }
+                }
                 try await performProjectMutation(projectID: creation.projectID) {
                     do {
                         let issue = try await self.gitHubService.createIssue(

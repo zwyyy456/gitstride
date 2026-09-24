@@ -76,6 +76,30 @@ extension GitHubResponse {
         }
     }
 
+    struct StatusFieldOptionsPayload: Decodable {
+        let node: Field?
+
+        struct Field: Decodable {
+            let id: String
+            let options: [Option]
+        }
+
+        struct Option: Decodable {
+            let id: String
+            let name: String
+            let color: String
+            let description: String
+        }
+    }
+
+    struct UpdateStatusFieldOptionsPayload: Decodable {
+        let updateProjectV2Field: Result
+
+        struct Result: Decodable {
+            let projectV2Field: StatusFieldOptionsPayload.Field?
+        }
+    }
+
     struct DraftIssuePayload: Decodable {
         let addProjectV2DraftIssue: DraftIssueResult
 

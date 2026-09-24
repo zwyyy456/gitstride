@@ -639,6 +639,33 @@ actor GitHubService {
         return payload.addProjectV2DraftIssue.projectItem.id
     }
 
+    func ensureProjectStatusOption(fieldID: String, name: String, color: String) async throws -> [ProjectFieldOption] {
+        let payload: GitHubResponse.StatusFieldOptionsPayload = try await request(
+            GraphQLQueries.statusFieldOptions,
+            variables: ["fieldID": fieldID],
+            as: GitHubResponse.StatusFieldOptionsPayload.self
+        )
+        guard let field = payload.node, field.id == fieldID else { throw GitHubError.invalidResponse }
+        if field.options.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+            return field.options.map { ProjectFieldOption(id: $0.id, name: $0.name, color: $0.color) }
+        }
+
+        let options = field.options.map { option in
+            ["id": option.id, "name": option.name, "color": option.color, "description": option.description]
+        } + [["name": name, "color": color, "description": ""]]
+        let updated: GitHubResponse.UpdateStatusFieldOptionsPayload = try await request(
+            GraphQLQueries.updateStatusFieldOptions,
+            variables: ["fieldID": fieldID],
+            objectArrayVariables: ["options": options],
+            as: GitHubResponse.UpdateStatusFieldOptionsPayload.self
+        )
+        guard let updatedField = updated.updateProjectV2Field.projectV2Field,
+              updatedField.id == fieldID,
+              updatedField.options.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame })
+        else { throw GitHubError.invalidResponse }
+        return updatedField.options.map { ProjectFieldOption(id: $0.id, name: $0.name, color: $0.color) }
+    }
+
     func createIssue(
         repository: String,
         projectID: String? = nil,
@@ -1034,11 +1061,13 @@ actor GitHubService {
         variables: [String: String] = [:],
         numberVariables: [String: Double] = [:],
         arrayVariables: [String: [String]] = [:],
+        objectArrayVariables: [String: [[String: String]]] = [:],
         as type: Payload.Type
     ) async throws -> Payload {
         var values: [String: Any] = variables
         for (key, value) in numberVariables { values[key] = value }
         for (key, value) in arrayVariables { values[key] = value }
+        for (key, value) in objectArrayVariables { values[key] = value }
         let body = try JSONSerialization.data(withJSONObject: ["query": query, "variables": values])
         let data = try await send(url: URL(string: "https://api.github.com/graphql")!, method: "POST",
                                   body: body, allowsAuthenticationRetry: !query.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("mutation"))

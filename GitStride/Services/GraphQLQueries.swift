@@ -160,6 +160,30 @@ enum GraphQLQueries {
         }
         """
 
+    static let statusFieldOptions = """
+        query($fieldID: ID!) {
+            node(id: $fieldID) {
+                ... on ProjectV2SingleSelectField {
+                    id
+                    options { id name color description }
+                }
+            }
+        }
+        """
+
+    static let updateStatusFieldOptions = """
+        mutation($fieldID: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+            updateProjectV2Field(input: { fieldId: $fieldID, singleSelectOptions: $options }) {
+                projectV2Field {
+                    ... on ProjectV2SingleSelectField {
+                        id
+                        options { id name color description }
+                    }
+                }
+            }
+        }
+        """
+
     static let issueRepository = """
         query($owner: String!, $name: String!, $after: String) {
             repository(owner: $owner, name: $name) {

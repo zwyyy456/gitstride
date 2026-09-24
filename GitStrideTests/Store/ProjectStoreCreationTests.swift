@@ -24,6 +24,86 @@ extension ProjectStoreTests {
     private static let confirmedProjectMembershipResponse =
         #"{"data":{"node":{"projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}"#
 
+    private static let statusOptionsResponse =
+        #"{"data":{"node":{"id":"STATUS","options":[{"id":"TODO","name":"Todo","color":"GRAY","description":""},{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"}]}}}"#
+
+    private static let addedBacklogResponse =
+        #"{"data":{"updateProjectV2Field":{"projectV2Field":{"id":"STATUS","options":[{"id":"TODO","name":"Todo","color":"GRAY","description":""},{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"},{"id":"BACKLOG","name":"Backlog","color":"GRAY","description":""}]}}}}"#
+
+    @Test func missingBacklogIsAddedBeforeIssueCreationAndSelectedOnTheNewItem() async throws {
+        let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.statusOptionsResponse, Self.addedBacklogResponse,
+            Self.issueRepositoryResponse, createdWithProject, Self.graphQLSuccessResponse,
+            Self.mutationFieldsResponse, Self.mutationItemsResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
+                                                      labels: [], assignees: [], status: "Backlog")
+
+        try await store.resumeIssueCreation(creation)
+
+        let calls = await runner.recordedRequests()
+        let fieldUpdate = try #require(calls.firstIndex { $0.graphQLQuery == GraphQLQueries.updateStatusFieldOptions })
+        let issueCreate = try #require(calls.firstIndex { $0.graphQLQuery == GraphQLQueries.createIssue })
+        #expect(fieldUpdate < issueCreate)
+        let body = try #require(calls[fieldUpdate].httpBody)
+        let request = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let variables = try #require(request["variables"] as? [String: Any])
+        let options = try #require(variables["options"] as? [[String: String]])
+        #expect(options == [
+            ["id": "TODO", "name": "Todo", "color": "GRAY", "description": ""],
+            ["id": "REVIEW", "name": "Review", "color": "YELLOW", "description": "Existing"],
+            ["name": "Backlog", "color": "GRAY", "description": ""]
+        ])
+        #expect(calls.contains { $0.hasVariable("optionId", "BACKLOG") })
+        #expect(store.selectedProject?.statusOptions.contains { $0.name == "Backlog" } == true)
+        #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" && $0.status == "Backlog" } == true)
+    }
+
+    @Test func backlogPreparationFailureDoesNotCreateAnIssue() async throws {
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.statusOptionsResponse, Self.graphQLFailureResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
+                                                      labels: [], assignees: [], status: "Backlog")
+
+        await #expect(throws: GitHubError.self) { try await store.resumeIssueCreation(creation) }
+
+        #expect(creation.phase == .ready)
+        #expect(creation.canResume)
+        #expect(issueCreationCount(await runner.recordedBodies()) == 0)
+    }
+
+    @Test func remoteBacklogIsReusedWhenTheLoadedProjectSnapshotIsStale() async throws {
+        let currentOptions = Self.statusOptionsResponse.replacingOccurrences(
+            of: #"{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"}"#,
+            with: #"{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"},{"id":"BACKLOG","name":"backlog","color":"GRAY","description":""}"#
+        )
+        let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            currentOptions, Self.issueRepositoryResponse, createdWithProject,
+            Self.graphQLSuccessResponse, Self.mutationFieldsResponse, Self.mutationItemsResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
+                                                      labels: [], assignees: [], status: "Backlog")
+
+        try await store.resumeIssueCreation(creation)
+
+        let calls = await runner.recordedRequests()
+        #expect(calls.contains { $0.graphQLQuery == GraphQLQueries.updateStatusFieldOptions } == false)
+        #expect(calls.contains { $0.hasVariable("optionId", "BACKLOG") })
+        #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" && $0.status == "backlog" } == true)
+    }
+
     @Test func missingMembershipInCreateResponseDoesNotAddTheIssueTwice() async throws {
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
             Self.issueRepositoryResponse, Self.createdIssueResponse,

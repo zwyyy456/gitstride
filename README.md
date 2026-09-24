@@ -44,6 +44,8 @@ Your GitHub permissions determine what you can view and edit. Organization polic
 
 Click the menu bar icon for quick access, or use the main window for Board, Table, My Work, and item details. Search by title, issue number, or `@assignee`. In the project or menu bar search field, type `>` followed by a title and press Return to open the creation form with your input filled in; confirm the repository and status, then choose **Create Issue**. Use Filter and Display Options to organize each Project.
 
+When a Project has a Status field, the new Issue form offers `Backlog` even if that option is missing. Selecting it adds a gray `Backlog` option before the Issue is created.
+
 | Shortcut | Action |
 | --- | --- |
 | `⌘ R` | Refresh |

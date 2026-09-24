@@ -237,7 +237,12 @@ struct AddProjectItemView: View {
     }
 
     private var statusOptions: [String] {
-        store.selectedProject?.statusOptions.map(\.name) ?? []
+        guard let project = store.selectedProject, project.statusField != nil else { return [] }
+        var options = project.statusOptions.map(\.name)
+        if options.contains(where: { $0.caseInsensitiveCompare("Backlog") == .orderedSame }) == false {
+            options.append("Backlog")
+        }
+        return options
     }
 
     private var defaultStatus: String {
