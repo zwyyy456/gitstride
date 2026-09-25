@@ -3,15 +3,16 @@ import SwiftUI
 struct ItemRelationshipsSection: View {
     let store: ProjectStore
     let item: ProjectItem
-    @Binding var operationErrorMessage: String?
-    @Binding var isWorking: Bool
+    @State private var localError: String?
+    @State private var isWorking = false
     @State private var relationEditor: IssueRelationKind?
 
     var body: some View {
         Group {
             if case .loaded(let detail) = store.itemDetailState(for: item),
-               let metadata = detail.issueMetadata {
-                ItemPropertySection(String(localized: "Relationships")) {
+                let metadata = detail.issueMetadata
+            {
+                Section {
                     if let parent = metadata.parent {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Parent issue")
@@ -58,30 +59,44 @@ struct ItemRelationshipsSection: View {
                     }
 
                     if metadata.parent == nil,
-                       metadata.subIssues.isEmpty,
-                       metadata.blockedBy.isEmpty,
-                       metadata.blocking.isEmpty {
+                        metadata.subIssues.isEmpty,
+                        metadata.blockedBy.isEmpty,
+                        metadata.blocking.isEmpty
+                    {
                         Text("No relationships").font(.callout).foregroundStyle(.secondary)
                     }
 
-                    if metadata.viewerCanUpdate {
-                        Menu {
-                            ForEach(IssueRelationKind.allCases) { kind in
-                                Button(relationActionTitle(kind, hasParent: metadata.parent != nil)) {
-                                    relationEditor = kind
+                    if isWorking { ProgressView().controlSize(.mini) }
+                    if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
+                } header: {
+                    HStack {
+                        Text("Relationships")
+                        Text(relationshipCount(metadata).formatted()).monospacedDigit()
+                        Spacer()
+                        if metadata.viewerCanUpdate {
+                            Menu {
+                                ForEach(IssueRelationKind.allCases) { kind in
+                                    Button(relationActionTitle(kind, hasParent: metadata.parent != nil)) {
+                                        relationEditor = kind
+                                    }
                                 }
+                            } label: {
+                                Label("Add relationship", systemImage: "plus").labelStyle(.iconOnly)
                             }
-                        } label: {
-                            Label("Add relationship", systemImage: "plus")
+                            .menuStyle(.borderlessButton)
+                            .fixedSize()
+                            .help("Add relationship")
+                            .disabled(isWorking)
                         }
-                        .disabled(isWorking)
                     }
+
                 }
             }
         }
         .sheet(item: $relationEditor) { kind in
             if case .loaded(let detail) = store.itemDetailState(for: item),
-               let metadata = detail.issueMetadata {
+                let metadata = detail.issueMetadata
+            {
                 IssueRelationEditorView(
                     store: store,
                     item: item,
@@ -90,6 +105,10 @@ struct ItemRelationshipsSection: View {
                 )
             }
         }
+    }
+
+    private func relationshipCount(_ metadata: IssueMetadata) -> Int {
+        (metadata.parent == nil ? 0 : 1) + metadata.subIssues.count + metadata.blockedBy.count + metadata.blocking.count
     }
 
     private func relationshipGroup(
@@ -151,7 +170,9 @@ struct ItemRelationshipsSection: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(issue.repository) issue \(issue.number), \(issue.title), \(issue.state == .closed ? String(localized: "Closed") : String(localized: "item.state.open", defaultValue: "Open", comment: "An issue or pull request that is still open, not the action to open a window."))")
+        .accessibilityLabel(
+            "\(issue.repository) issue \(issue.number), \(issue.title), \(issue.state == .closed ? String(localized: "Closed") : String(localized: "item.state.open", defaultValue: "Open", comment: "An issue or pull request that is still open, not the action to open a window."))"
+        )
     }
 
     private func subIssueTitle(_ metadata: IssueMetadata) -> String {
@@ -187,8 +208,9 @@ struct ItemRelationshipsSection: View {
         issue: IssueReference,
         from item: ProjectItem
     ) {
+        guard !isWorking else { return }
         isWorking = true
-        operationErrorMessage = nil
+        localError = nil
         Task {
             do {
                 try await store.removeRelation(kind, relatedIssue: issue, from: item)
@@ -201,6 +223,6 @@ struct ItemRelationshipsSection: View {
 
     private func report(_ error: Error) {
         guard (error is CancellationError) == false else { return }
-        operationErrorMessage = error.localizedDescription
+        localError = error.localizedDescription
     }
 }

@@ -3,54 +3,68 @@ import SwiftUI
 struct ItemLabelsSection: View {
     let store: ProjectStore
     let item: ProjectItem
-    @Binding var operationErrorMessage: String?
+    @State private var localError: String?
+    @State private var isSaving = false
     let projectID: String
     private var canEdit: Bool { store.canEditProject(id: projectID) }
     @State private var labelName = ""
     @State private var showsLabelPicker = false
 
     var body: some View {
-        ItemPropertySection(String(localized: "Labels")) {
-            if item.labels.isEmpty {
-                Text("No labels").font(.callout).foregroundStyle(.secondary)
-            } else {
-                ForEach(item.labels) { label in
-                    HStack {
-                        Circle()
-                            .fill(Color(hex: label.color))
-                            .frame(width: 9, height: 9)
-                        Text(label.name)
-                        Spacer()
-                        if canEdit {
-                            Button {
-                                operationErrorMessage = nil
-                                Task {
-                                    do {
-                                        try await store.removeLabel(
-                                            from: item,
-                                            in: projectID,
-                                            name: label.name
-                                        )
-                                    } catch {
-                                        report(error)
+        LabeledContent(String(localized: "Labels")) {
+            VStack(alignment: .trailing, spacing: 8) {
+                if item.labels.isEmpty {
+                    if !canEdit { Text("No labels").foregroundStyle(.secondary) }
+                } else {
+                    ForEach(item.labels) { label in
+                        HStack {
+                            Circle()
+                                .fill(Color(hex: label.color))
+                                .frame(width: 9, height: 9)
+                            Text(label.name).fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            if canEdit {
+                                Button {
+                                    guard !isSaving else { return }
+                                    localError = nil
+                                    isSaving = true
+                                    Task { @MainActor in
+                                        defer { isSaving = false }
+                                        do {
+                                            try await store.removeLabel(
+                                                from: item,
+                                                in: projectID,
+                                                name: label.name
+                                            )
+                                        } catch {
+                                            report(error)
+                                        }
                                     }
+                                } label: {
+                                    Image(systemName: "xmark")
                                 }
-                            } label: {
-                                Image(systemName: "xmark")
+                                .buttonStyle(.borderless)
+                                .help("Remove label")
+                                .accessibilityLabel("Remove label")
+                                .disabled(isSaving)
                             }
-                            .buttonStyle(.borderless)
-                            .help("Remove label")
                         }
                     }
                 }
-            }
 
-            if canEdit {
-                Button("Add Label…", systemImage: "plus", action: showLabelPicker)
+                if canEdit {
+                    Button(
+                        item.labels.isEmpty ? String(localized: "No Labels…") : String(localized: "Add Label…"),
+                        action: showLabelPicker
+                    )
                     .buttonStyle(.borderless)
+                    .disabled(isSaving)
                     .popover(isPresented: $showsLabelPicker) {
                         labelPicker(item)
                     }
+                }
+                if isSaving { ProgressView().controlSize(.mini).accessibilityLabel("Saving field") }
+                if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
             }
         }
     }
@@ -73,8 +87,12 @@ struct ItemLabelsSection: View {
                     addLabel(to: item)
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(labelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(isSaving || labelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let localError { Text(localError).font(.caption).foregroundStyle(.red).padding() }
+            if isSaving { ProgressView().controlSize(.small).padding() }
         }
         .padding()
         .frame(width: 320)
@@ -88,8 +106,11 @@ struct ItemLabelsSection: View {
     private func addLabel(to item: ProjectItem) {
         let name = labelName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard name.isEmpty == false else { return }
-        operationErrorMessage = nil
-        Task {
+        guard !isSaving else { return }
+        localError = nil
+        isSaving = true
+        Task { @MainActor in
+            defer { isSaving = false }
             do {
                 try await store.addLabel(to: item, in: projectID, name: name)
                 labelName = ""
@@ -102,12 +123,12 @@ struct ItemLabelsSection: View {
 
     private func report(_ error: Error) {
         guard (error is CancellationError) == false else { return }
-        operationErrorMessage = error.localizedDescription
+        localError = error.localizedDescription
     }
 }
 
-private extension Color {
-    init(hex: String) {
+extension Color {
+    fileprivate init(hex: String) {
         let value = UInt64(hex, radix: 16) ?? 0x808080
         self.init(
             red: Double((value >> 16) & 0xff) / 255,

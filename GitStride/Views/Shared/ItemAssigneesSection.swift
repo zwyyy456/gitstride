@@ -3,7 +3,8 @@ import SwiftUI
 struct ItemAssigneesSection: View {
     let store: ProjectStore
     let item: ProjectItem
-    @Binding var operationErrorMessage: String?
+    @State private var localError: String?
+    @State private var isSaving = false
     let projectID: String
     private var canEdit: Bool { store.canEditProject(id: projectID) }
     @State private var userQuery = ""
@@ -14,61 +15,76 @@ struct ItemAssigneesSection: View {
     @State private var showsAssigneePicker = false
 
     var body: some View {
-        ItemPropertySection(String(localized: "Assignees")) {
-            if item.assignees.isEmpty {
-                Text("No assignees").font(.callout).foregroundStyle(.secondary)
-            } else {
-                ForEach(item.assignees) { assignee in
-                    HStack {
-                        AsyncImage(url: URL(string: assignee.avatarUrl)) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Circle().fill(.secondary.opacity(0.2))
-                        }
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(assignee.name ?? assignee.login)
-                            if assignee.name != nil {
-                                Text("@\(assignee.login)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+        LabeledContent(String(localized: "Assignees")) {
+            VStack(alignment: .trailing, spacing: 8) {
+                if item.assignees.isEmpty {
+                    if !canEdit || item.contentType == .draftIssue {
+                        Text("No assignees").foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(item.assignees) { assignee in
+                        HStack {
+                            AsyncImage(url: URL(string: assignee.avatarUrl)) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                Circle().fill(.secondary.opacity(0.2))
                             }
-                        }
+                            .frame(width: 20, height: 20)
+                            .clipShape(Circle())
 
-                        Spacer()
-
-                        if canEdit {
-                            Button {
-                                operationErrorMessage = nil
-                                Task {
-                                    do {
-                                        try await store.removeAssignee(
-                                            from: item,
-                                            in: projectID,
-                                            user: assignee
-                                        )
-                                    } catch {
-                                        report(error)
-                                    }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(assignee.name ?? assignee.login).fixedSize(horizontal: false, vertical: true)
+                                if assignee.name != nil {
+                                    Text("@\(assignee.login)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
-                            } label: {
-                                Image(systemName: "xmark")
                             }
-                            .buttonStyle(.borderless)
-                            .help("Remove assignee")
+
+                            Spacer()
+
+                            if canEdit {
+                                Button {
+                                    guard !isSaving else { return }
+                                    localError = nil
+                                    isSaving = true
+                                    Task { @MainActor in
+                                        defer { isSaving = false }
+                                        do {
+                                            try await store.removeAssignee(
+                                                from: item,
+                                                in: projectID,
+                                                user: assignee
+                                            )
+                                        } catch {
+                                            report(error)
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Remove assignee")
+                                .accessibilityLabel("Remove assignee")
+                                .disabled(isSaving)
+                            }
                         }
                     }
                 }
-            }
 
-            if canEdit, item.contentType != .draftIssue {
-                Button("Add Assignee…", systemImage: "plus", action: showAssigneePicker)
+                if canEdit, item.contentType != .draftIssue {
+                    Button(
+                        item.assignees.isEmpty ? String(localized: "Unassigned…") : String(localized: "Add Assignee…"),
+                        action: showAssigneePicker
+                    )
                     .buttonStyle(.borderless)
+                    .disabled(isSaving)
                     .popover(isPresented: $showsAssigneePicker) {
                         assigneePicker(item)
                     }
+                }
+                if isSaving { ProgressView().controlSize(.mini).accessibilityLabel("Saving field") }
+                if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
             }
         }
     }
@@ -97,9 +113,12 @@ struct ItemAssigneesSection: View {
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel("Searching GitHub users")
             } else if userResults.isEmpty {
-                Text(hasSearchedUsers ? String(localized: "No matching users") : String(localized: "Enter a GitHub login or name."))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                Text(
+                    hasSearchedUsers
+                        ? String(localized: "No matching users") : String(localized: "Enter a GitHub login or name.")
+                )
+                .font(.callout)
+                .foregroundStyle(.secondary)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
@@ -115,13 +134,17 @@ struct ItemAssigneesSection: View {
                                 Button("Add") {
                                     addAssignee(user, to: item)
                                 }
-                                .disabled(item.assignees.contains { $0.id == user.id })
+                                .disabled(isSaving || item.assignees.contains { $0.id == user.id })
                             }
                         }
                     }
                 }
                 .frame(maxHeight: 240)
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let localError { Text(localError).font(.caption).foregroundStyle(.red).padding() }
+            if isSaving { ProgressView().controlSize(.small).padding() }
         }
         .padding()
         .frame(width: 320)
@@ -134,7 +157,7 @@ struct ItemAssigneesSection: View {
         let generation = userSearchGeneration
         isSearchingUsers = true
         hasSearchedUsers = true
-        operationErrorMessage = nil
+        localError = nil
         Task {
             do {
                 let results = try await store.searchUsers(query: query)
@@ -160,8 +183,11 @@ struct ItemAssigneesSection: View {
     }
 
     private func addAssignee(_ user: Assignee, to item: ProjectItem) {
-        operationErrorMessage = nil
-        Task {
+        guard !isSaving else { return }
+        localError = nil
+        isSaving = true
+        Task { @MainActor in
+            defer { isSaving = false }
             do {
                 try await store.addAssignee(
                     to: item,
@@ -177,6 +203,6 @@ struct ItemAssigneesSection: View {
 
     private func report(_ error: Error) {
         guard (error is CancellationError) == false else { return }
-        operationErrorMessage = error.localizedDescription
+        localError = error.localizedDescription
     }
 }

@@ -30,7 +30,6 @@
 		367A94803064B9F300F2A402 /* ProjectTableRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFE21A0911D247109916D351 /* ProjectTableRows.swift */; };
 		367A94813064B9F300F2A402 /* KanbanColumnsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5D182101734B84B6F77F9A /* KanbanColumnsView.swift */; };
 		367A94823064B9F300F2A402 /* ItemRelationshipsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 393A98A954EB4E10A1B5C5B7 /* ItemRelationshipsSection.swift */; };
-		367A94833064B9F300F2A402 /* ItemPropertySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B1AD773FC7441F91849A52 /* ItemPropertySection.swift */; };
 		367A94843064B9F300F2A402 /* ItemMilestoneSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6D407A095F41C7BAB85F69 /* ItemMilestoneSection.swift */; };
 		367A94853064B9F300F2A402 /* ItemLabelsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067616FE0D8F4BB582025D8E /* ItemLabelsSection.swift */; };
 		367A94863064B9F300F2A402 /* ItemAssigneesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200CCB2760E44DB596C60314 /* ItemAssigneesSection.swift */; };
@@ -95,7 +94,6 @@
 		367A94C13064B9F300F2A402 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000047 /* AppIcon.icon */; };
 		367A94C23064B9F300F2A402 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = BD0000000000000000000002 /* LICENSE */; };
 		367A94C33064B9F300F2A402 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = BF0000000000000000000002 /* Localizable.xcstrings */; };
-		3C2B7D323DB347409FD29995 /* ItemPropertySection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B1AD773FC7441F91849A52 /* ItemPropertySection.swift */; };
 		481568AA2C0A41AEA9696AAF /* ItemAssigneesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200CCB2760E44DB596C60314 /* ItemAssigneesSection.swift */; };
 		4C521BC4648C43B3BF2B65CD /* Store/ProjectStoreMutationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F984E1BF5A14E0AABEAEB41 /* Store/ProjectStoreMutationTests.swift */; };
 		51869C985D0A4103B88B3E70 /* Store/ProjectStoreCreationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF04DCD734F7459B903E47A4 /* Store/ProjectStoreCreationTests.swift */; };
@@ -224,7 +222,6 @@
 		62F8302DE36A45B8A30CC33A /* Models/IssueRelationKindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/IssueRelationKindTests.swift; sourceTree = "<group>"; };
 		6BE86DAE172A4F919768058D /* Views/ProjectWorkPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ProjectWorkPreferencesTests.swift; sourceTree = "<group>"; };
 		77D827C9808D48FD9437123A /* GitHubItemResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubItemResponse.swift; sourceTree = "<group>"; };
-		85B1AD773FC7441F91849A52 /* ItemPropertySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemPropertySection.swift; sourceTree = "<group>"; };
 		906BAEE59D54492EB681F8B9 /* ExistingProjectItemPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExistingProjectItemPicker.swift; sourceTree = "<group>"; };
 		92917782F0194B5FA178787A /* ItemContentEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemContentEditorView.swift; sourceTree = "<group>"; };
 		A1000000 /* GitStride.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GitStride.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -475,7 +472,6 @@
 			children = (
 				BE0000000000000000000002 /* WelcomeView.swift */,
 				393A98A954EB4E10A1B5C5B7 /* ItemRelationshipsSection.swift */,
-				85B1AD773FC7441F91849A52 /* ItemPropertySection.swift */,
 				AC6D407A095F41C7BAB85F69 /* ItemMilestoneSection.swift */,
 				067616FE0D8F4BB582025D8E /* ItemLabelsSection.swift */,
 				200CCB2760E44DB596C60314 /* ItemAssigneesSection.swift */,
@@ -720,7 +716,6 @@
 				367A94803064B9F300F2A402 /* ProjectTableRows.swift in Sources */,
 				367A94813064B9F300F2A402 /* KanbanColumnsView.swift in Sources */,
 				367A94823064B9F300F2A402 /* ItemRelationshipsSection.swift in Sources */,
-				367A94833064B9F300F2A402 /* ItemPropertySection.swift in Sources */,
 				367A94843064B9F300F2A402 /* ItemMilestoneSection.swift in Sources */,
 				367A94853064B9F300F2A402 /* ItemLabelsSection.swift in Sources */,
 				367A94863064B9F300F2A402 /* ItemAssigneesSection.swift in Sources */,
@@ -834,7 +829,6 @@
 				FB4726B9B6864204851AC806 /* ProjectTableRows.swift in Sources */,
 				3069EB3E513B4854B1AC21D9 /* KanbanColumnsView.swift in Sources */,
 				88980FE0BAF047A1A87221B1 /* ItemRelationshipsSection.swift in Sources */,
-				3C2B7D323DB347409FD29995 /* ItemPropertySection.swift in Sources */,
 				96213ACF191740819FF81303 /* ItemMilestoneSection.swift in Sources */,
 				95F40CC60C9D4E16A2EE8C4D /* ItemLabelsSection.swift in Sources */,
 				481568AA2C0A41AEA9696AAF /* ItemAssigneesSection.swift in Sources */,

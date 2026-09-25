@@ -63,65 +63,37 @@ struct ItemDetailView: View {
         .navigationTitle(item?.displayTitle ?? String(localized: "Item"))
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                if isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel("Refreshing item")
-                        .help("Refreshing Item")
-                } else {
-                    Button(
-                        "Refresh Item",
-                        systemImage: "arrow.clockwise",
-                        action: refreshItem
-                    )
-                    .labelStyle(.iconOnly)
-                    .disabled(isArchiving)
-                    .help("Refresh Item")
-                }
-
-                if itemURL != nil {
-                    Button(action: openInGitHub) {
-                        Label(openInGitHubTitle, systemImage: "arrow.up.right.square")
-                            .labelStyle(.iconOnly)
-                    }
-                    .help(openInGitHubHelp)
-                }
-
-                if allowsOpeningNewWindow {
-                    Button(
-                        "Open in New Window",
-                        systemImage: "macwindow",
-                        action: openInNewWindow
-                    )
-                    .labelStyle(.iconOnly)
-                    .help("Open in New Window")
-                }
-            }
-
-            if #available(macOS 26.0, *) {
-                ToolbarSpacer(.fixed, placement: .primaryAction)
-            }
-
-            ToolbarItemGroup(placement: .primaryAction) {
                 Button("Edit", systemImage: "pencil", action: editItem)
                     .labelStyle(.iconOnly)
                     .disabled(!canEdit)
                     .help("Edit title and description")
 
-                if canArchive {
-                    if isArchiving {
-                        ProgressView()
-                            .controlSize(.small)
-                            .accessibilityLabel("Archiving item")
-                            .help("Archiving Item")
-                    } else {
+                Menu {
+                    Button("Refresh Item", systemImage: "arrow.clockwise", action: refreshItem)
+                        .disabled(isRefreshing || isArchiving)
+                    if itemURL != nil {
+                        Button(action: openInGitHub) {
+                            Label(openInGitHubTitle, systemImage: "arrow.up.right.square")
+                        }
+                    }
+                    if allowsOpeningNewWindow {
+                        Button("Open in New Window", systemImage: "macwindow", action: openInNewWindow)
+                    }
+                    if canArchive {
+                        Divider()
                         Button(role: .destructive, action: archiveItem) {
                             Label("Archive from Project", systemImage: "archivebox")
-                                .labelStyle(.iconOnly)
                         }
-                        .disabled(isRefreshing)
-                        .help("Archive from Project")
+                        .disabled(isRefreshing || isArchiving)
                     }
+                } label: {
+                    Label("More Actions", systemImage: "ellipsis.circle")
+                }
+                .help("More Actions")
+
+                if isRefreshing || isArchiving {
+                    ProgressView().controlSize(.small)
+                        .accessibilityLabel(isArchiving ? String(localized: "Archiving item") : String(localized: "Refreshing item"))
                 }
             }
 
@@ -132,8 +104,7 @@ struct ItemDetailView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button(
                     isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"),
-                    systemImage: "sidebar.right",
-                    action: toggleInspector
+                    systemImage: "sidebar.right", action: toggleInspector
                 )
                 .labelStyle(.iconOnly)
                 .help(isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"))
@@ -150,9 +121,9 @@ struct ItemDetailView: View {
         .inspector(isPresented: $isInspectorPresented) {
             ItemPropertiesView(
                 store: store,
-                reference: reference,
-                operationErrorMessage: $operationErrorMessage
+                reference: reference
             )
+            .id(reference)
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.width
             } action: { width in
@@ -186,13 +157,6 @@ struct ItemDetailView: View {
         case .draftIssue: String(localized: "Open Draft Item")
         case .redacted, .none: String(localized: "Open in GitHub")
         }
-    }
-
-    private var openInGitHubHelp: String {
-        if let number = item?.number {
-            return String(localized: "\(openInGitHubTitle) #\(number) in GitHub")
-        }
-        return String(localized: "\(openInGitHubTitle) in GitHub")
     }
 
     private var commandContext: WorkspaceCommandContext {

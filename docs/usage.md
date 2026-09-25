@@ -77,9 +77,15 @@ GitStride keeps GitHub's native concepts separate:
 
 Project field configuration remains managed on GitHub. If an existing `Phase` field duplicates `Status`, remove or repurpose it in the GitHub Project settings rather than maintaining two workflow fields.
 
+### Item Inspector
+
+The right-hand inspector groups project fields, issue properties (assignees, labels, milestone), and relationships in a native form. Unset dates display **Not Set**. Click a date to open its calendar, then choose **Done**, **Cancel**, or **Clear field**; browsing the calendar does not save changes. Text and number fields show their saved value until clicked: Return saves, Escape cancels, and clearing the input removes the value. Single-select and iteration fields save the selected option immediately.
+
+Saving indicators and errors appear beside the affected property. Failed edits retain their draft for correction or retry. The detail toolbar keeps **Edit**, **More Actions**, and the inspector toggle; refresh, GitHub, new-window, and archive actions are available under **More Actions**.
+
 ### Command Palette
 
-Use **⌘K** or **Workspace → Show Command Palette…** in the workspace or a detached item window. The toolbar offers the same command; the menu bar popover opens the palette in the workspace. Search commands, switch projects, open My Work views, or change the current layout. Choose **Keyboard Shortcuts** to browse the shortcuts.
+Use **⌘K** or **Workspace → Show Command Palette…** in the workspace or a detached item window. The menu bar popover also opens the palette in the workspace. Search commands, switch projects, open My Work views, or change the current layout. Choose **Keyboard Shortcuts** to browse the shortcuts.
 
 The **Loaded Items** scope searches item titles, numbers (`#123`), and assignees (`@login`, `@me`) in the current account's project snapshots already held by GitStride. It includes followed projects and cached snapshots, independently of the current board filters. Cached results are marked. This is not a GitHub-wide search. Results show their repository and project; an issue in two projects has two entries because each membership has its own status.
 

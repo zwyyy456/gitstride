@@ -3,44 +3,44 @@ import SwiftUI
 struct ItemMilestoneSection: View {
     let store: ProjectStore
     let item: ProjectItem
-    @Binding var operationErrorMessage: String?
-    @Binding var isWorking: Bool
+    @State private var isWorking = false
+    @State private var localError: String?
 
     @ViewBuilder
     var body: some View {
-        ItemPropertySection(String(localized: "Issue Details")) {
-            switch store.itemDetailState(for: item) {
-            case .idle, .loading:
-                ProgressView()
-                    .controlSize(.small)
+        LabeledContent(String(localized: "Milestone")) {
+            VStack(alignment: .trailing, spacing: 6) {
+                switch store.itemDetailState(for: item) {
+                case .idle, .loading:
+                    ProgressView()
+                        .controlSize(.small)
 
-            case .loaded(let detail):
-                if let metadata = detail.issueMetadata {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Milestone")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                case .loaded(let detail):
+                    if let metadata = detail.issueMetadata {
+                        VStack(alignment: .trailing, spacing: 6) {
+                            if metadata.viewerCanSetMilestone {
+                                milestoneEditor(metadata: metadata, item: item)
+                            } else {
+                                Text(metadata.milestone?.title ?? String(localized: "No milestone"))
+                            }
 
-                        if metadata.viewerCanSetMilestone {
-                            milestoneEditor(metadata: metadata, item: item)
-                        } else {
-                            Text(metadata.milestone?.title ?? String(localized: "No milestone"))
+                            milestoneProgress(metadata.milestone)
                         }
-
-                        milestoneProgress(metadata.milestone)
-                    }
-                    .task(id: metadata.repository) {
-                        if metadata.viewerCanSetMilestone {
-                            await store.loadMilestones(repository: metadata.repository)
+                        .task(id: metadata.repository) {
+                            if metadata.viewerCanSetMilestone {
+                                await store.loadMilestones(repository: metadata.repository)
+                            }
                         }
                     }
+
+                case .failed(let message):
+                    Label(message, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-            case .failed(let message):
-                Label(message, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if isWorking { ProgressView().controlSize(.mini) }
+                if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
             }
         }
     }
@@ -75,13 +75,8 @@ struct ItemMilestoneSection: View {
                     }
                 }
             } label: {
-                HStack {
-                    Text(metadata.milestone?.title ?? String(localized: "No milestone"))
-                    Spacer()
-                    Image(systemName: "chevron.up.chevron.down")
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(.rect)
+                Text(metadata.milestone?.title ?? String(localized: "No milestone"))
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .menuStyle(.borderlessButton)
             .disabled(isWorking)
@@ -131,8 +126,9 @@ struct ItemMilestoneSection: View {
     }
 
     private func changeMilestone(_ milestone: RepositoryMilestone?, on item: ProjectItem) {
+        guard !isWorking else { return }
         isWorking = true
-        operationErrorMessage = nil
+        localError = nil
         Task {
             do {
                 try await store.setMilestone(milestone, on: item)
@@ -145,6 +141,6 @@ struct ItemMilestoneSection: View {
 
     private func report(_ error: Error) {
         guard (error is CancellationError) == false else { return }
-        operationErrorMessage = error.localizedDescription
+        localError = error.localizedDescription
     }
 }

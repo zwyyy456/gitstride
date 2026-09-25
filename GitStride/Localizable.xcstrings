@@ -1,618 +1,11 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Show Command Palette…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示命令面板…"
-          }
-        }
-      }
-    },
-    "Show Command Palette… (⌘K)": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示命令面板…（⌘K）"
-          }
-        }
-      }
-    },
-    "Command Palette": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令面板"
-          }
-        }
-      }
-    },
-    "Commands": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令"
-          }
-        }
-      }
-    },
-    "Loaded Items": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已加载条目"
-          }
-        }
-      }
-    },
-    "Search scope": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索范围"
-          }
-        }
-      }
-    },
-    "Search commands, projects, and loaded items": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索命令、项目和已加载条目"
-          }
-        }
-      }
-    },
-    "Keyboard Shortcuts": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "键盘快捷键"
-          }
-        }
-      }
-    },
-    "Find in Current View": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在当前视图中查找"
-          }
-        }
-      }
-    },
-    "Toggle Inspector": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换检查器"
-          }
-        }
-      }
-    },
-    "Refresh Projects": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刷新项目列表"
-          }
-        }
-      }
-    },
-    "Change Status…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "修改状态…"
-          }
-        }
-      }
-    },
-    "Open Item Details": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开条目详情"
-          }
-        }
-      }
-    },
-    "Open Item in GitHub": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在 GitHub 中打开条目"
-          }
-        }
-      }
-    },
-    "Search commands, projects, or items already loaded on this Mac.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索命令、项目或此 Mac 上已加载的条目。"
-          }
-        }
-      }
-    },
-    "↑↓ Navigate · Return Select · Esc Back": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "↑↓ 浏览 · 回车选择 · Esc 返回"
-          }
-        }
-      }
-    },
-    "Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用方向键浏览条目，回车打开详情。在选择模式下，空格切换选中状态。"
-          }
-        }
-      }
-    },
-    "On a board, Left and Right move between visible columns. Tab moves between controls.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在看板中，左右方向键切换可见列。Tab 键在控件之间移动。"
-          }
-        }
-      }
-    },
-    "Shortcuts apply to the active window. While editing text, typing and arrow keys stay in the editor.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "快捷键作用于当前窗口。编辑文本时，输入和方向键操作由编辑器处理。"
-          }
-        }
-      }
-    },
-    "Navigation": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导航"
-          }
-        }
-      }
-    },
-    "Cached": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "缓存"
-          }
-        }
-      }
-    },
-    "This item is still syncing.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此条目仍在同步。"
-          }
-        }
-      }
-    },
-    "This project has no status field.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此项目没有状态字段。"
-          }
-        }
-      }
-    },
-    "Unavailable in the current context.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前上下文中不可用。"
-          }
-        }
-      }
-    },
-    "The context changed. Reopen the command palette.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作上下文已改变，请重新打开命令面板。"
-          }
-        }
-      }
-    },
-    "Move Selected Items: %@": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "移动选中条目：%@"
-          }
-        }
-      }
-    },
-    "Confirm Action": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认操作"
-          }
-        }
-      }
-    },
-    "Loading item editor…": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载条目编辑器…"
-          }
-        }
-      }
-    },
-    "Couldn’t load the item editor. Refresh the item and try again.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载条目编辑器，请刷新条目后重试。"
-          }
-        }
-      }
-    },
-    "This item is read-only.": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此条目为只读。"
-          }
-        }
-      }
-    },
-    "The target date must not be earlier than the start date." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标日期不能早于开始日期。"
-          }
-        }
-      }
-    },
-    "The schedule changed while you were editing. Review the dates and try again." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑期间排期已发生变化，请核对日期后重试。"
-          }
-        }
-      }
-    },
-    "No iteration is available for this schedule." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此排期没有可用的迭代。"
-          }
-        }
-      }
-    },
-    "The schedule update did not finish. Confirmed changes were kept; refresh to check the current dates. %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "排期更新未完成。已确认的修改已保留，请刷新核对当前日期。%@"
-          }
-        }
-      }
-    },
-    "Edit Dates…" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑日期…"
-          }
-        }
-      }
-    },
-    "Drag to change start date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖动以修改开始日期"
-          }
-        }
-      }
-    },
-    "Drag to change target date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖动以修改目标日期"
-          }
-        }
-      }
-    },
-    "Roadmap" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "路线图"
-          }
-        }
-      }
-    },
-    "Set Up Roadmap" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置路线图"
-          }
-        }
-      }
-    },
-    "Add a date or iteration field to this project on GitHub to schedule items." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请在 GitHub 项目中添加日期或迭代字段，以安排条目。"
-          }
-        }
-      }
-    },
-    "Choose the fields used for start and target dates. Layout settings stay on this Mac." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择用于开始日期和目标日期的字段。布局设置仅保存在此 Mac 上。"
-          }
-        }
-      }
-    },
-    "Choose Date Fields" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择日期字段"
-          }
-        }
-      }
-    },
-    "Timeline Zoom" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "时间轴缩放"
-          }
-        }
-      }
-    },
-    "Roadmap Options" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "路线图选项"
-          }
-        }
-      }
-    },
-    "Start Date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始日期"
-          }
-        }
-      }
-    },
-    "Target Date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标日期"
-          }
-        }
-      }
-    },
-    "Title Column Width" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标题列宽度"
-          }
-        }
-      }
-    },
-    "Choose the same iteration field for both dates to show its full duration. Items without dates remain visible as unscheduled." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "为两个日期选择同一个迭代字段可显示完整迭代时长。没有日期的条目仍会显示为未排期。"
-          }
-        }
-      }
-    },
-    "Check schedule dates" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请检查排期日期"
-          }
-        }
-      }
-    },
-    "Unscheduled" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未排期"
-          }
-        }
-      }
-    },
-    "Starts %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始于 %@"
-          }
-        }
-      }
-    },
-    "Target %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标日期 %@"
-          }
-        }
-      }
-    },
-    "Month" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "月"
-          }
-        }
-      }
-    },
-    "Quarter" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "季度"
-          }
-        }
-      }
-    },
-    "Year" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "年"
-          }
-        }
-      }
-    },
-    "Today" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今天"
-          }
-        }
-      }
-    },
-    "Start date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "开始日期"
-          }
-        }
-      }
-    },
-    "Target date" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目标日期"
-          }
-        }
-      }
-    },
-    "Set date…" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置日期…"
-          }
-        }
-      }
-    },
-    "Clear" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "清除"
-          }
-        }
-      }
-    },
-    "Date field unavailable: %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日期字段不可用：%@"
-          }
-        }
-      }
-    },
     "" : {
       "shouldTranslate" : false
+    },
+    " " : {
+
     },
     "—" : {
       "shouldTranslate" : false
@@ -631,6 +24,16 @@
     },
     "#%lld" : {
       "shouldTranslate" : false
+    },
+    "%@\n%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@\n%2$@"
+          }
+        }
+      }
     },
     "%@ · Modified" : {
       "localizations" : {
@@ -652,6 +55,7 @@
       "shouldTranslate" : false
     },
     "%@ #%lld in GitHub" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -703,6 +107,7 @@
       }
     },
     "%@ in GitHub" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -736,6 +141,26 @@
     },
     "%@, @me" : {
       "shouldTranslate" : false
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@, %3$@"
+          }
+        }
+      }
     },
     "%@, %lld items" : {
       "localizations" : {
@@ -1055,6 +480,16 @@
         }
       }
     },
+    "↑↓ Navigate · Return Select · Esc Back" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 浏览 · 回车选择 · Esc 返回"
+          }
+        }
+      }
+    },
     "+%lld" : {
       "shouldTranslate" : false
     },
@@ -1185,6 +620,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "将%@添加到我的工作"
+          }
+        }
+      }
+    },
+    "Add a date or iteration field to this project on GitHub to schedule items." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在 GitHub 项目中添加日期或迭代字段，以安排条目。"
           }
         }
       }
@@ -1734,6 +1179,7 @@
       }
     },
     "Archiving Item" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1745,6 +1191,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在归档条目"
+          }
+        }
+      }
+    },
+    "Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用方向键浏览条目，回车打开详情。在选择模式下，空格切换选中状态。"
           }
         }
       }
@@ -2038,6 +1494,9 @@
         }
       }
     },
+    "Back" : {
+
+    },
     "Blocked" : {
       "localizations" : {
         "en" : {
@@ -2242,6 +1701,16 @@
         }
       }
     },
+    "Cached" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缓存"
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "en" : {
@@ -2302,6 +1771,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更改项目布局"
+          }
+        }
+      }
+    },
+    "Change Status…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改状态…"
           }
         }
       }
@@ -2405,6 +1884,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查看仓库"
+          }
+        }
+      }
+    },
+    "Check schedule dates" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请检查排期日期"
           }
         }
       }
@@ -2553,6 +2042,16 @@
         }
       }
     },
+    "Choose Date Fields" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择日期字段"
+          }
+        }
+      }
+    },
     "Choose Status" : {
       "localizations" : {
         "en" : {
@@ -2565,6 +2064,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择状态"
+          }
+        }
+      }
+    },
+    "Choose the fields used for start and target dates. Layout settings stay on this Mac." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择用于开始日期和目标日期的字段。布局设置仅保存在此 Mac 上。"
+          }
+        }
+      }
+    },
+    "Choose the same iteration field for both dates to show its full duration. Items without dates remain visible as unscheduled." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为两个日期选择同一个迭代字段可显示完整迭代时长。没有日期的条目仍会显示为未排期。"
           }
         }
       }
@@ -2645,6 +2164,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CI 已恢复：%@"
+          }
+        }
+      }
+    },
+    "Clear" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除"
           }
         }
       }
@@ -2757,6 +2286,26 @@
         }
       }
     },
+    "Command Palette" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命令面板"
+          }
+        }
+      }
+    },
+    "Commands" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "命令"
+          }
+        }
+      }
+    },
     "Completed" : {
       "localizations" : {
         "en" : {
@@ -2817,6 +2366,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配置我的工作视图"
+          }
+        }
+      }
+    },
+    "Confirm Action" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认操作"
           }
         }
       }
@@ -3093,6 +2652,26 @@
         }
       }
     },
+    "Couldn’t load the item editor. Refresh the item and try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载条目编辑器，请刷新条目后重试。"
+          }
+        }
+      }
+    },
+    "Couldn’t save field: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存属性：%@"
+          }
+        }
+      }
+    },
     "Counts cover this project’s issues in the delivery, before other filters. Completed means closed on GitHub." : {
       "localizations" : {
         "en" : {
@@ -3255,6 +2834,7 @@
       }
     },
     "Date" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3266,6 +2846,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "日期"
+          }
+        }
+      }
+    },
+    "Date field unavailable: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日期字段不可用：%@"
           }
         }
       }
@@ -3759,6 +3349,26 @@
         }
       }
     },
+    "Drag to change start date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动以修改开始日期"
+          }
+        }
+      }
+    },
+    "Drag to change target date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖动以修改目标日期"
+          }
+        }
+      }
+    },
     "Due %@" : {
       "localizations" : {
         "en" : {
@@ -3820,6 +3430,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑"
+          }
+        }
+      }
+    },
+    "Edit Dates…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑日期…"
+          }
+        }
+      }
+    },
+    "Edit field" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑属性"
           }
         }
       }
@@ -3987,6 +3617,16 @@
         }
       }
     },
+    "Enter a valid number." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入有效数字。"
+          }
+        }
+      }
+    },
     "Enter an HTTPS address without a path, query, or fragment." : {
       "localizations" : {
         "en" : {
@@ -4127,6 +3767,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已启用筛选"
+          }
+        }
+      }
+    },
+    "Find in Current View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在当前视图中查找"
           }
         }
       }
@@ -4778,6 +4428,9 @@
         }
       }
     },
+    "Group by Status" : {
+
+    },
     "Group, sort, and choose visible fields" : {
       "localizations" : {
         "en" : {
@@ -5037,6 +4690,16 @@
         }
       }
     },
+    "Item Properties" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目属性"
+          }
+        }
+      }
+    },
     "Item refresh failed: %@" : {
       "localizations" : {
         "en" : {
@@ -5146,6 +4809,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "随着关联 PR 的变化，自动更新 Issue 状态。"
+          }
+        }
+      }
+    },
+    "Keyboard Shortcuts" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "键盘快捷键"
           }
         }
       }
@@ -5342,6 +5015,16 @@
         }
       }
     },
+    "Loaded Items" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已加载条目"
+          }
+        }
+      }
+    },
     "Loading accounts…" : {
       "localizations" : {
         "en" : {
@@ -5386,6 +5069,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在加载描述…"
+          }
+        }
+      }
+    },
+    "Loading item editor…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载条目编辑器…"
           }
         }
       }
@@ -5803,6 +5496,16 @@
         }
       }
     },
+    "Month" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "月"
+          }
+        }
+      }
+    },
     "More" : {
       "localizations" : {
         "en" : {
@@ -5815,6 +5518,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更多"
+          }
+        }
+      }
+    },
+    "More Actions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更多操作"
           }
         }
       }
@@ -5847,6 +5560,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下移"
+          }
+        }
+      }
+    },
+    "Move Selected Items: %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移动选中条目：%@"
           }
         }
       }
@@ -5991,6 +5714,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "适用于 GitHub Projects 的原生 macOS 应用"
+          }
+        }
+      }
+    },
+    "Navigation" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导航"
           }
         }
       }
@@ -6171,6 +5904,16 @@
         }
       }
     },
+    "No iteration is available for this schedule." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此排期没有可用的迭代。"
+          }
+        }
+      }
+    },
     "No labels" : {
       "localizations" : {
         "en" : {
@@ -6183,6 +5926,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂无标签"
+          }
+        }
+      }
+    },
+    "No Labels…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无标签…"
           }
         }
       }
@@ -6491,7 +6244,18 @@
         }
       }
     },
+    "Not Set" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未设置"
+          }
+        }
+      }
+    },
     "Not supported" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6583,6 +6347,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编号 %lld"
+          }
+        }
+      }
+    },
+    "On a board, Left and Right move between visible columns. Tab moves between controls." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在看板中，左右方向键切换可见列。Tab 键在控件之间移动。"
           }
         }
       }
@@ -6727,6 +6501,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开 Issue"
+          }
+        }
+      }
+    },
+    "Open Item Details" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开条目详情"
+          }
+        }
+      }
+    },
+    "Open Item in GitHub" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 中打开条目"
           }
         }
       }
@@ -7457,6 +7251,16 @@
         }
       }
     },
+    "Quarter" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "季度"
+          }
+        }
+      }
+    },
     "Queued" : {
       "localizations" : {
         "en" : {
@@ -7565,6 +7369,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "退出 GitStride"
+          }
+        }
+      }
+    },
+    "Read-only" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只读"
           }
         }
       }
@@ -7761,6 +7575,16 @@
         }
       }
     },
+    "Refresh Projects" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新项目列表"
+          }
+        }
+      }
+    },
     "Refreshing" : {
       "localizations" : {
         "en" : {
@@ -7794,6 +7618,7 @@
       }
     },
     "Refreshing Item" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8442,6 +8267,26 @@
         }
       }
     },
+    "Roadmap" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路线图"
+          }
+        }
+      }
+    },
+    "Roadmap Options" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路线图选项"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "en" : {
@@ -8570,6 +8415,16 @@
         }
       }
     },
+    "Saving field" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在保存属性"
+          }
+        }
+      }
+    },
     "Saving…" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8599,6 +8454,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索"
+          }
+        }
+      }
+    },
+    "Search commands, projects, and loaded items" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索命令、项目和已加载条目"
+          }
+        }
+      }
+    },
+    "Search commands, projects, or items already loaded on this Mac." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索命令、项目或此 Mac 上已加载的条目。"
           }
         }
       }
@@ -8743,6 +8618,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索项目条目"
+          }
+        }
+      }
+    },
+    "Search scope" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索范围"
           }
         }
       }
@@ -9084,6 +8969,16 @@
         }
       }
     },
+    "Set date…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置日期…"
+          }
+        }
+      }
+    },
     "Set Up Automation" : {
       "localizations" : {
         "en" : {
@@ -9132,6 +9027,16 @@
         }
       }
     },
+    "Set Up Roadmap" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置路线图"
+          }
+        }
+      }
+    },
     "Settings…" : {
       "localizations" : {
         "en" : {
@@ -9164,6 +9069,16 @@
         }
       }
     },
+    "Shortcuts apply to the active window. While editing text, typing and arrow keys stay in the editor." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快捷键作用于当前窗口。编辑文本时，输入和方向键操作由编辑器处理。"
+          }
+        }
+      }
+    },
     "Show" : {
       "localizations" : {
         "en" : {
@@ -9192,6 +9107,27 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示所有列"
+          }
+        }
+      }
+    },
+    "Show Command Palette…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示命令面板…"
+          }
+        }
+      }
+    },
+    "Show Command Palette… (⌘K)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示命令面板…（⌘K）"
           }
         }
       }
@@ -9436,6 +9372,26 @@
         }
       }
     },
+    "Start date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始日期"
+          }
+        }
+      }
+    },
+    "Start Date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始日期"
+          }
+        }
+      }
+    },
     "Start time" : {
       "localizations" : {
         "en" : {
@@ -9464,6 +9420,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先输入标题，再添加以下任意限定条件："
+          }
+        }
+      }
+    },
+    "Starts %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始于 %@"
           }
         }
       }
@@ -9751,6 +9717,36 @@
         }
       }
     },
+    "Target %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标日期 %@"
+          }
+        }
+      }
+    },
+    "Target date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标日期"
+          }
+        }
+      }
+    },
+    "Target Date" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标日期"
+          }
+        }
+      }
+    },
     "Thank you for supporting GitStride!" : {
       "localizations" : {
         "en" : {
@@ -9811,6 +9807,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动化服务返回了无效响应。"
+          }
+        }
+      }
+    },
+    "The context changed. Reopen the command palette." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作上下文已改变，请重新打开命令面板。"
           }
         }
       }
@@ -9976,6 +9982,36 @@
         }
       }
     },
+    "The schedule changed while you were editing. Review the dates and try again." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑期间排期已发生变化，请核对日期后重试。"
+          }
+        }
+      }
+    },
+    "The schedule update did not finish. Confirmed changes were kept; refresh to check the current dates. %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排期更新未完成。已确认的修改已保留，请刷新核对当前日期。%@"
+          }
+        }
+      }
+    },
+    "The target date must not be earlier than the start date." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标日期不能早于开始日期。"
+          }
+        }
+      }
+    },
     "The unsynced changes will be removed from this app." : {
 
     },
@@ -10078,6 +10114,26 @@
         }
       }
     },
+    "This item is read-only." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此条目为只读。"
+          }
+        }
+      }
+    },
+    "This item is still syncing." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此条目仍在同步。"
+          }
+        }
+      }
+    },
     "This item is unavailable or no longer accessible." : {
       "localizations" : {
         "en" : {
@@ -10106,6 +10162,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此项目没有可识别的 Done 状态。"
+          }
+        }
+      }
+    },
+    "This project has no status field." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此项目没有状态字段。"
           }
         }
       }
@@ -10174,6 +10240,16 @@
         }
       }
     },
+    "Timeline Zoom" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间轴缩放"
+          }
+        }
+      }
+    },
     "Title" : {
       "localizations" : {
         "en" : {
@@ -10206,6 +10282,16 @@
         }
       }
     },
+    "Title Column Width" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标题列宽度"
+          }
+        }
+      }
+    },
     "Title, required" : {
       "localizations" : {
         "en" : {
@@ -10234,6 +10320,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "至"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天"
+          }
+        }
+      }
+    },
+    "Toggle Inspector" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换检查器"
           }
         }
       }
@@ -10398,6 +10504,16 @@
         }
       }
     },
+    "Unassigned…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未指派…"
+          }
+        }
+      }
+    },
     "Unavailable" : {
       "localizations" : {
         "en" : {
@@ -10410,6 +10526,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不可用"
+          }
+        }
+      }
+    },
+    "Unavailable in the current context." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前上下文中不可用。"
           }
         }
       }
@@ -10474,6 +10600,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未完成"
+          }
+        }
+      }
+    },
+    "Unscheduled" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未排期"
           }
         }
       }
@@ -10763,6 +10899,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "工作区"
+          }
+        }
+      }
+    },
+    "Year" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "年"
           }
         }
       }

@@ -56,12 +56,6 @@ struct CommandPaletteHost: ViewModifier {
                     showStatus: { show(shortcuts: false, statusTarget: context?.itemReference) }
                 )
             )
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Show Command Palette…", systemImage: "command") { show(shortcuts: false) }
-                        .help("Show Command Palette… (⌘K)")
-                }
-            }
             .sheet(item: $session, onDismiss: finish) { session in
                 CommandPaletteView(
                     store: store, context: session.context, roadmap: session.roadmap,

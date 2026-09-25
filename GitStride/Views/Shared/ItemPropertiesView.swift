@@ -3,7 +3,6 @@ import SwiftUI
 struct ItemPropertiesView: View {
     @Bindable var store: ProjectStore
     let reference: ItemInspectorReference
-    @Binding var operationErrorMessage: String?
 
     @State private var isWorking = false
 
@@ -12,42 +11,35 @@ struct ItemPropertiesView: View {
     private var canEdit: Bool { store.canEditProject(id: reference.projectID) }
 
     var body: some View {
-        ScrollView {
+        Form {
             if let project, let item {
-                VStack(alignment: .leading, spacing: 20) {
-                    fieldSection(project: project, item: item)
-
+                fieldSection(project: project, item: item)
+                Section(
+                    item.contentType == .issue
+                        ? String(localized: "Issue Details") : String(localized: "Item Properties")
+                ) {
+                    ItemAssigneesSection(
+                        store: store, item: item,
+                        projectID: reference.projectID)
                     if item.contentType == .issue {
-                        ItemMilestoneSection(store: store, item: item,
-                            operationErrorMessage: $operationErrorMessage, isWorking: $isWorking)
-                        ItemRelationshipsSection(store: store, item: item,
-                            operationErrorMessage: $operationErrorMessage, isWorking: $isWorking)
+                        ItemLabelsSection(
+                            store: store, item: item,
+                            projectID: reference.projectID)
+                        ItemMilestoneSection(store: store, item: item)
                     }
-
-                    ItemAssigneesSection(store: store, item: item,
-                            operationErrorMessage: $operationErrorMessage, projectID: reference.projectID)
-
-                    if item.contentType == .issue {
-                        ItemLabelsSection(store: store, item: item,
-                            operationErrorMessage: $operationErrorMessage, projectID: reference.projectID)
-                    }
-
-                    signalsSection(item)
-
                 }
-                .padding(20)
+                if item.contentType == .issue {
+                    ItemRelationshipsSection(store: store, item: item)
+                }
+                signalsSection(item)
             }
         }
-        .overlay {
-            if isWorking {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        }
+        .formStyle(.grouped)
+        .controlSize(.small)
     }
 
     private func fieldSection(project: Project, item: ProjectItem) -> some View {
-        ItemPropertySection(String(localized: "Project Fields")) {
+        Section(String(localized: "Project Fields")) {
             ForEach(project.fields.filter(\.isEditable)) { field in
                 ProjectFieldEditor(
                     field: field,
@@ -55,18 +47,8 @@ struct ItemPropertiesView: View {
                     isEditable: canEdit && isWorking == false
                 ) { value in
                     isWorking = true
-                    operationErrorMessage = nil
-                    do {
-                        try await store.updateField(
-                            on: item,
-                            in: reference.projectID,
-                            field: field,
-                            value: value
-                        )
-                    } catch {
-                        report(error)
-                    }
-                    isWorking = false
+                    defer { isWorking = false }
+                    try await store.updateField(on: item, in: reference.projectID, field: field, value: value)
                 }
             }
         }
@@ -75,8 +57,9 @@ struct ItemPropertiesView: View {
     @ViewBuilder
     private func signalsSection(_ item: ProjectItem) -> some View {
         if (item.contentType == .pullRequest && item.engineeringSignals != nil)
-            || item.linkedPR != nil {
-            ItemPropertySection(String(localized: "Engineering")) {
+            || item.linkedPR != nil
+        {
+            Section(String(localized: "Engineering")) {
                 if item.contentType == .pullRequest {
                     EngineeringSignalsView(item: item, limit: 5)
                 }
@@ -91,8 +74,4 @@ struct ItemPropertiesView: View {
         }
     }
 
-    private func report(_ error: Error) {
-        guard (error is CancellationError) == false else { return }
-        operationErrorMessage = error.localizedDescription
-    }
 }
