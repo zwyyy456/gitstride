@@ -28,6 +28,8 @@ struct ProjectRoadmapView: View {
     @Bindable var store: ProjectStore
     let isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
+    @Binding var currentItemID: String?
+    @FocusState private var keyboardItemID: String?
     let showItemDetail: (ItemInspectorReference) -> Void
     let clearFilters: () -> Void
     let reportError: (Error) -> Void
@@ -54,7 +56,7 @@ struct ProjectRoadmapView: View {
     }
 
     init(project: Project, items: [ProjectItem], store: ProjectStore, preferenceID: String,
-         isSelecting: Bool, selectedItemIDs: Binding<Set<String>>,
+         isSelecting: Bool, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
          showItemDetail: @escaping (ItemInspectorReference) -> Void,
          clearFilters: @escaping () -> Void, reportError: @escaping (Error) -> Void) {
         self.project = project
@@ -62,6 +64,7 @@ struct ProjectRoadmapView: View {
         self.store = store
         self.isSelecting = isSelecting
         _selectedItemIDs = selectedItemIDs
+        _currentItemID = currentItemID
         self.showItemDetail = showItemDetail
         self.clearFilters = clearFilters
         self.reportError = reportError
@@ -153,6 +156,18 @@ struct ProjectRoadmapView: View {
             if !ids.contains(endFieldID) { endFieldID = "" }
         }
         .onChange(of: items.map(\.id)) { _, ids in selectedItemIDs.formIntersection(ids) }
+        .onChange(of: rows.compactMap { $0.item?.id }) { old, new in
+            currentItemID = ItemKeyboardNavigation.reconciled(currentItemID, old: old, new: new)
+        }
+        .onChange(of: keyboardItemID) { _, id in if let id { currentItemID = id } }
+        .onKeyPress(keys: [.upArrow, .downArrow]) { press in
+            guard !KeyboardInput.isEditingText, keyboardItemID != nil else { return .ignored }
+            currentItemID = ItemKeyboardNavigation.next(from: currentItemID,
+                in: rows.compactMap(\.item).filter { store.pendingCreationState(for: $0.id) == nil }.map(\.id),
+                offset: press.key == .upArrow ? -1 : 1)
+            keyboardItemID = currentItemID
+            return .handled
+        }
     }
 
     private var options: some View {
@@ -228,58 +243,63 @@ struct ProjectRoadmapView: View {
             }
             .frame(height: 36)
             Divider()
-            ScrollView(.vertical) {
-                HStack(alignment: .top, spacing: 0) {
-                    LazyVStack(spacing: 0) {
-                        ForEach(rows) { row in titleCell(row).frame(height: row.height) }
-                    }
-                    .frame(width: leftWidth)
-                    Divider()
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal) {
-                            VStack(spacing: 0) {
-                                ForEach(rows) { row in
-                                    scheduleCell(row, first: first, dayWidth: dayWidth, width: contentWidth)
-                                        .frame(height: row.height)
-                                }
-                            }
-                            .background {
-                                Canvas { context, size in
-                                    var grid = Path()
-                                    for day in ticks {
-                                        let x = CGFloat(day) * dayWidth
-                                        grid.move(to: CGPoint(x: x, y: 0))
-                                        grid.addLine(to: CGPoint(x: x, y: size.height))
-                                    }
-                                    context.stroke(grid, with: .color(.secondary.opacity(0.15)), lineWidth: 1)
-                                }
-                            }
-                            .overlay(alignment: .topLeading) {
-                                Rectangle().fill(Color.accentColor.opacity(0.7))
-                                    .frame(width: 1, height: height).offset(x: todayX)
-                                    .allowsHitTesting(false).accessibilityHidden(true)
-                            }
-                            .overlay(alignment: .topLeading) {
-                                HStack(spacing: 0) {
-                                    Color.clear.frame(width: todayX, height: 1)
-                                    Color.clear.frame(width: 1, height: 1).id("today")
-                                }
-                                .allowsHitTesting(false).accessibilityHidden(true)
-                            }
-                            .background {
-                                GeometryReader { geometry in
-                                    Color.clear.preference(key: RoadmapHorizontalOffset.self,
-                                        value: geometry.frame(in: .named("roadmapHorizontal")).minX)
-                                }
-                            }
+            ScrollViewReader { verticalProxy in
+                ScrollView(.vertical) {
+                    HStack(alignment: .top, spacing: 0) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(rows) { row in titleCell(row).frame(height: row.height).id(row.item?.id ?? "group:\(row.title)") }
                         }
-                        .coordinateSpace(name: "roadmapHorizontal")
-                        .onPreferenceChange(RoadmapHorizontalOffset.self) { horizontalOffset = $0 }
-                        .onAppear { proxy.scrollTo("today", anchor: .center) }
-                        .onChange(of: todayRequest) { _, _ in proxy.scrollTo("today", anchor: .center) }
-                        .onChange(of: zoom) { _, _ in proxy.scrollTo("today", anchor: .center) }
+                        .frame(width: leftWidth)
+                        Divider()
+                        ScrollViewReader { proxy in
+                            ScrollView(.horizontal) {
+                                VStack(spacing: 0) {
+                                    ForEach(rows) { row in
+                                        scheduleCell(row, first: first, dayWidth: dayWidth, width: contentWidth)
+                                            .frame(height: row.height)
+                                    }
+                                }
+                                .background {
+                                    Canvas { context, size in
+                                        var grid = Path()
+                                        for day in ticks {
+                                            let x = CGFloat(day) * dayWidth
+                                            grid.move(to: CGPoint(x: x, y: 0))
+                                            grid.addLine(to: CGPoint(x: x, y: size.height))
+                                        }
+                                        context.stroke(grid, with: .color(.secondary.opacity(0.15)), lineWidth: 1)
+                                    }
+                                }
+                                .overlay(alignment: .topLeading) {
+                                    Rectangle().fill(Color.accentColor.opacity(0.7))
+                                        .frame(width: 1, height: height).offset(x: todayX)
+                                        .allowsHitTesting(false).accessibilityHidden(true)
+                                }
+                                .overlay(alignment: .topLeading) {
+                                    HStack(spacing: 0) {
+                                        Color.clear.frame(width: todayX, height: 1)
+                                        Color.clear.frame(width: 1, height: 1).id("today")
+                                    }
+                                    .allowsHitTesting(false).accessibilityHidden(true)
+                                }
+                                .background {
+                                    GeometryReader { geometry in
+                                        Color.clear.preference(key: RoadmapHorizontalOffset.self,
+                                            value: geometry.frame(in: .named("roadmapHorizontal")).minX)
+                                    }
+                                }
+                            }
+                            .coordinateSpace(name: "roadmapHorizontal")
+                            .onPreferenceChange(RoadmapHorizontalOffset.self) { horizontalOffset = $0 }
+                            .onAppear { proxy.scrollTo("today", anchor: .center) }
+                            .onChange(of: todayRequest) { _, _ in proxy.scrollTo("today", anchor: .center) }
+                            .onChange(of: zoom) { _, _ in proxy.scrollTo("today", anchor: .center) }
+                        }
+                        .frame(height: height + 16)
                     }
-                    .frame(height: height + 16)
+                }
+                .onChange(of: currentItemID) { _, id in
+                    if let id { verticalProxy.scrollTo(id); if !KeyboardInput.isEditingText { keyboardItemID = id } }
                 }
             }
         }
@@ -309,6 +329,17 @@ struct ProjectRoadmapView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .focused($keyboardItemID, equals: item.id)
+            .onKeyPress(.return) {
+                guard !KeyboardInput.isEditingText, !isSelecting else { return .ignored }
+                activate(item)
+                return .handled
+            }
+            .onKeyPress(.space) {
+                guard !KeyboardInput.isEditingText, isSelecting else { return .ignored }
+                activate(item)
+                return .handled
+            }
             .disabled(store.pendingCreationState(for: item.id) != nil)
             .background(selectedItemIDs.contains(item.id) ? Color.accentColor.opacity(0.15) : Color.clear)
             .help("\(row.title)\n\(schedule.summary)")
@@ -331,6 +362,7 @@ struct ProjectRoadmapView: View {
                         first: first, dayWidth: dayWidth, color: statusColor(item),
                         isEditable: !isSelecting && store.canEditRoadmap(itemID: item.id, projectID: project.id),
                         isSaving: store.isUpdatingRoadmap(itemID: item.id, projectID: project.id),
+                        focus: { currentItemID = item.id },
                         open: { activate(item) },
                         commit: { original, kind, days in
                             let startID = startFieldID
@@ -390,6 +422,7 @@ private struct RoadmapScheduleBar: View {
     let color: Color
     let isEditable: Bool
     let isSaving: Bool
+    let focus: () -> Void
     let open: () -> Void
     let commit: (ProjectItem, RoadmapEditKind, Int) -> Void
 
@@ -459,6 +492,7 @@ private struct RoadmapScheduleBar: View {
             .gesture(gesture(.move), including: isEditable ? .all : .none)
             .focusable()
             .focused($isFocused)
+            .onChange(of: isFocused) { _, focused in if focused { focus() } }
             .onKeyPress(.return) { open(); return .handled }
             .onKeyPress(.escape) {
                 guard drag != nil else { return .ignored }

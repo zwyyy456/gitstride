@@ -3,6 +3,8 @@ import SwiftUI
 struct MenuBarPopoverView: View {
     @Bindable var store: ProjectStore
     @Binding var requestedItemReference: ItemInspectorReference?
+    @Binding var requestsCommandPalette: Bool
+    @State private var hostWindow: NSWindow?
     @Environment(\.openWindow) private var openWindow
     @Environment(\.openSettings) private var showSettings
     @Environment(\.dismissMenuBar) private var dismissMenuBar
@@ -22,6 +24,12 @@ struct MenuBarPopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerView
+            Button("Show Command Palette…") {
+                openKanbanBoard()
+                requestsCommandPalette = true
+            }
+            .buttonStyle(.borderless)
+            .padding(.bottom, 6)
 
             OperationErrorBanner(
                 message: operationErrorMessage ?? store.operationErrorMessage,
@@ -41,6 +49,7 @@ struct MenuBarPopoverView: View {
             }
         }
         .frame(width: 400)
+        .background(MenuBarWindowFinder(window: $hostWindow))
         .task {
             if store.projects.isEmpty {
                 await store.loadProjects()
@@ -48,7 +57,9 @@ struct MenuBarPopoverView: View {
         }
         .onAppear {
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-                if event.modifierFlags.contains(.command) {
+                guard event.window === hostWindow, event.window?.isKeyWindow == true,
+                      !KeyboardInput.isEditingText else { return event }
+                if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command {
                     if event.keyCode == 123 {
                         navigateTab(direction: -1)
                         return nil

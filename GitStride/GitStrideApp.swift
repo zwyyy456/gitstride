@@ -19,6 +19,8 @@ struct GitStrideApp: App {
     @State private var isShowingWelcome = false
     @State private var menuBarWindow: NSWindow?
     @State private var requestsProjectBoard = false
+    @State private var requestsCommandPalette = false
+    @State private var requestedMyWorkFilter: MyWorkFilter?
     @State private var requestedItemReference: ItemInspectorReference?
 
     init() {
@@ -35,7 +37,9 @@ struct GitStrideApp: App {
             MainWorkspaceView(
                 model: model,
                 requestedItemReference: $requestedItemReference,
-                requestsProjectBoard: $requestsProjectBoard
+                requestsProjectBoard: $requestsProjectBoard,
+                requestsCommandPalette: $requestsCommandPalette,
+                requestedMyWorkFilter: $requestedMyWorkFilter
             )
                 .id(model.connectionID)
                 .sheet(isPresented: $isShowingWelcome) {
@@ -68,7 +72,8 @@ struct GitStrideApp: App {
         MenuBarExtra {
             MenuBarPopoverView(
                 store: model.projectStore,
-                requestedItemReference: $requestedItemReference
+                requestedItemReference: $requestedItemReference,
+                requestsCommandPalette: $requestsCommandPalette
             )
                 .id(model.connectionID)
                 .environment(\.dismissMenuBar) { @MainActor @Sendable in
@@ -112,6 +117,21 @@ struct GitStrideApp: App {
                     ContentUnavailableView("Item Unavailable", systemImage: "archivebox")
                 }
             }
+            .commandPalette(store: model.projectStore, opensWorkspaceForNavigation: true, navigation: CommandPaletteNavigation(
+                openProject: { id in
+                    guard let project = model.projectStore.project(id: id) else { return }
+                    Task {
+                        await model.openProject(project)
+                        requestsProjectBoard = true
+                    }
+                },
+                openItem: { reference in
+                    requestedItemReference = reference
+                },
+                openMyWork: { filter in
+                    requestedMyWorkFilter = filter
+                }
+            ))
             .id(model.connectionID)
         }
         .defaultSize(width: 980, height: 720)
@@ -177,6 +197,7 @@ private struct GitStrideCommands: Commands {
     @Environment(\.openWindow) private var openWindow
     @FocusedValue(\.workspaceCommandContext) private var workspaceCommandContext
     @FocusedValue(\.roadmapCommands) private var roadmapCommands
+    @FocusedValue(\.commandPaletteRequest) private var paletteRequest
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -196,26 +217,39 @@ private struct GitStrideCommands: Commands {
         CommandGroup(after: .sidebar) {
             if let toggleInspector = workspaceCommandContext?.toggleInspector {
                 Button(toggleInspector.title, action: toggleInspector.perform)
-                    .keyboardShortcut("i", modifiers: [.command, .option])
+                    .workspaceShortcut(.inspector)
                     .disabled(toggleInspector.isEnabled == false)
             }
         }
 
         CommandGroup(after: .newItem) {
             NewProjectButton()
-                .keyboardShortcut("n", modifiers: .command)
+                .workspaceShortcut(.newProject)
             Button("Add to Project…") {
                 openWindow(id: "quick-add")
             }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
+            .workspaceShortcut(.addItem)
 
             Divider()
 
             RefreshProjectsButton(store: store)
-                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .workspaceShortcut(.refreshProjects)
         }
 
         CommandMenu("Workspace") {
+            Button("Show Command Palette…") { paletteRequest?.show() }
+                .workspaceShortcut(.palette)
+                .disabled(paletteRequest == nil)
+            Button("Keyboard Shortcuts") { paletteRequest?.showShortcuts() }
+                .disabled(paletteRequest == nil)
+            Button("Find in Current View") { workspaceCommandContext?.find?.perform() }
+                .workspaceShortcut(.find)
+                .disabled(workspaceCommandContext?.find == nil)
+            if let changeStatus = workspaceCommandContext?.itemReference {
+                Button("Change Status…") { paletteRequest?.showStatus() }
+                    .disabled(store.statusChangeUnavailableReason(changeStatus) != nil)
+            }
+            Divider()
             if let layout = workspaceCommandContext?.projectLayout {
                 Picker("Project Layout", selection: layout) {
                     ForEach(ProjectLayout.allCases, id: \.self) { value in
@@ -286,7 +320,7 @@ private struct GitStrideCommands: Commands {
             Button(workspaceCommandContext?.refresh.title ?? String(localized: "Refresh")) {
                 workspaceCommandContext?.refresh.perform()
             }
-            .keyboardShortcut("r", modifiers: .command)
+            .workspaceShortcut(.refresh)
             .disabled(workspaceCommandContext?.refresh.isEnabled != true)
 
             if let openInGitHub = workspaceCommandContext?.openInGitHub {

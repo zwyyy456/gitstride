@@ -7,6 +7,7 @@ struct ProjectTableView: View {
     @Bindable var store: ProjectStore
     let isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
+    @Binding var currentItemID: String?
     let showItemDetail: (ItemInspectorReference) -> Void
     let reportError: (Error) -> Void
 
@@ -23,7 +24,7 @@ struct ProjectTableView: View {
         preferenceID: String? = nil,
         workControls: ProjectWorkControls,
         collapsedGroups: Binding<Set<ProjectTableRow.ID>>,
-        isSelecting: Bool, selectedItemIDs: Binding<Set<String>>,
+        isSelecting: Bool, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
         showItemDetail: @escaping (ItemInspectorReference) -> Void,
         reportError: @escaping (Error) -> Void
     ) {
@@ -34,6 +35,7 @@ struct ProjectTableView: View {
         self.store = store
         self.isSelecting = isSelecting
         _selectedItemIDs = selectedItemIDs
+        _currentItemID = currentItemID
         self.showItemDetail = showItemDetail
         self.reportError = reportError
         let preferences = ProjectDisplayPreferences(id: preferenceID ?? project.id)
@@ -64,70 +66,102 @@ struct ProjectTableView: View {
     private var selection: Binding<Set<ProjectTableRow.ID>> {
         Binding(get: { Set(selectedItemIDs.map(ProjectTableRow.ID.item)) }, set: { ids in
             selectedItemIDs = Set(ids.compactMap(\.itemID))
+            currentItemID = selectedItemIDs.count == 1 ? selectedItemIDs.first : nil
         })
     }
 
+    private var visibleItemIDs: [String] {
+        let rows: [ProjectTableRow]
+        if groupsByStatus {
+            rows = ProjectTableGroup.make(items: items, statuses: project.statusOptions, sortOrder: sortOrder.wrappedValue)
+                .filter { !collapsedGroups.contains($0.id) }.flatMap(\.rows)
+        } else { rows = items.map(ProjectTableRow.init(item:)).sorted(using: sortOrder.wrappedValue) }
+        return rows.compactMap { row in
+            guard let id = row.id.itemID, store.pendingCreationState(for: id) == nil else { return nil }
+            return id
+        }
+    }
+
     var body: some View {
-        table
-            .tableStyle(.inset)
-            .alternatingRowBackgrounds(.disabled)
-            .font(.system(size: 13))
-            .contextMenu(forSelectionType: ProjectTableRow.ID.self) { ids in
-                if !ids.contains(where: { $0.itemID.map { store.pendingCreationState(for: $0) != nil } == true }) {
-                    itemContextMenu(ids)
+        ScrollViewReader { proxy in
+            table
+                .onChange(of: currentItemID) { _, id in if let id { proxy.scrollTo(ProjectTableRow.ID.item(id)) } }
+                .tableStyle(.inset)
+                .alternatingRowBackgrounds(.disabled)
+                .font(.system(size: 13))
+                .contextMenu(forSelectionType: ProjectTableRow.ID.self) { ids in
+                    if !ids.contains(where: { $0.itemID.map { store.pendingCreationState(for: $0) != nil } == true }) {
+                        itemContextMenu(ids)
+                    }
+                } primaryAction: { ids in
+                    guard !isSelecting, ids.count == 1, let id = ids.first?.itemID,
+                          store.pendingCreationState(for: id) == nil,
+                          let item = items.first(where: { $0.id == id }) else { return }
+                    open(item)
                 }
-            } primaryAction: { ids in
-                guard !isSelecting, ids.count == 1, let id = ids.first?.itemID,
-                      store.pendingCreationState(for: id) == nil,
-                      let item = items.first(where: { $0.id == id }) else { return }
-                open(item)
-            }
-            .onKeyPress(.return) {
-                guard !isSelecting, selectedItemIDs.count == 1,
-                      selectedItemIDs.allSatisfy({ store.pendingCreationState(for: $0) == nil }),
-                      let item = items.first(where: { selectedItemIDs.contains($0.id) }) else { return .ignored }
-                open(item)
-                return .handled
-            }
-            .onChange(of: items.map(\.id)) { _, ids in
-                selectedItemIDs.formIntersection(ids)
-            }
-            .overlay {
-                if items.isEmpty {
-                    ContentUnavailableView {
-                        Label("No Matching Items", systemImage: "line.3.horizontal.decrease.circle")
-                    } description: {
-                        Text("Try removing filters or changing your search.")
-                    } actions: {
-                        Button("Clear Filters", action: workControls.clearFilters)
+                .onKeyPress(.return) {
+                    guard !KeyboardInput.isEditingText else { return .ignored }
+                    guard !isSelecting, selectedItemIDs.count == 1,
+                          selectedItemIDs.allSatisfy({ store.pendingCreationState(for: $0) == nil }),
+                          let item = items.first(where: { selectedItemIDs.contains($0.id) }) else { return .ignored }
+                    open(item)
+                    return .handled
+                }
+                .onKeyPress(keys: [.upArrow, .downArrow]) { press in
+                    guard !KeyboardInput.isEditingText, press.modifiers.isEmpty else { return .ignored }
+                    currentItemID = ItemKeyboardNavigation.next(from: currentItemID, in: visibleItemIDs,
+                        offset: press.key == .upArrow ? -1 : 1)
+                    if !isSelecting { selectedItemIDs = Set(currentItemID.map { [$0] } ?? []) }
+                    return .handled
+                }
+                .onKeyPress(.space) {
+                    guard !KeyboardInput.isEditingText, isSelecting, let currentItemID else { return .ignored }
+                    if selectedItemIDs.contains(currentItemID) { selectedItemIDs.remove(currentItemID) }
+                    else { selectedItemIDs.insert(currentItemID) }
+                    return .handled
+                }
+                .onChange(of: items.map(\.id)) { _, ids in selectedItemIDs.formIntersection(ids) }
+                .onChange(of: visibleItemIDs) { old, new in
+                    currentItemID = ItemKeyboardNavigation.reconciled(currentItemID, old: old, new: new)
+                    if !isSelecting { selectedItemIDs = Set(currentItemID.map { [$0] } ?? []) }
+                }
+                .overlay {
+                    if items.isEmpty {
+                        ContentUnavailableView {
+                            Label("No Matching Items", systemImage: "line.3.horizontal.decrease.circle")
+                        } description: {
+                            Text("Try removing filters or changing your search.")
+                        } actions: {
+                            Button("Clear Filters", action: workControls.clearFilters)
+                        }
                     }
                 }
-            }
-            .onChange(of: availableFields.map(\.id), initial: true) { _, ids in
-                if !fieldID.isEmpty && !ids.contains(fieldID) {
-                    fieldID = ""
-                    columns[visibility: "field"] = .hidden
-                    if sortColumn == "field" { sortColumn = "" }
-                }
-                if sortColumn.hasPrefix("field:"), !ids.contains(String(sortColumn.dropFirst(6))) {
-                    sortColumn = ""
-                }
-            }
-            .confirmationDialog(
-                "Remove \"\(itemToRemove?.displayTitle ?? "")\" from the project?",
-                isPresented: Binding(get: { itemToRemove != nil }, set: { if !$0 { itemToRemove = nil } }),
-                titleVisibility: .visible, presenting: itemToRemove
-            ) { item in
-                Button("Remove", role: .destructive) {
-                    Task {
-                        do { try await store.deleteItem(item, from: project.id) }
-                        catch { reportError(error) }
+                .onChange(of: availableFields.map(\.id), initial: true) { _, ids in
+                    if !fieldID.isEmpty && !ids.contains(fieldID) {
+                        fieldID = ""
+                        columns[visibility: "field"] = .hidden
+                        if sortColumn == "field" { sortColumn = "" }
+                    }
+                    if sortColumn.hasPrefix("field:"), !ids.contains(String(sortColumn.dropFirst(6))) {
+                        sortColumn = ""
                     }
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: { _ in
-                Text("Archive is recommended when you may need the item again.")
-            }
+                .confirmationDialog(
+                    "Remove \"\(itemToRemove?.displayTitle ?? "")\" from the project?",
+                    isPresented: Binding(get: { itemToRemove != nil }, set: { if !$0 { itemToRemove = nil } }),
+                    titleVisibility: .visible, presenting: itemToRemove
+                ) { item in
+                    Button("Remove", role: .destructive) {
+                        Task {
+                            do { try await store.deleteItem(item, from: project.id) }
+                            catch { reportError(error) }
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: { _ in
+                    Text("Archive is recommended when you may need the item again.")
+                }
+        }
     }
 
     @ViewBuilder
@@ -289,6 +323,10 @@ struct ProjectTableView: View {
     private func titleCell(_ row: ProjectTableRow) -> some View {
         if let item = row.item {
             HStack(spacing: 6) {
+                if isSelecting {
+                    Image(systemName: selectedItemIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selectedItemIDs.contains(item.id) ? Color.accentColor : .secondary)
+                }
                 Text(item.displayTitle).lineLimit(1)
                 if let syncState = store.pendingSyncState(for: item) {
                     Text(syncTitle(for: syncState))
@@ -297,6 +335,12 @@ struct ProjectTableView: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
+            .overlay {
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(isSelecting && currentItemID == item.id ? Color.accentColor : .clear)
+                    .allowsHitTesting(false)
+            }
+            .accessibilityValue(isSelecting && selectedItemIDs.contains(item.id) ? String(localized: "Selected") : "")
             .help(item.displayTitle)
         } else {
             HStack(spacing: 8) {

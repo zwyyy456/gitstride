@@ -77,12 +77,28 @@ GitStride keeps GitHub's native concepts separate:
 
 Project field configuration remains managed on GitHub. If an existing `Phase` field duplicates `Status`, remove or repurpose it in the GitHub Project settings rather than maintaining two workflow fields.
 
+### Command Palette
+
+Use **⌘K** or **Workspace → Show Command Palette…** in the workspace or a detached item window. The toolbar offers the same command; the menu bar popover opens the palette in the workspace. Search commands, switch projects, open My Work views, or change the current layout. Choose **Keyboard Shortcuts** to browse the shortcuts.
+
+The **Loaded Items** scope searches item titles, numbers (`#123`), and assignees (`@login`, `@me`) in the current account's project snapshots already held by GitStride. It includes followed projects and cached snapshots, independently of the current board filters. Cached results are marked. This is not a GitHub-wide search. Results show their repository and project; an issue in two projects has two entries because each membership has its own status.
+
+Use Up/Down and Return to choose a result. Select **Change Status…** for the focused item, or for an item search result, to choose from its project's current status options. Read-only and syncing items cannot be changed. The palette also offers existing contextual actions; destructive commands require confirmation. Escape returns from a subpage or closes the palette. Closing restores the previous keyboard focus.
+
+Keyboard navigation follows the visible order in tables, My Work, and roadmaps. On a board, Up/Down moves within a column and Left/Right moves to an adjacent nonempty visible column. Return opens details. In selection mode, Space toggles the current item's selection and Escape exits selection mode. Focus and bulk selection are separate; hovering does not choose a command target. Text editors and input-method composition retain their normal key handling.
+
 ### Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
-| `⌘ R` | Refresh |
-| `⌘ ←` | Previous status tab |
-| `⌘ →` | Next status tab |
+| `⌘ K` | Show the command palette in the active workspace or item window |
+| `⌘ F` | Search the current project view or My Work |
+| `⌘ R` | Refresh the current context |
+| `⇧ ⌘ R` | Refresh the project list |
+| `⌘ N` | New project |
+| `⇧ ⌘ N` | Add to project |
+| `⌥ ⌘ I` | Toggle the item inspector |
+| `⌘ ←` | Previous status tab in the menu bar popover, outside text input |
+| `⌘ →` | Next status tab in the menu bar popover, outside text input |
 | `> title` + `Return` | Open a prefilled creation form from project or menu bar search |
 | `Esc` | Cancel quick-create input in search |

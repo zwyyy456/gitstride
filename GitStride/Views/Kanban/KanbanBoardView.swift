@@ -15,6 +15,8 @@ struct KanbanBoardView: View {
     @State private var viewName = ""
     @State private var addItemPresentation: AddItemPresentation?
     @State private var collapsedTableGroups: Set<ProjectTableRow.ID> = []
+    @State private var currentItemID: String?
+    @State private var searchPresented = false
     @State private var selectedItemIDs: Set<String> = []
     @State private var isBulkWorking = false
     @State private var operationErrorMessage: String?
@@ -87,6 +89,7 @@ struct KanbanBoardView: View {
                 AddProjectItemView(store: store, initialQuickEntry: presentation.quickEntry)
             }
             .onChange(of: store.selectedProjectId) { _, _ in
+                currentItemID = nil
                 searchText = ""
                 workFilter = ProjectWorkFilter()
                 selectedViewID = nil
@@ -111,7 +114,7 @@ struct KanbanBoardView: View {
             .onChange(of: tablePreferenceID) { _, _ in collapsedTableGroups.removeAll() }
             .onChange(of: workFilter) { _, _ in selectedItemIDs.removeAll() }
             .onChange(of: searchText) { _, _ in selectedItemIDs.removeAll() }
-            .onChange(of: layout) { _, _ in selectedItemIDs.removeAll() }
+            .onChange(of: layout) { _, _ in selectedItemIDs.removeAll(); currentItemID = nil }
             .onChange(of: isSelecting) { _, isSelecting in
                 if isSelecting == false {
                     selectedItemIDs.removeAll()
@@ -127,6 +130,7 @@ struct KanbanBoardView: View {
     private var projectSurface: some View {
         boardSurface.searchable(
             text: $searchText,
+            isPresented: $searchPresented,
             placement: .toolbar,
             prompt: "Search title, #number, or @assignee"
         )
@@ -386,6 +390,12 @@ struct KanbanBoardView: View {
 
     private var commandContext: WorkspaceCommandContext {
         var context = WorkspaceCommandContext(
+            projectID: store.selectedProjectId,
+            find: .init(id: "find", title: WorkspaceShortcut.find.title, shortcut: .find,
+                        perform: { searchPresented = true }),
+            itemReference: !isSelecting ? currentItemID.flatMap { id in
+                store.selectedProject.map { ItemInspectorReference(projectID: $0.id, itemID: id) }
+            } : nil,
             refresh: .init(
                 id: "refresh-project",
                 title: String(localized: "Refresh Project"),
@@ -567,7 +577,7 @@ struct KanbanBoardView: View {
                     workControls: workControls(project),
                     collapsedGroups: $collapsedTableGroups,
                     isSelecting: isSelecting,
-                    selectedItemIDs: $selectedItemIDs,
+                    selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID,
                     showItemDetail: openItemDetail,
                     reportError: report
                 )
@@ -589,7 +599,7 @@ struct KanbanBoardView: View {
         ProjectRoadmapView(
             project: project, items: filteredItems(for: project.items), store: store,
             preferenceID: tablePreferenceID, isSelecting: isSelecting,
-            selectedItemIDs: $selectedItemIDs, showItemDetail: openItemDetail,
+            selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID, showItemDetail: openItemDetail,
             clearFilters: workControls(project).clearFilters, reportError: report
         )
         .id(tablePreferenceID)
@@ -640,7 +650,7 @@ struct KanbanBoardView: View {
             store: store, project: project, items: filteredItems(for: project.items),
             statuses: visibleStatuses(in: project), preferenceID: tablePreferenceID,
             emptyMessage: workFilter.isActive || !itemSearchText.isEmpty ? String(localized: "No matching items") : String(localized: "No items"),
-            isSelecting: isSelecting, selectedItemIDs: $selectedItemIDs,
+            isSelecting: isSelecting, selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID,
             showInspector: openItemDetail, reportError: report
         )
     }

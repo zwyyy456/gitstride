@@ -12,6 +12,9 @@ struct KanbanColumn: View {
     @Bindable var store: ProjectStore
     let isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
+    @Binding var currentItemID: String?
+    let moveAcross: (Int) -> Void
+    @FocusState private var keyboardItemID: String?
     let showInspector: (ItemInspectorReference) -> Void
     let reportError: (Error) -> Void
 
@@ -47,77 +50,117 @@ struct KanbanColumn: View {
             .padding(.vertical, 12)
 
             // Cards
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 8) {
-                    if items.isEmpty {
-                        Text(emptyMessage)
-                            .font(.callout)
-                            .foregroundStyle(.tertiary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 24)
-                    } else {
-                        ForEach(items) { item in
-                            if isSelecting {
-                                KanbanCard(
-                                    projectID: projectID,
-                                    preferenceID: preferenceID,
-                                    showsRepository: showsRepository,
-                                    availableFields: availableFields,
-                                    item: item,
-                                    allStatuses: allStatuses,
-                                    store: store,
-                                    isSelecting: true,
-                                    isSelected: selectedItemIDs.contains(item.id)
-                                ) {
-                                    toggleSelection(item.id)
-                                } showInspector: {
-                                    showInspector(
-                                        ItemInspectorReference(projectID: projectID, itemID: item.id)
-                                    )
-                                } reportError: { reportError($0) }
-                            } else if store.pendingCreationState(for: item.id) != nil {
-                                KanbanCard(
-                                    projectID: projectID,
-                                    preferenceID: preferenceID,
-                                    showsRepository: showsRepository,
-                                    availableFields: availableFields,
-                                    item: item,
-                                    allStatuses: allStatuses,
-                                    store: store,
-                                    isSelecting: false,
-                                    isSelected: false,
-                                    onSelect: {},
-                                    showInspector: {},
-                                    reportError: reportError
-                                )
-                            } else {
-                                KanbanCard(
-                                    projectID: projectID,
-                                    preferenceID: preferenceID,
-                                    showsRepository: showsRepository,
-                                    availableFields: availableFields,
-                                    item: item,
-                                    allStatuses: allStatuses,
-                                    store: store,
-                                    isSelecting: false,
-                                    isSelected: selectedItemIDs.contains(item.id),
-                                    onSelect: {},
-                                    showInspector: {
-                                        showInspector(
-                                            ItemInspectorReference(projectID: projectID, itemID: item.id)
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 8) {
+                        if items.isEmpty {
+                            Text(emptyMessage)
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 24)
+                        } else {
+                            ForEach(items) { item in
+                                Group {
+                                    if isSelecting {
+                                        KanbanCard(
+                                            projectID: projectID,
+                                            preferenceID: preferenceID,
+                                            showsRepository: showsRepository,
+                                            availableFields: availableFields,
+                                            item: item,
+                                            allStatuses: allStatuses,
+                                            store: store,
+                                            isSelecting: true,
+                                            isSelected: selectedItemIDs.contains(item.id)
+                                        ) {
+                                            toggleSelection(item.id)
+                                        } showInspector: {
+                                            showInspector(
+                                                ItemInspectorReference(projectID: projectID, itemID: item.id)
+                                            )
+                                        } reportError: { reportError($0) }
+                                    } else if store.pendingCreationState(for: item.id) != nil {
+                                        KanbanCard(
+                                            projectID: projectID,
+                                            preferenceID: preferenceID,
+                                            showsRepository: showsRepository,
+                                            availableFields: availableFields,
+                                            item: item,
+                                            allStatuses: allStatuses,
+                                            store: store,
+                                            isSelecting: false,
+                                            isSelected: false,
+                                            onSelect: {},
+                                            showInspector: {},
+                                            reportError: reportError
                                         )
-                                    },
-                                    reportError: reportError
-                                )
-                                .draggable(item.id) {
-                                    KanbanCardPreview(item: item)
+                                    } else {
+                                        KanbanCard(
+                                            projectID: projectID,
+                                            preferenceID: preferenceID,
+                                            showsRepository: showsRepository,
+                                            availableFields: availableFields,
+                                            item: item,
+                                            allStatuses: allStatuses,
+                                            store: store,
+                                            isSelecting: false,
+                                            isSelected: selectedItemIDs.contains(item.id),
+                                            onSelect: {},
+                                            showInspector: {
+                                                showInspector(
+                                                    ItemInspectorReference(projectID: projectID, itemID: item.id)
+                                                )
+                                            },
+                                            reportError: reportError
+                                        )
+                                        .draggable(item.id) {
+                                            KanbanCardPreview(item: item)
+                                        }
+                                    }
+                                }
+                                .focusable(store.pendingCreationState(for: item.id) == nil)
+                                .focused($keyboardItemID, equals: item.id)
+                                .id(item.id)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(keyboardItemID == item.id ? Color.accentColor : .clear, lineWidth: 2)
+                                        .allowsHitTesting(false)
+                                }
+                                .onKeyPress(.return) {
+                                    guard !KeyboardInput.isEditingText, !isSelecting else { return .ignored }
+                                    showInspector(ItemInspectorReference(projectID: projectID, itemID: item.id))
+                                    return .handled
+                                }
+                                .onKeyPress(.space) {
+                                    guard !KeyboardInput.isEditingText, isSelecting else { return .ignored }
+                                    toggleSelection(item.id)
+                                    return .handled
                                 }
                             }
                         }
                     }
+                    .padding(8)
                 }
-                .padding(8)
+                .onChange(of: currentItemID, initial: true) { _, id in
+                    if let id, items.contains(where: { $0.id == id }) {
+                        proxy.scrollTo(id)
+                        if !KeyboardInput.isEditingText { keyboardItemID = id }
+                    } else { keyboardItemID = nil }
+                }
             }
+        }
+        .onChange(of: keyboardItemID) { _, id in if let id { currentItemID = id } }
+        .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow]) { press in
+            guard !KeyboardInput.isEditingText, keyboardItemID != nil else { return .ignored }
+            if press.key == .leftArrow || press.key == .rightArrow {
+                moveAcross(press.key == .leftArrow ? -1 : 1)
+            } else {
+                currentItemID = ItemKeyboardNavigation.next(from: currentItemID,
+                    in: items.filter { store.pendingCreationState(for: $0.id) == nil }.map(\.id),
+                    offset: press.key == .upArrow ? -1 : 1)
+            }
+            return .handled
         }
         .overlay(
             RoundedRectangle(cornerRadius: 12)

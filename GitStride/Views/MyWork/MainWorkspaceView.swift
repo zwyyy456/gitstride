@@ -5,6 +5,8 @@ struct MainWorkspaceView: View {
     @Environment(\.openSettings) private var openSettings
     @Binding var requestedItemReference: ItemInspectorReference?
     @Binding var requestsProjectBoard: Bool
+    @Binding var requestsCommandPalette: Bool
+    @Binding var requestedMyWorkFilter: MyWorkFilter?
     @State private var destination: Destination = .project
     @State private var detailPath = NavigationPath()
     @State private var projectSearchText = ""
@@ -222,6 +224,21 @@ struct MainWorkspaceView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 860, minHeight: 600)
+        .commandPalette(store: model.projectStore, navigation: CommandPaletteNavigation(
+            openProject: { id in
+                guard let project = model.projectStore.project(id: id) else { return }
+                destination = .project
+                detailPath = NavigationPath()
+                Task { await model.openProject(project) }
+            },
+            openItem: showItemDetail,
+            openMyWork: { destination = .myWork($0) }
+        ), requested: $requestsCommandPalette)
+        .onChange(of: requestedMyWorkFilter, initial: true) { _, filter in
+            guard let filter else { return }
+            destination = .myWork(filter)
+            requestedMyWorkFilter = nil
+        }
         .task {
             if model.projectStore.projects.isEmpty {
                 await model.projectStore.loadProjects()

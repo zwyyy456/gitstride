@@ -3,6 +3,25 @@ import Testing
 @testable import GitStride
 
 extension ProjectStoreTests {
+    @Test func paletteStatusTargetRequiresTheOriginalMembershipAndCurrentOption() async throws {
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses)
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let item = try #require(store.item(for: reference))
+        #expect(store.statusChangeUnavailableReason(reference) == nil)
+        #expect(store.statusChangeUnavailableReason(.init(projectID: "P2", itemID: "ITEM1")) != nil)
+        let requestsBefore = await runner.recordedRequests().count
+        do {
+            try await store.moveItem(item, toStatus: StatusOption(id: "removed-option", name: "Todo", color: "GRAY"), in: "P1")
+            Issue.record("An option removed from this project must not be sent to GitHub")
+        } catch ProjectStoreError.itemUnavailable { }
+        #expect(await runner.recordedRequests().count == requestsBefore)
+        try await store.invalidateSession()
+        #expect(store.statusChangeUnavailableReason(reference) != nil)
+    }
+
     @Test(arguments: [
         ("Issue", false, true, true),
         ("PullRequest", true, false, false),

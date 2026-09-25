@@ -1,6 +1,306 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Show Command Palette…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示命令面板…"
+          }
+        }
+      }
+    },
+    "Show Command Palette… (⌘K)": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示命令面板…（⌘K）"
+          }
+        }
+      }
+    },
+    "Command Palette": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令面板"
+          }
+        }
+      }
+    },
+    "Commands": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令"
+          }
+        }
+      }
+    },
+    "Loaded Items": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加载条目"
+          }
+        }
+      }
+    },
+    "Search scope": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索范围"
+          }
+        }
+      }
+    },
+    "Search commands, projects, and loaded items": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索命令、项目和已加载条目"
+          }
+        }
+      }
+    },
+    "Keyboard Shortcuts": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "键盘快捷键"
+          }
+        }
+      }
+    },
+    "Find in Current View": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在当前视图中查找"
+          }
+        }
+      }
+    },
+    "Toggle Inspector": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换检查器"
+          }
+        }
+      }
+    },
+    "Refresh Projects": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新项目列表"
+          }
+        }
+      }
+    },
+    "Change Status…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改状态…"
+          }
+        }
+      }
+    },
+    "Open Item Details": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开条目详情"
+          }
+        }
+      }
+    },
+    "Open Item in GitHub": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 GitHub 中打开条目"
+          }
+        }
+      }
+    },
+    "Search commands, projects, or items already loaded on this Mac.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索命令、项目或此 Mac 上已加载的条目。"
+          }
+        }
+      }
+    },
+    "↑↓ Navigate · Return Select · Esc Back": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "↑↓ 浏览 · 回车选择 · Esc 返回"
+          }
+        }
+      }
+    },
+    "Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用方向键浏览条目，回车打开详情。在选择模式下，空格切换选中状态。"
+          }
+        }
+      }
+    },
+    "On a board, Left and Right move between visible columns. Tab moves between controls.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在看板中，左右方向键切换可见列。Tab 键在控件之间移动。"
+          }
+        }
+      }
+    },
+    "Shortcuts apply to the active window. While editing text, typing and arrow keys stay in the editor.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷键作用于当前窗口。编辑文本时，输入和方向键操作由编辑器处理。"
+          }
+        }
+      }
+    },
+    "Navigation": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导航"
+          }
+        }
+      }
+    },
+    "Cached": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓存"
+          }
+        }
+      }
+    },
+    "This item is still syncing.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此条目仍在同步。"
+          }
+        }
+      }
+    },
+    "This project has no status field.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此项目没有状态字段。"
+          }
+        }
+      }
+    },
+    "Unavailable in the current context.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前上下文中不可用。"
+          }
+        }
+      }
+    },
+    "The context changed. Reopen the command palette.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作上下文已改变，请重新打开命令面板。"
+          }
+        }
+      }
+    },
+    "Move Selected Items: %@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移动选中条目：%@"
+          }
+        }
+      }
+    },
+    "Confirm Action": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认操作"
+          }
+        }
+      }
+    },
+    "Loading item editor…": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加载条目编辑器…"
+          }
+        }
+      }
+    },
+    "Couldn’t load the item editor. Refresh the item and try again.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载条目编辑器，请刷新条目后重试。"
+          }
+        }
+      }
+    },
+    "This item is read-only.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此条目为只读。"
+          }
+        }
+      }
+    },
     "The target date must not be earlier than the start date." : {
       "localizations" : {
         "zh-Hans" : {

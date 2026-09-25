@@ -6,9 +6,14 @@ struct MyWorkView: View {
     let showItemDetail: (ItemInspectorReference) -> Void
     let didOpenProject: () -> Void
     @State private var operationErrorMessage: String?
+    @State private var selectedID: String?
+    @State private var searchText = ""
+    @State private var searchPresented = false
 
     private var items: [MyWorkItem] {
-        model.myWorkItems(for: filter)
+        model.myWorkItems(for: filter).filter {
+            ![$0.item].matching(searchText, currentUserLogin: model.projectStore.currentUserLogin).isEmpty
+        }
     }
 
     var body: some View {
@@ -41,19 +46,32 @@ struct MyWorkView: View {
                     description: Text("No items in My Work match this filter.")
                 )
             } else {
-                List(items) { workItem in
-                    MyWorkRow(
-                        workItem: workItem,
-                        model: model,
-                        showDetails: { showDetails(workItem) },
-                        openProject: { openProject(workItem.project) },
-                        reportError: report
-                    )
+                List(selection: $selectedID) {
+                    ForEach(items) { workItem in
+                        MyWorkRow(
+                            workItem: workItem,
+                            model: model,
+                            showDetails: { showDetails(workItem) },
+                            openProject: { openProject(workItem.project) },
+                            reportError: report
+                        )
+                        .tag(workItem.id)
+                    }
                 }
                 .listStyle(.inset)
+                .onKeyPress(.return) {
+                    guard !KeyboardInput.isEditingText, let selected = items.first(where: { $0.id == selectedID }) else { return .ignored }
+                    showDetails(selected)
+                    return .handled
+                }
             }
         }
         .frame(minHeight: 560)
+        .searchable(text: $searchText, isPresented: $searchPresented, prompt: "Search title, #number, or @assignee")
+        .onChange(of: items.map(\.id)) { old, new in
+            selectedID = ItemKeyboardNavigation.reconciled(selectedID, old: old, new: new)
+        }
+        .onChange(of: filter) { _, _ in selectedID = nil; searchText = "" }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {
@@ -97,6 +115,11 @@ struct MyWorkView: View {
 
     private var commandContext: WorkspaceCommandContext {
         WorkspaceCommandContext(
+            find: .init(id: "find", title: WorkspaceShortcut.find.title, shortcut: .find,
+                        perform: { searchPresented = true }),
+            itemReference: items.first(where: { $0.id == selectedID }).map {
+                ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id)
+            },
             refresh: .init(
                 id: "refresh-my-work",
                 title: String(localized: "Refresh My Work"),

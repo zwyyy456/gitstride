@@ -9,6 +9,7 @@ struct KanbanColumnsView: View {
     let emptyMessage: String
     let isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
+    @Binding var currentItemID: String?
     let showInspector: (ItemInspectorReference) -> Void
     let reportError: (Error) -> Void
 
@@ -28,6 +29,12 @@ struct KanbanColumnsView: View {
         let knownStatusIDs = Set(project.statusOptions.map(\.id))
         let includesNoStatus = project.items.contains { hasNoStatus($0, knownIDs: knownStatusIDs) }
         let columns = statuses.map { Column(status: $0) } + (includesNoStatus ? [Column(status: nil)] : [])
+        let itemColumns = columns.map { column in
+            items.filter { item in
+                (column.status.map { item.statusOptionId == $0.id } ?? hasNoStatus(item, knownIDs: knownStatusIDs))
+                    && store.pendingCreationState(for: item.id) == nil
+            }.map(\.id)
+        }
         GeometryReader { geometry in
             let columnCount = max(columns.count, 1)
             let totalSpacing = CGFloat(columnCount - 1) * Self.columnSpacing
@@ -35,27 +42,42 @@ struct KanbanColumnsView: View {
             let columnWidth = fittingWidth >= Self.minimumColumnWidth
                 ? min(Self.maximumColumnWidth, fittingWidth) : Self.idealOverflowColumnWidth
 
-            ScrollView(.horizontal) {
-                LazyHStack(alignment: .top, spacing: Self.columnSpacing) {
-                    ForEach(columns) { column in
-                        let status = column.status
-                        let columnItems = items.filter { item in
-                            status.map { item.statusOptionId == $0.id } ?? hasNoStatus(item, knownIDs: knownStatusIDs)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: Self.columnSpacing) {
+                        ForEach(columns) { column in
+                            let status = column.status
+                            let columnItems = items.filter { item in
+                                status.map { item.statusOptionId == $0.id } ?? hasNoStatus(item, knownIDs: knownStatusIDs)
+                            }
+                            KanbanColumn(
+                                projectID: project.id, preferenceID: preferenceID,
+                                showsRepository: showsRepository, availableFields: cardFields,
+                                status: status, items: columnItems, emptyMessage: emptyMessage,
+                                allStatuses: project.statusOptions, store: store,
+                                isSelecting: isSelecting, selectedItemIDs: $selectedItemIDs,
+                                currentItemID: $currentItemID,
+                                moveAcross: { offset in
+                                    currentItemID = ItemKeyboardNavigation.horizontal(from: currentItemID, columns: itemColumns, offset: offset)
+                                },
+                                showInspector: showInspector, reportError: reportError
+                            )
+                            .frame(width: columnWidth, height: geometry.size.height - 32)
+                            .id(column.id ?? "no-status")
                         }
-                        KanbanColumn(
-                            projectID: project.id, preferenceID: preferenceID,
-                            showsRepository: showsRepository, availableFields: cardFields,
-                            status: status, items: columnItems, emptyMessage: emptyMessage,
-                            allStatuses: project.statusOptions, store: store,
-                            isSelecting: isSelecting, selectedItemIDs: $selectedItemIDs,
-                            showInspector: showInspector, reportError: reportError
-                        )
-                        .frame(width: columnWidth, height: geometry.size.height - 32)
+                    }
+                    .padding(16)
+                }
+                .onChange(of: currentItemID) { _, id in
+                    if let index = itemColumns.firstIndex(where: { $0.contains(id ?? "") }) {
+                        proxy.scrollTo(columns[index].id ?? "no-status")
                     }
                 }
-                .padding(16)
             }
             .id([preferenceID, includesNoStatus ? "includes-no-status" : "statuses-only"] + statuses.map(\.id))
+        }
+        .onChange(of: itemColumns.flatMap { $0 }) { old, new in
+            currentItemID = ItemKeyboardNavigation.reconciled(currentItemID, old: old, new: new)
         }
     }
 

@@ -400,6 +400,21 @@ final class ProjectStore {
         projectStates.keys.compactMap { project(id: $0) }
     }
 
+    func isProjectCached(_ id: String) -> Bool { projectStates[id]?.source == .cache }
+
+    func statusChangeUnavailableReason(_ reference: ItemInspectorReference) -> String? {
+        guard isActive, let project = project(id: reference.projectID), item(for: reference) != nil else {
+            return String(localized: "This item is no longer available.")
+        }
+        guard canEditProject(id: reference.projectID) else { return String(localized: "This project is read-only.") }
+        guard project.statusField != nil else { return String(localized: "This project has no status field.") }
+        if pendingCreationState(for: reference.itemID) != nil ||
+            pendingItemMutations[ItemMutationKey(projectID: reference.projectID, itemID: reference.itemID)] != nil {
+            return String(localized: "Another change to this item is still in progress.")
+        }
+        return nil
+    }
+
     func followedProject(id: String) -> Project? {
         followedProjectIDs.contains(id) ? project(id: id) : nil
     }
@@ -1509,6 +1524,7 @@ final class ProjectStore {
     ) async throws {
         let project = try editableProject(id: projectID)
         guard let fieldID = project.statusField?.id,
+              project.statusOptions.contains(where: { $0.id == status.id }),
               project.items.contains(where: { $0.id == item.id }) else {
             throw ProjectStoreError.itemUnavailable
         }

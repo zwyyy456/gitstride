@@ -164,7 +164,7 @@ struct ItemDetailView: View {
                 max: Self.inspectorMaximumWidth
             )
         }
-        .focusedValue(\.workspaceCommandContext, commandContext)
+        .focusedSceneValue(\.workspaceCommandContext, commandContext)
         .task(id: item.map { "\($0.contentId ?? ""):\($0.updatedAt ?? "")" }) {
             guard let item,
                   item.contentId.flatMap({ store.pendingContentEdits[$0] }) == nil else { return }
@@ -197,6 +197,7 @@ struct ItemDetailView: View {
 
     private var commandContext: WorkspaceCommandContext {
         WorkspaceCommandContext(
+            itemReference: reference,
             refresh: .init(
                 id: "refresh-item",
                 title: String(localized: "Refresh Item"),

@@ -187,6 +187,13 @@
 		ABD3A3B8EA1143E196327B2A /* ProjectRoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */; };
 		2246A9129D924C1D83ABE340 /* ProjectRoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */; };
 		D68E5C472E44461FB6567339 /* Views/ProjectRoadmapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398DD85FB0E8473C854E9007 /* Views/ProjectRoadmapTests.swift */; };
+		1AB7B328D91F4B1B8C6E45DF /* CommandSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3C988229604621932BFB6D /* CommandSearch.swift */; };
+		C394EA3E382C4D839EF53AA0 /* CommandSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3C988229604621932BFB6D /* CommandSearch.swift */; };
+		FE7BE1551CF745548690DEED /* CommandSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF633661D36B4334AACA20F0 /* CommandSearchField.swift */; };
+		440897A68EA84BE397C32A93 /* CommandSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF633661D36B4334AACA20F0 /* CommandSearchField.swift */; };
+		E96EC83E08924E37AA7DFEFE /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
+		7A5D20464FC24702BFE2BCB6 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
+		243C62428F2544BC8746A097 /* Views/CommandSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -305,6 +312,10 @@
 		87BFE2EF3051402A84FE3594 /* ProjectRoadmap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRoadmap.swift; sourceTree = "<group>"; };
 		E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRoadmapView.swift; sourceTree = "<group>"; };
 		398DD85FB0E8473C854E9007 /* Views/ProjectRoadmapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ProjectRoadmapTests.swift; sourceTree = "<group>"; };
+		6D3C988229604621932BFB6D /* CommandSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandSearch.swift; sourceTree = "<group>"; };
+		BF633661D36B4334AACA20F0 /* CommandSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandSearchField.swift; sourceTree = "<group>"; };
+		6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandPaletteView.swift; sourceTree = "<group>"; };
+		99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/CommandSearchTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -349,6 +360,9 @@
 				A1000001 /* GitStrideApp.swift */,
 				BF0000000000000000000002 /* Localizable.xcstrings */,
 				A1000044 /* WorkspaceCommandContext.swift */,
+				6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */,
+				BF633661D36B4334AACA20F0 /* CommandSearchField.swift */,
+				6D3C988229604621932BFB6D /* CommandSearch.swift */,
 				A3000002 /* Models */,
 				A3000003 /* Services */,
 				A3000004 /* Store */,
@@ -520,6 +534,7 @@
 				DB0000000000000000000005 /* Services/GitHubAuthenticationTests.swift */,
 				6BE86DAE172A4F919768058D /* Views/ProjectWorkPreferencesTests.swift */,
 				FF2A0BB18D464368ADC92757 /* Views/NewProjectItemDraftTests.swift */,
+				99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */,
 				F7DE3A1447C4442497CC9916 /* Store/ProjectStoreTests.swift */,
 				1F984E1BF5A14E0AABEAEB41 /* Store/ProjectStoreMutationTests.swift */,
 				CF04DCD734F7459B903E47A4 /* Store/ProjectStoreCreationTests.swift */,
@@ -727,6 +742,9 @@
 				367A94963064B9F300F2A402 /* StatusOptionPicker.swift in Sources */,
 				367A94973064B9F300F2A402 /* AutomationConnectionList.swift in Sources */,
 				367A94983064B9F300F2A402 /* WorkspaceCommandContext.swift in Sources */,
+				E96EC83E08924E37AA7DFEFE /* CommandPaletteView.swift in Sources */,
+				FE7BE1551CF745548690DEED /* CommandSearchField.swift in Sources */,
+				1AB7B328D91F4B1B8C6E45DF /* CommandSearch.swift in Sources */,
 				367A94993064B9F300F2A402 /* Monitoring.swift in Sources */,
 				367A949A3064B9F300F2A402 /* QuickCreate.swift in Sources */,
 				367A949B3064B9F300F2A402 /* Project.swift in Sources */,
@@ -781,6 +799,7 @@
 				DA0000000000000000000005 /* Services/GitHubAuthenticationTests.swift in Sources */,
 				7E11B23897274E1A8C79FFD8 /* Views/ProjectWorkPreferencesTests.swift in Sources */,
 				FFC8E795899043D584F51D7F /* Views/NewProjectItemDraftTests.swift in Sources */,
+				243C62428F2544BC8746A097 /* Views/CommandSearchTests.swift in Sources */,
 				1256B447FBC34D199F0B53D1 /* Support/ProjectStoreFixtures.swift in Sources */,
 				1C5E5C020F46418DB08480DC /* Support/GitHubHTTPClients.swift in Sources */,
 				57FD432CD7CB41478DAE15A1 /* Store/ProjectStoreTests.swift in Sources */,
@@ -837,6 +856,9 @@
 				A0000057 /* StatusOptionPicker.swift in Sources */,
 				A0000058 /* AutomationConnectionList.swift in Sources */,
 				A0000044 /* WorkspaceCommandContext.swift in Sources */,
+				7A5D20464FC24702BFE2BCB6 /* CommandPaletteView.swift in Sources */,
+				440897A68EA84BE397C32A93 /* CommandSearchField.swift in Sources */,
+				C394EA3E382C4D839EF53AA0 /* CommandSearch.swift in Sources */,
 				A0000033 /* Monitoring.swift in Sources */,
 				A0000035 /* QuickCreate.swift in Sources */,
 				A0000002 /* Project.swift in Sources */,
