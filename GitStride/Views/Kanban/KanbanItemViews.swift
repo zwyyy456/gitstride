@@ -13,6 +13,7 @@ struct KanbanColumn: View {
     let isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
     @Binding var currentItemID: String?
+    @Binding var showsKeyboardFocus: Bool
     let moveAcross: (Int) -> Void
     @FocusState private var keyboardItemID: String?
     let showInspector: (ItemInspectorReference) -> Void
@@ -105,7 +106,7 @@ struct KanbanColumn: View {
                                             allStatuses: allStatuses,
                                             store: store,
                                             isSelecting: false,
-                                            isSelected: selectedItemIDs.contains(item.id),
+                                            isSelected: false,
                                             onSelect: {},
                                             showInspector: {
                                                 showInspector(
@@ -120,11 +121,12 @@ struct KanbanColumn: View {
                                     }
                                 }
                                 .focusable(store.pendingCreationState(for: item.id) == nil)
+                                .focusEffectDisabled()
                                 .focused($keyboardItemID, equals: item.id)
                                 .id(item.id)
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .stroke(keyboardItemID == item.id ? Color.accentColor : .clear, lineWidth: 2)
+                                        .stroke(showsKeyboardFocus && keyboardItemID == item.id ? Color.accentColor : .clear, lineWidth: 2)
                                         .allowsHitTesting(false)
                                 }
                                 .onKeyPress(.return) {
@@ -145,12 +147,22 @@ struct KanbanColumn: View {
                 .onChange(of: currentItemID, initial: true) { _, id in
                     if let id, items.contains(where: { $0.id == id }) {
                         proxy.scrollTo(id)
-                        if !KeyboardInput.isEditingText { keyboardItemID = id }
+                        if showsKeyboardFocus && !KeyboardInput.isEditingText { keyboardItemID = id }
                     } else { keyboardItemID = nil }
                 }
             }
         }
-        .onChange(of: keyboardItemID) { _, id in if let id { currentItemID = id } }
+        .onChange(of: showsKeyboardFocus) { _, visible in
+            if visible, let currentItemID, items.contains(where: { $0.id == currentItemID }), !KeyboardInput.isEditingText {
+                keyboardItemID = currentItemID
+            }
+        }
+        .onChange(of: keyboardItemID) { _, id in
+            if let id {
+                currentItemID = id
+                if NSApp.currentEvent?.type == .keyDown { showsKeyboardFocus = true }
+            }
+        }
         .onKeyPress(keys: [.upArrow, .downArrow, .leftArrow, .rightArrow]) { press in
             guard !KeyboardInput.isEditingText, keyboardItemID != nil else { return .ignored }
             if press.key == .leftArrow || press.key == .rightArrow {
@@ -194,6 +206,7 @@ struct KanbanColumn: View {
     }
 
     private func toggleSelection(_ itemID: String) {
+        guard store.pendingCreationState(for: itemID) == nil else { return }
         if selectedItemIDs.contains(itemID) {
             selectedItemIDs.remove(itemID)
         } else {

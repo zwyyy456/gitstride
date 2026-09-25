@@ -490,6 +490,16 @@
         }
       }
     },
+    "↑↓ Navigate · Return Toggle · Esc Back" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车勾选或移除 · Esc 返回"
+          }
+        }
+      }
+    },
     "+%lld" : {
       "shouldTranslate" : false
     },
@@ -1196,11 +1206,22 @@
       }
     },
     "Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用方向键浏览条目，回车打开详情。在选择模式下，空格切换选中状态。"
+          }
+        }
+      }
+    },
+    "Arrow keys navigate items. Return opens details. X toggles selection. Shift–Up/Down extends selection; Command–A selects visible items. Escape clears selection. In selection mode, Space toggles selection." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方向键浏览条目，Return 打开详情，X 切换选中状态。Shift＋上下方向键扩展或缩小选择范围，⌘A 选择可见条目，Escape 清除选择。选择模式下，空格键切换选中状态。"
           }
         }
       }

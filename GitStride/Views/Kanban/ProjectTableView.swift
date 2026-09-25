@@ -5,7 +5,7 @@ struct ProjectTableView: View {
     let workControls: ProjectWorkControls
     let items: [ProjectItem]
     @Bindable var store: ProjectStore
-    let isSelecting: Bool
+    @Binding var isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
     @Binding var currentItemID: String?
     let showItemDetail: (ItemInspectorReference) -> Void
@@ -24,7 +24,7 @@ struct ProjectTableView: View {
         preferenceID: String? = nil,
         workControls: ProjectWorkControls,
         collapsedGroups: Binding<Set<ProjectTableRow.ID>>,
-        isSelecting: Bool, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
+        isSelecting: Binding<Bool>, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
         showItemDetail: @escaping (ItemInspectorReference) -> Void,
         reportError: @escaping (Error) -> Void
     ) {
@@ -33,7 +33,7 @@ struct ProjectTableView: View {
         _collapsedGroups = collapsedGroups
         self.items = items
         self.store = store
-        self.isSelecting = isSelecting
+        _isSelecting = isSelecting
         _selectedItemIDs = selectedItemIDs
         _currentItemID = currentItemID
         self.showItemDetail = showItemDetail
@@ -65,8 +65,12 @@ struct ProjectTableView: View {
 
     private var selection: Binding<Set<ProjectTableRow.ID>> {
         Binding(get: { Set(selectedItemIDs.map(ProjectTableRow.ID.item)) }, set: { ids in
-            selectedItemIDs = Set(ids.compactMap(\.itemID))
-            currentItemID = selectedItemIDs.count == 1 ? selectedItemIDs.first : nil
+            let newIDs = Set(ids.compactMap(\.itemID)).intersection(visibleItemIDs)
+            let added = newIDs.subtracting(selectedItemIDs)
+            selectedItemIDs = newIDs
+            if let lastAdded = visibleItemIDs.last(where: { added.contains($0) }) { currentItemID = lastAdded }
+            else if selectedItemIDs.count == 1 { currentItemID = selectedItemIDs.first }
+            if selectedItemIDs.count > 1 { isSelecting = true }
         })
     }
 
@@ -99,6 +103,8 @@ struct ProjectTableView: View {
                           let item = items.first(where: { $0.id == id }) else { return }
                     open(item)
                 }
+                .itemSelectionKeyboard(ids: visibleItemIDs, current: $currentItemID,
+                    selected: $selectedItemIDs, isSelecting: $isSelecting)
                 .onKeyPress(.return) {
                     guard !KeyboardInput.isEditingText else { return .ignored }
                     guard !isSelecting, selectedItemIDs.count == 1,
@@ -337,7 +343,7 @@ struct ProjectTableView: View {
             .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
             .overlay {
                 RoundedRectangle(cornerRadius: 3)
-                    .stroke(isSelecting && currentItemID == item.id ? Color.accentColor : .clear)
+                    .stroke(currentItemID == item.id && (isSelecting || !selectedItemIDs.contains(item.id)) ? Color.accentColor : .clear)
                     .allowsHitTesting(false)
             }
             .accessibilityValue(isSelecting && selectedItemIDs.contains(item.id) ? String(localized: "Selected") : "")

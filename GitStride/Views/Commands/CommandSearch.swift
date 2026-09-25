@@ -45,3 +45,23 @@ enum ItemKeyboardNavigation {
         return new[min(old.firstIndex(of: current) ?? 0, new.count - 1)]
     }
 }
+
+/// Keeps the original range anchor while Shift navigation grows or shrinks a selection.
+struct ItemRangeSelection {
+    private var anchor: String?
+    private var base: Set<String> = []
+    private var lastDestination: String?
+
+    mutating func reset() { anchor = nil; base = []; lastDestination = nil }
+
+    mutating func extend(from current: String?, to destination: String, in ids: [String],
+                         selected: Set<String>) -> Set<String> {
+        if anchor == nil || current != lastDestination || !ids.contains(anchor!) {
+            anchor = current.flatMap { ids.contains($0) ? $0 : nil } ?? destination
+            base = selected.subtracting(current.map { [$0] } ?? [])
+        }
+        lastDestination = destination
+        guard let start = ids.firstIndex(of: anchor!), let end = ids.firstIndex(of: destination) else { return selected }
+        return base.intersection(ids).union(ids[min(start, end)...max(start, end)])
+    }
+}

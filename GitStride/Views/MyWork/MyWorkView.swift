@@ -7,6 +7,9 @@ struct MyWorkView: View {
     let didOpenProject: () -> Void
     @State private var operationErrorMessage: String?
     @State private var selectedID: String?
+    @State private var selectedIDs: Set<String> = []
+    @State private var isSelecting = false
+    @State private var isBulkWorking = false
     @State private var searchText = ""
     @State private var searchPresented = false
 
@@ -14,6 +17,10 @@ struct MyWorkView: View {
         model.myWorkItems(for: filter).filter {
             ![$0.item].matching(searchText, currentUserLogin: model.projectStore.currentUserLogin).isEmpty
         }
+    }
+
+    private var selectableIDs: [String] {
+        items.filter { model.projectStore.pendingCreationState(for: $0.item.id) == nil }.map(\.id)
     }
 
     var body: some View {
@@ -46,23 +53,53 @@ struct MyWorkView: View {
                     description: Text("No items in My Work match this filter.")
                 )
             } else {
-                List(selection: $selectedID) {
-                    ForEach(items) { workItem in
-                        MyWorkRow(
-                            workItem: workItem,
-                            model: model,
-                            showDetails: { showDetails(workItem) },
-                            openProject: { openProject(workItem.project) },
-                            reportError: report
-                        )
-                        .tag(workItem.id)
+                ScrollViewReader { proxy in
+                    List(selection: listSelection) {
+                        ForEach(items) { workItem in
+                            MyWorkRow(
+                                workItem: workItem,
+                                model: model,
+                                showDetails: {
+                                    selectedID = workItem.id
+                                    if isSelecting {
+                                        guard selectableIDs.contains(workItem.id) else { return }
+                                        if selectedIDs.contains(workItem.id) { selectedIDs.remove(workItem.id) }
+                                        else { selectedIDs.insert(workItem.id) }
+                                    } else { showDetails(workItem) }
+                                },
+                                openProject: { openProject(workItem.project) },
+                                reportError: report
+                            )
+                            .tag(workItem.id)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(selectedID == workItem.id && (isSelecting || !selectedIDs.contains(workItem.id)) ? Color.accentColor : .clear)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                     }
-                }
-                .listStyle(.inset)
-                .onKeyPress(.return) {
-                    guard !KeyboardInput.isEditingText, let selected = items.first(where: { $0.id == selectedID }) else { return .ignored }
-                    showDetails(selected)
-                    return .handled
+                    .listStyle(.inset)
+                    .itemSelectionKeyboard(ids: selectableIDs, current: $selectedID,
+                        selected: $selectedIDs, isSelecting: $isSelecting)
+                    .onKeyPress(keys: [.upArrow, .downArrow]) { press in
+                        guard !KeyboardInput.isEditingText, press.modifiers.isEmpty else { return .ignored }
+                        selectedID = ItemKeyboardNavigation.next(from: selectedID, in: selectableIDs,
+                            offset: press.key == .upArrow ? -1 : 1)
+                        if !isSelecting { selectedIDs = Set(selectedID.map { [$0] } ?? []) }
+                        return .handled
+                    }
+                    .onKeyPress(.space) {
+                        guard !KeyboardInput.isEditingText, isSelecting, let selectedID else { return .ignored }
+                        if selectedIDs.contains(selectedID) { selectedIDs.remove(selectedID) }
+                        else { selectedIDs.insert(selectedID) }
+                        return .handled
+                    }
+                    .onKeyPress(.return) {
+                        guard !KeyboardInput.isEditingText, !isSelecting, let selected = items.first(where: { $0.id == selectedID }) else { return .ignored }
+                        showDetails(selected)
+                        return .handled
+                    }
+                    .onChange(of: selectedID) { _, id in if let id { proxy.scrollTo(id) } }
                 }
             }
         }
@@ -70,8 +107,9 @@ struct MyWorkView: View {
         .searchable(text: $searchText, isPresented: $searchPresented, prompt: "Search title, #number, or @assignee")
         .onChange(of: items.map(\.id)) { old, new in
             selectedID = ItemKeyboardNavigation.reconciled(selectedID, old: old, new: new)
+            selectedIDs.formIntersection(new)
         }
-        .onChange(of: filter) { _, _ in selectedID = nil; searchText = "" }
+        .onChange(of: filter) { _, _ in selectedID = nil; selectedIDs = []; isSelecting = false; searchText = "" }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {
@@ -83,6 +121,19 @@ struct MyWorkView: View {
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
+                if isSelecting {
+                    Text("\(selectedIDs.count) Selected")
+                    Menu("Move To") {
+                        ForEach(commandContext.moveSelection) { action in
+                            Button(action.title, action: action.perform).disabled(!action.isEnabled)
+                        }
+                    }.disabled(!canWork || commonStatuses.isEmpty)
+                    Button("Archive Selected Items", role: .destructive) { performBulk(status: nil) }
+                        .disabled(!canWork)
+                    Button("Done Selecting") { isSelecting = false; selectedIDs = [] }
+                        .disabled(isBulkWorking)
+                }
+
                 Menu {
                     ForEach(model.myWorkStore.followedProjects) { reference in
                         let title = followedProjectTitle(reference)
@@ -114,12 +165,12 @@ struct MyWorkView: View {
     }
 
     private var commandContext: WorkspaceCommandContext {
-        WorkspaceCommandContext(
+        var context = WorkspaceCommandContext(
             find: .init(id: "find", title: WorkspaceShortcut.find.title, shortcut: .find,
                         perform: { searchPresented = true }),
-            itemReference: items.first(where: { $0.id == selectedID }).map {
+            itemReference: !isSelecting ? items.first(where: { $0.id == selectedID }).map {
                 ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id)
-            },
+            } : nil,
             refresh: .init(
                 id: "refresh-my-work",
                 title: String(localized: "Refresh My Work"),
@@ -134,6 +185,67 @@ struct MyWorkView: View {
                 )
             }
         )
+        context.toggleSelection = .init(id: "toggle-selection",
+            title: isSelecting ? String(localized: "Done Selecting") : String(localized: "Select Items"),
+            isEnabled: !isBulkWorking, perform: { isSelecting.toggle(); selectedIDs = [] })
+        if isSelecting {
+            context.moveSelection = commonStatuses.map { name in
+                .init(id: "move-selection-" + name, title: name, isEnabled: canWork,
+                      perform: { performBulk(status: name) })
+            }
+            context.archiveSelection = .init(id: "archive-selection", title: String(localized: "Archive Selected Items"),
+                isEnabled: canWork, perform: { performBulk(status: nil) })
+        }
+        return context
+    }
+
+    private var listSelection: Binding<Set<String>> {
+        Binding(get: { selectedIDs }, set: { ids in
+            let ids = ids.intersection(selectableIDs)
+            let added = ids.subtracting(selectedIDs)
+            selectedIDs = ids
+            if let lastAdded = items.last(where: { added.contains($0.id) }) { selectedID = lastAdded.id }
+            else if ids.count == 1 { selectedID = ids.first }
+            if ids.count > 1 { isSelecting = true }
+        })
+    }
+
+    private var selectedItems: [MyWorkItem] { items.filter { selectedIDs.contains($0.id) } }
+    private var canWork: Bool {
+        !isBulkWorking && !selectedItems.isEmpty
+            && selectedItems.allSatisfy { model.projectStore.canEditProject(id: $0.project.id) }
+    }
+    private var commonStatuses: [String] {
+        guard let first = selectedItems.first else { return [] }
+        return first.project.statusOptions.map(\.name).filter { name in
+            selectedItems.allSatisfy { $0.project.statusOptions.contains { $0.name == name } }
+        }
+    }
+
+    private func performBulk(status: String?) {
+        guard canWork else { return }
+        let targets = selectedItems
+        let store = model.projectStore
+        isBulkWorking = true
+        operationErrorMessage = nil
+        Task { @MainActor in
+            defer { isBulkWorking = false }
+            do {
+                for target in targets {
+                    let reference = ItemInspectorReference(projectID: target.project.id, itemID: target.item.id)
+                    guard let item = store.item(for: reference) else { throw ProjectStoreError.itemUnavailable }
+                    if let status {
+                        guard let option = store.project(id: target.project.id)?.statusOptions.first(where: { $0.name == status })
+                        else { throw ProjectStoreError.itemUnavailable }
+                        try await store.moveItem(item, toStatus: option, in: target.project.id)
+                    } else {
+                        try await store.archiveItem(item, in: target.project.id)
+                    }
+                    selectedIDs.remove(target.id)
+                }
+                if selectedIDs.isEmpty { isSelecting = false }
+            } catch { report(error) }
+        }
     }
 
     private func followedProjectTitle(_ reference: FollowedProject) -> String {

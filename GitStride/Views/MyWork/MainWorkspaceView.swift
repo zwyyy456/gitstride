@@ -188,6 +188,7 @@ struct MainWorkspaceView: View {
                         }
                     }
                 }
+                .modifier(SidebarKeyboardNavigation())
             }
             .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 320)
         } detail: {

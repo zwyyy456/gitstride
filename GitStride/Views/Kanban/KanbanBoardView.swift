@@ -227,14 +227,14 @@ struct KanbanBoardView: View {
                         Button(status.name) { moveSelection(to: status) }
                     }
                 }
-                .disabled(selectedItemIDs.isEmpty || isBulkWorking)
+                .disabled(selectedItemIDs.isEmpty || isBulkWorking || !canEditSelectedProject)
 
                 Button(role: .destructive) {
                     archiveSelection()
                 } label: {
                     Label("Archive", systemImage: "archivebox")
                 }
-                .disabled(selectedItemIDs.isEmpty || isBulkWorking)
+                .disabled(selectedItemIDs.isEmpty || isBulkWorking || !canEditSelectedProject)
 
                 Button("Done", action: toggleSelectionMode)
                     .keyboardShortcut(.cancelAction)
@@ -259,8 +259,10 @@ struct KanbanBoardView: View {
                         Text(layout.title).tag(layout)
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
+                .labelsHidden()
                 .fixedSize()
+                .accessibilityLabel("Project Layout")
                 .help("Change project layout")
             }
         }
@@ -416,7 +418,7 @@ struct KanbanBoardView: View {
             : nil
 
         if isSelecting {
-            let canWork = selectedItemIDs.isEmpty == false && isBulkWorking == false
+            let canWork = !selectedItemIDs.isEmpty && !isBulkWorking && canEditSelectedProject
             context.moveSelection = (store.selectedProject?.statusOptions ?? []).map { status in
                 .init(
                     id: "move-selection-\(status.id)",
@@ -576,7 +578,7 @@ struct KanbanBoardView: View {
                     preferenceID: tablePreferenceID,
                     workControls: workControls(project),
                     collapsedGroups: $collapsedTableGroups,
-                    isSelecting: isSelecting,
+                    isSelecting: $isSelecting,
                     selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID,
                     showItemDetail: openItemDetail,
                     reportError: report
@@ -598,7 +600,7 @@ struct KanbanBoardView: View {
     private func roadmapContent(_ project: Project) -> some View {
         ProjectRoadmapView(
             project: project, items: filteredItems(for: project.items), store: store,
-            preferenceID: tablePreferenceID, isSelecting: isSelecting,
+            preferenceID: tablePreferenceID, isSelecting: $isSelecting,
             selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID, showItemDetail: openItemDetail,
             clearFilters: workControls(project).clearFilters, reportError: report
         )
@@ -650,13 +652,13 @@ struct KanbanBoardView: View {
             store: store, project: project, items: filteredItems(for: project.items),
             statuses: visibleStatuses(in: project), preferenceID: tablePreferenceID,
             emptyMessage: workFilter.isActive || !itemSearchText.isEmpty ? String(localized: "No matching items") : String(localized: "No items"),
-            isSelecting: isSelecting, selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID,
+            isSelecting: $isSelecting, selectedItemIDs: $selectedItemIDs, currentItemID: $currentItemID,
             showInspector: openItemDetail, reportError: report
         )
     }
 
     private func openItemDetail(_ reference: ItemInspectorReference) {
-        selectedItemIDs = [reference.itemID]
+        currentItemID = reference.itemID
         showItemDetail(reference)
     }
 
@@ -666,7 +668,7 @@ struct KanbanBoardView: View {
 
     private func moveSelection(to status: StatusOption) {
         let items = selectedItems
-        guard items.isEmpty == false, let projectID = store.selectedProjectId else { return }
+        guard !items.isEmpty, !isBulkWorking, canEditSelectedProject, let projectID = store.selectedProjectId else { return }
         isBulkWorking = true
         operationErrorMessage = nil
         Task {
@@ -682,7 +684,7 @@ struct KanbanBoardView: View {
 
     private func archiveSelection() {
         let items = selectedItems
-        guard items.isEmpty == false, let projectID = store.selectedProjectId else { return }
+        guard !items.isEmpty, !isBulkWorking, canEditSelectedProject, let projectID = store.selectedProjectId else { return }
         isBulkWorking = true
         operationErrorMessage = nil
         Task {

@@ -29,4 +29,22 @@ struct CommandSearchTests {
         #expect(ItemKeyboardNavigation.reconciled("b", old: ["a", "b"], new: []) == nil)
         #expect(ItemKeyboardNavigation.reconciled(nil, old: ["a"], new: ["b"]) == nil)
     }
+    @Test func rangeSelectionShrinksAcrossAnchorAndPreservesOtherSelections() {
+        var range = ItemRangeSelection()
+        let ids = ["a", "b", "c", "d", "e"]
+        let first = range.extend(from: "b", to: "c", in: ids, selected: ["b", "e"])
+        #expect(first == ["b", "c", "e"])
+        let back = range.extend(from: "c", to: "b", in: ids, selected: first)
+        #expect(back == ["b", "e"])
+        #expect(range.extend(from: "b", to: "a", in: ids, selected: back) == ["a", "b", "e"])
+        range.reset()
+        #expect(range.extend(from: nil, to: "d", in: ids, selected: []) == ["d"])
+    }
+
+    @Test func rangeSelectionReanchorsAfterFocusOrVisibleItemsChange() {
+        var range = ItemRangeSelection()
+        _ = range.extend(from: "a", to: "b", in: ["a", "b", "c"], selected: [])
+        #expect(range.extend(from: "c", to: "b", in: ["a", "b", "c"], selected: []) == ["b", "c"])
+        #expect(range.extend(from: "b", to: "d", in: ["b", "d"], selected: ["a"]) == ["b", "d"])
+    }
 }

@@ -26,7 +26,7 @@ struct ProjectRoadmapView: View {
     let project: Project
     let items: [ProjectItem]
     @Bindable var store: ProjectStore
-    let isSelecting: Bool
+    @Binding var isSelecting: Bool
     @Binding var selectedItemIDs: Set<String>
     @Binding var currentItemID: String?
     @FocusState private var keyboardItemID: String?
@@ -56,13 +56,13 @@ struct ProjectRoadmapView: View {
     }
 
     init(project: Project, items: [ProjectItem], store: ProjectStore, preferenceID: String,
-         isSelecting: Bool, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
+         isSelecting: Binding<Bool>, selectedItemIDs: Binding<Set<String>>, currentItemID: Binding<String?>,
          showItemDetail: @escaping (ItemInspectorReference) -> Void,
          clearFilters: @escaping () -> Void, reportError: @escaping (Error) -> Void) {
         self.project = project
         self.items = items
         self.store = store
-        self.isSelecting = isSelecting
+        _isSelecting = isSelecting
         _selectedItemIDs = selectedItemIDs
         _currentItemID = currentItemID
         self.showItemDetail = showItemDetail
@@ -151,6 +151,8 @@ struct ProjectRoadmapView: View {
             zoom: $zoom, today: goToToday, showOptions: { showsOptions = true }
         ))
         .sheet(isPresented: $showsOptions) { options }
+        .itemSelectionKeyboard(ids: rows.compactMap(\.item).filter { store.pendingCreationState(for: $0.id) == nil }.map(\.id), current: $currentItemID,
+            selected: $selectedItemIDs, isSelecting: $isSelecting)
         .onChange(of: dateFields.map(\.id), initial: true) { _, ids in
             if !ids.contains(startFieldID) {
                 startFieldID = (try? ProjectField.dateField(named: "Start date", in: project.fields))?.id ?? ""
