@@ -30,6 +30,45 @@ extension ProjectStoreTests {
     private static let addedBacklogResponse =
         #"{"data":{"updateProjectV2Field":{"projectV2Field":{"id":"STATUS","options":[{"id":"TODO","name":"Todo","color":"GRAY","description":""},{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"},{"id":"BACKLOG","name":"Backlog","color":"GRAY","description":""}]}}}}"#
 
+    @Test func creationDatesResumeWithoutRecreatingIssueOrRepeatingConfirmedFields() async throws {
+        let fields = Self.mutationFieldsResponse.replacingOccurrences(
+            of: "\"fields\":{\"nodes\":[",
+            with: "\"fields\":{\"nodes\":[" +
+                #"{"__typename":"ProjectV2Field","id":"START","name":"Start date","dataType":"DATE"},{"__typename":"ProjectV2Field","id":"TARGET","name":"Target date","dataType":"DATE"},"#
+        )
+        var responses = Self.mutationProjectResponses
+        responses[3] = fields
+        let runner = FixtureGitHubHTTPClient(responses: responses + [
+            Self.issueRepositoryResponse, Self.createdIssueResponse,
+            Self.confirmedProjectMembershipResponse,
+            Self.graphQLSuccessResponse, Self.graphQLFailureResponse, Self.graphQLSuccessResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try #require(calendar.date(from: DateComponents(year: 2026, month: 9, day: 25)))
+        let target = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 2)))
+        let creation = try store.prepareIssueCreation(
+            repository: "acme/app", title: "New", body: "", labels: [], assignees: [],
+            startDate: start, targetDate: target
+        )
+        await #expect(throws: GitHubError.self) { try await store.resumeIssueCreation(creation) }
+        try await store.resumeIssueCreation(creation)
+
+        let requests = await runner.recordedRequests()
+        let writes = requests.filter { $0.graphQLQuery == GraphQLQueries.updateDateField }
+        #expect(writes.count == 3)
+        #expect(writes[0].hasVariable("fieldId", "START"))
+        #expect(writes[0].hasVariable("date", "2026-09-25"))
+        #expect(writes[1].hasVariable("fieldId", "TARGET"))
+        #expect(writes[2].hasVariable("date", "2026-10-02"))
+        #expect(issueCreationCount(await runner.recordedBodies()) == 1)
+        let item = try #require(store.selectedProject?.items.first { $0.id == "NEW_ITEM" })
+        #expect(item.fieldValues["START"] == .date("2026-09-25"))
+        #expect(item.fieldValues["TARGET"] == .date("2026-10-02"))
+    }
+
     @Test func missingBacklogIsAddedBeforeIssueCreationAndSelectedOnTheNewItem() async throws {
         let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [

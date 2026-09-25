@@ -70,13 +70,54 @@ struct ProjectWorkFilter: Codable, Equatable {
     }
 }
 
+enum ProjectLayout: String, Codable, CaseIterable {
+    case board, table, roadmap
+
+    var title: String {
+        switch self {
+        case .board: String(localized: "Board")
+        case .table: String(localized: "Table")
+        case .roadmap: String(localized: "Roadmap")
+        }
+    }
+}
+
 struct SavedProjectWorkView: Codable, Identifiable {
     var id = UUID().uuidString
     let projectID: String
     var name: String
     var filter: ProjectWorkFilter
-    var usesTable: Bool
+    var layout: ProjectLayout
     var hiddenStatusIDs: Set<String> = []
+
+    init(projectID: String, name: String, filter: ProjectWorkFilter,
+         layout: ProjectLayout, hiddenStatusIDs: Set<String> = []) {
+        self.projectID = projectID
+        self.name = name
+        self.filter = filter
+        self.layout = layout
+        self.hiddenStatusIDs = hiddenStatusIDs
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, projectID, name, filter, layout, hiddenStatusIDs
+    }
+    private enum LegacyKeys: String, CodingKey { case usesTable }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        projectID = try values.decode(String.self, forKey: .projectID)
+        name = try values.decode(String.self, forKey: .name)
+        filter = try values.decode(ProjectWorkFilter.self, forKey: .filter)
+        hiddenStatusIDs = try values.decodeIfPresent(Set<String>.self, forKey: .hiddenStatusIDs) ?? []
+        if let stored = try values.decodeIfPresent(ProjectLayout.self, forKey: .layout) {
+            layout = stored
+        } else {
+            let legacy = try decoder.container(keyedBy: LegacyKeys.self)
+            layout = try legacy.decode(Bool.self, forKey: .usesTable) ? .table : .board
+        }
+    }
 }
 
 extension ProjectItem {

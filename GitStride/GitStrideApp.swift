@@ -176,6 +176,7 @@ private struct GitStrideCommands: Commands {
     let showWelcome: () -> Void
     @Environment(\.openWindow) private var openWindow
     @FocusedValue(\.workspaceCommandContext) private var workspaceCommandContext
+    @FocusedValue(\.roadmapCommands) private var roadmapCommands
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -215,6 +216,26 @@ private struct GitStrideCommands: Commands {
         }
 
         CommandMenu("Workspace") {
+            if let layout = workspaceCommandContext?.projectLayout {
+                Picker("Project Layout", selection: layout) {
+                    ForEach(ProjectLayout.allCases, id: \.self) { value in
+                        Text(value.title).tag(value)
+                    }
+                }
+                Divider()
+            }
+
+            if let roadmap = roadmapCommands {
+                Menu("Roadmap") {
+                    Button("Today", action: roadmap.today)
+                    Picker("Timeline Zoom", selection: roadmap.zoom) {
+                        ForEach(RoadmapZoom.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    Button("Roadmap Options", action: roadmap.showOptions)
+                }
+                Divider()
+            }
+
             if let addItem = workspaceCommandContext?.addItem {
                 Button(addItem.title, action: addItem.perform)
                     .disabled(addItem.isEnabled == false)

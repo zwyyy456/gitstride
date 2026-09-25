@@ -26,6 +26,7 @@ enum ProjectStoreError: LocalizedError {
     case operationInProgress
     case emptyItemTitle
     case itemDetailsFailed(String)
+    case missingDateField(String)
     case missingFieldOption(field: String, option: String)
 
     var errorDescription: String? {
@@ -44,6 +45,8 @@ enum ProjectStoreError: LocalizedError {
             message
         case .itemUnavailable:
             String(localized: "This item is no longer available.")
+        case .missingDateField(let name):
+            String(localized: "Date field unavailable: \(name)")
         case .missingFieldOption(let field, let option):
             String(localized: "\(field) has no option named \(option).")
         }
@@ -71,7 +74,7 @@ final class IssueCreation {
     fileprivate let assignees: [String]
     fileprivate let selectedStatusName: String?
     fileprivate var backlogFieldToPrepare: ProjectField?
-    fileprivate var remainingFields: [(ProjectField, ProjectFieldOption)]
+    fileprivate var remainingFields: [(ProjectField, ProjectFieldValue)]
     fileprivate var createdIssue: CreatedIssue?
     fileprivate var createdItem: ProjectItem?
     fileprivate(set) var phase: Phase = .ready
@@ -88,7 +91,7 @@ final class IssueCreation {
 
     fileprivate init(sessionID: UUID, projectID: String, repository: String, title: String, body: String,
                      labels: [String], assignees: [String], selectedStatusName: String?,
-                     backlogFieldToPrepare: ProjectField?, fields: [(ProjectField, ProjectFieldOption)]) {
+                     backlogFieldToPrepare: ProjectField?, fields: [(ProjectField, ProjectFieldValue)]) {
         self.sessionID = sessionID
         self.projectID = projectID
         self.repository = repository
@@ -251,6 +254,7 @@ final class ProjectStore {
     private(set) var refreshingItemReferences: Set<ItemInspectorReference> = []
     private var repositoryMilestones: [String: RepositoryMilestonesState] = [:]
     private var pendingItemMutations: [ItemMutationKey: UUID] = [:]
+    private var pendingRoadmapEdits: [ItemMutationKey: RoadmapEdit] = [:]
     private var pendingStatusMoves: [ItemMutationKey: PendingStatusMove] = [:]
     private var pendingContentMutations: [String: UUID] = [:]
     private(set) var pendingCreations: [UUID: PendingItemCreation] = [:]
@@ -335,7 +339,20 @@ final class ProjectStore {
                 optionId: move.status.id, name: move.status.name
             )
         }
+        for (key, edit) in pendingRoadmapEdits where key.projectID == id {
+            guard let index = project.items.firstIndex(where: { $0.id == key.itemID }) else { continue }
+            for change in edit.changes { project.items[index].fieldValues[change.fieldID] = change.value }
+        }
         return project
+    }
+
+    func isUpdatingRoadmap(itemID: String, projectID: String) -> Bool {
+        pendingRoadmapEdits[ItemMutationKey(projectID: projectID, itemID: itemID)] != nil
+    }
+
+    func canEditRoadmap(itemID: String, projectID: String) -> Bool {
+        canEditProject(id: projectID) && pendingCreationState(for: itemID) == nil
+            && pendingItemMutations[ItemMutationKey(projectID: projectID, itemID: itemID)] == nil
     }
 
     func pendingCreationState(for itemID: String) -> PendingSyncState? {
@@ -359,8 +376,13 @@ final class ProjectStore {
             let selectedStatus = creation.remainingFields.first {
                 $0.0.name.caseInsensitiveCompare("Status") == .orderedSame
             }?.1
-            status = creation.createdItem?.status ?? selectedStatus?.name ?? creation.selectedStatusName
-            statusOptionID = creation.createdItem?.statusOptionId ?? selectedStatus?.id
+            if case .singleSelect(let id, let name) = selectedStatus {
+                status = creation.createdItem?.status ?? name
+                statusOptionID = creation.createdItem?.statusOptionId ?? id
+            } else {
+                status = creation.createdItem?.status ?? creation.selectedStatusName
+                statusOptionID = creation.createdItem?.statusOptionId
+            }
         case .draft:
             contentType = .draftIssue
             status = nil
@@ -845,6 +867,7 @@ final class ProjectStore {
         pendingCreations = [:]
         pendingContentEdits = [:]
         pendingStatusMoves = [:]
+        pendingRoadmapEdits = [:]
         owners = []
         repositoryLists = [:]
         repositoryReadIDs = [:]
@@ -1334,6 +1357,7 @@ final class ProjectStore {
 
     private func removeProject(id: String) {
         projectStates[id] = nil
+        pendingRoadmapEdits = pendingRoadmapEdits.filter { $0.key.projectID != id }
         pendingStatusMoves = pendingStatusMoves.filter { $0.key.projectID != id }
         pendingItemMutations = pendingItemMutations.filter { $0.key.projectID != id }
         reconciliationTasks.removeValue(forKey: id)?.task.cancel()
@@ -1528,6 +1552,60 @@ final class ProjectStore {
         await persistCache()
     }
 
+    func updateRoadmap(
+        on item: ProjectItem, in projectID: String, startFieldID: String, endFieldID: String,
+        kind: RoadmapEditKind, days: Int
+    ) async throws {
+        let project = try editableProject(id: projectID)
+        let key = ItemMutationKey(projectID: projectID, itemID: item.id)
+        guard pendingItemMutations[key] == nil, pendingCreationState(for: item.id) == nil else {
+            throw ProjectStoreError.operationInProgress
+        }
+        guard let current = project.items.first(where: { $0.id == item.id }) else {
+            throw ProjectStoreError.itemUnavailable
+        }
+        for id in Set([startFieldID, endFieldID]) where !id.isEmpty {
+            guard project.fields.contains(where: { $0.id == id && ($0.kind == .date || $0.kind == .iteration) }),
+                  current.fieldValues[id] == item.fieldValues[id] else { throw RoadmapEditError.changedSchedule }
+        }
+        let edit = try RoadmapEdit.make(values: item.fieldValues, fields: project.fields,
+            startFieldID: startFieldID, endFieldID: endFieldID, kind: kind, days: days)
+        guard !edit.changes.isEmpty else { return }
+        do {
+            try await performProjectMutation(projectID: projectID, itemID: item.id) {
+                let operationID = self.pendingItemMutations[key]
+                self.pendingRoadmapEdits[key] = edit
+                defer { self.pendingRoadmapEdits[key] = nil }
+                do {
+                    for change in edit.changes {
+                        try Task.checkCancellation()
+                        try await self.gitHubService.updateItemField(
+                            projectId: projectID, itemId: item.id, fieldId: change.fieldID, value: change.value
+                        )
+                        guard self.isActive, self.pendingItemMutations[key] == operationID else {
+                            throw CancellationError()
+                        }
+                        self.updateItem(projectID: projectID, itemID: item.id) {
+                            $0.fieldValues[change.fieldID] = change.value
+                        }
+                    }
+                } catch {
+                    // Each field is a separate remote write, and a lost response can be ambiguous.
+                    if self.isActive, self.pendingItemMutations[key] == operationID {
+                        self.projectStates[projectID]?.needsRefresh = true
+                    }
+                    throw error
+                }
+            }
+        } catch {
+            await persistCache()
+            if error is CancellationError { throw error }
+            if error is ProjectStoreError { throw error }
+            throw RoadmapEditError.incompleteWrite(error.localizedDescription)
+        }
+        await persistCache()
+    }
+
     func updateField(
         on item: ProjectItem, in projectID: String, field: ProjectField, value: ProjectFieldValue?
     ) async throws {
@@ -1642,14 +1720,16 @@ final class ProjectStore {
         labels: [String],
         assignees: [String],
         status: String? = nil,
-        priority: String? = nil
+        priority: String? = nil,
+        startDate: Date? = nil,
+        targetDate: Date? = nil
     ) throws -> IssueCreation {
         let project = try editableSelectedProject()
 
         let requestedFields = [("Status", status), ("Priority", priority)].compactMap { name, value in
             value.map { (name, $0) }
         }
-        var resolvedFields: [(ProjectField, ProjectFieldOption)] = []
+        var resolvedFields: [(ProjectField, ProjectFieldValue)] = []
         var backlogFieldToPrepare: ProjectField?
         for (name, value) in requestedFields {
             guard let field = project.fields.first(where: {
@@ -1666,7 +1746,17 @@ final class ProjectStore {
                 }
                 throw ProjectStoreError.missingFieldOption(field: name, option: value)
             }
-            resolvedFields.append((field, option))
+            resolvedFields.append((field, .singleSelect(optionId: option.id, name: option.name)))
+        }
+
+        for (name, date) in [("Start date", startDate), ("Target date", targetDate)] {
+            guard let date else { continue }
+            guard let field = project.fields.first(where: {
+                $0.kind == .date && $0.name.caseInsensitiveCompare(name) == .orderedSame
+            }) else { throw ProjectStoreError.missingDateField(name) }
+            let components = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: date)
+            let value = String(format: "%04d-%02d-%02d", components.year!, components.month!, components.day!)
+            resolvedFields.append((field, .date(value)))
         }
 
         return IssueCreation(sessionID: sessionID, projectID: project.id, repository: repository, title: title, body: body,
@@ -1784,7 +1874,7 @@ final class ProjectStore {
                             guard let backlog = options.first(where: {
                                 $0.name.caseInsensitiveCompare("Backlog") == .orderedSame
                             }) else { return }
-                            creation.remainingFields.insert((field, backlog), at: 0)
+                            creation.remainingFields.insert((field, .singleSelect(optionId: backlog.id, name: backlog.name)), at: 0)
                             creation.backlogFieldToPrepare = nil
                             if var project = projectStates[creation.projectID]?.snapshot {
                                 if let index = project.fields.firstIndex(where: { $0.id == field.id }) {
@@ -1867,16 +1957,16 @@ final class ProjectStore {
             }
             if case .applyingFields(let issueURL, let itemID) = creation.phase {
                 try await performProjectMutation(projectID: creation.projectID, itemID: itemID) {
-                    while let (field, option) = creation.remainingFields.first {
-                        let value = ProjectFieldValue.singleSelect(optionId: option.id, name: option.name)
+                    while let (field, value) = creation.remainingFields.first {
                         try await self.gitHubService.updateItemField(
                             projectId: creation.projectID, itemId: itemID, fieldId: field.id,
                             value: value
                         )
                         creation.createdItem?.fieldValues[field.id] = value
-                        if field.name.caseInsensitiveCompare("Status") == .orderedSame {
-                            creation.createdItem?.status = option.name
-                            creation.createdItem?.statusOptionId = option.id
+                        if field.name.caseInsensitiveCompare("Status") == .orderedSame,
+                           case .singleSelect(let id, let name) = value {
+                            creation.createdItem?.status = name
+                            creation.createdItem?.statusOptionId = id
                         }
                         creation.remainingFields.removeFirst()
                     }

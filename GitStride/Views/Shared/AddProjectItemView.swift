@@ -3,7 +3,7 @@ import SwiftUI
 
 struct AddProjectItemView: View {
     static let sheetWidth: CGFloat = 620
-    private static let sheetHeight: CGFloat = 520
+    private static let sheetHeight: CGFloat = 620
     static let horizontalPadding: CGFloat = 48
     static let windowDefaultSize = CGSize(width: sheetWidth, height: sheetHeight)
     static let windowMinimumSize = CGSize(width: 520, height: 500)
@@ -96,6 +96,8 @@ struct AddProjectItemView: View {
             }
         }
         .onChange(of: store.selectedProjectId) { _, _ in
+            draft.startDate = nil
+            draft.targetDate = nil
             guard presentation == .window else { return }
             draft.repository = store.defaultIssueRepository
             draft.status = defaultStatus
@@ -277,7 +279,8 @@ struct AddProjectItemView: View {
                     repository: draft.repository.trimmed, title: draft.title.trimmed, body: draft.bodyText,
                     labels: draft.labelNames,
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
-                    status: draft.status.trimmed.nilIfEmpty, priority: draft.priority.trimmed.nilIfEmpty
+                    status: draft.status.trimmed.nilIfEmpty, priority: draft.priority.trimmed.nilIfEmpty,
+                    startDate: draft.startDate, targetDate: draft.targetDate
                 )
                 try store.beginIssueCreation(creation)
             } else {

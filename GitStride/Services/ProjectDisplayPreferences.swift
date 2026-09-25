@@ -3,6 +3,7 @@ import Foundation
 struct ProjectDisplayPreferences {
     enum Key: String, CaseIterable {
         case columns, sortColumn, sortAscending, fieldID, groupsByStatus, cardFields
+        case roadmapStartField, roadmapEndField, roadmapZoom, roadmapGroupsByStatus, roadmapTitleWidth
     }
 
     let id: String

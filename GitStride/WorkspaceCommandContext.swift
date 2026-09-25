@@ -8,6 +8,7 @@ struct WorkspaceCommandContext {
         let perform: () -> Void
     }
 
+    var projectLayout: Binding<ProjectLayout>? = nil
     let refresh: Action
     var addItem: Action? = nil
     var editItem: Action? = nil

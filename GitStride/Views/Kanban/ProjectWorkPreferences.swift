@@ -7,7 +7,7 @@ struct ProjectWorkPreferences: DynamicProperty {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        _layoutsData = AppStorage(wrappedValue: Data(), "projectTableLayouts", store: defaults)
+        _layoutsData = AppStorage(wrappedValue: Data(), "projectLayouts", store: defaults)
         _viewsData = AppStorage(wrappedValue: Data(), "savedProjectWorkViews", store: defaults)
     }
 
@@ -15,21 +15,27 @@ struct ProjectWorkPreferences: DynamicProperty {
         (try? JSONDecoder().decode([SavedProjectWorkView].self, from: viewsData)) ?? []
     }
 
-    private var tableProjectIDs: Set<String> {
-        (try? JSONDecoder().decode(Set<String>.self, from: layoutsData)) ?? []
+    private var layouts: [String: ProjectLayout] {
+        if !layoutsData.isEmpty {
+            return (try? JSONDecoder().decode([String: ProjectLayout].self, from: layoutsData)) ?? [:]
+        }
+        let legacy = defaults.data(forKey: "projectTableLayouts") ?? Data()
+        let ids = (try? JSONDecoder().decode(Set<String>.self, from: legacy)) ?? []
+        return Dictionary(uniqueKeysWithValues: ids.map { ($0, .table) })
     }
 
-    func usesTable(projectID: String) -> Bool {
-        tableProjectIDs.contains(projectID)
+    func layout(projectID: String) -> ProjectLayout {
+        layouts[projectID] ?? .board
     }
 
-    func setLayout(usesTable: Bool, projectID: String, viewID: String?) throws {
+    func setLayout(_ layout: ProjectLayout, projectID: String, viewID: String?) throws {
         if let viewID {
-            try update(viewID) { $0.usesTable = usesTable }
+            try update(viewID) { $0.layout = layout }
         } else {
-            var ids = tableProjectIDs
-            if usesTable { ids.insert(projectID) } else { ids.remove(projectID) }
-            layoutsData = try JSONEncoder().encode(ids)
+            var values = layouts
+            values[projectID] = layout
+            layoutsData = try JSONEncoder().encode(values)
+            defaults.removeObject(forKey: "projectTableLayouts")
         }
     }
 

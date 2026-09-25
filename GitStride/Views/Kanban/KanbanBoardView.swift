@@ -36,15 +36,15 @@ struct KanbanBoardView: View {
         _isSelecting = isSelecting
     }
 
-    private var usesTable: Bool {
-        selectedSavedView?.usesTable ?? (store.selectedProjectId.map { workPreferences.usesTable(projectID: $0) } ?? false)
+    private var layout: ProjectLayout {
+        selectedSavedView?.layout ?? (store.selectedProjectId.map { workPreferences.layout(projectID: $0) } ?? .board)
     }
 
-    private var layoutSelection: Binding<Bool> {
-        Binding(get: { usesTable }, set: { useTable in
+    private var layoutSelection: Binding<ProjectLayout> {
+        Binding(get: { layout }, set: { layout in
             guard let id = store.selectedProjectId else { return }
             do {
-                try workPreferences.setLayout(usesTable: useTable, projectID: id, viewID: selectedViewID)
+                try workPreferences.setLayout(layout, projectID: id, viewID: selectedViewID)
             } catch { report(error) }
         })
     }
@@ -111,7 +111,7 @@ struct KanbanBoardView: View {
             .onChange(of: tablePreferenceID) { _, _ in collapsedTableGroups.removeAll() }
             .onChange(of: workFilter) { _, _ in selectedItemIDs.removeAll() }
             .onChange(of: searchText) { _, _ in selectedItemIDs.removeAll() }
-            .onChange(of: usesTable) { _, _ in selectedItemIDs.removeAll() }
+            .onChange(of: layout) { _, _ in selectedItemIDs.removeAll() }
             .onChange(of: isSelecting) { _, isSelecting in
                 if isSelecting == false {
                     selectedItemIDs.removeAll()
@@ -251,8 +251,9 @@ struct KanbanBoardView: View {
         if store.selectedProject != nil {
             ToolbarItem(placement: .automatic) {
                 Picker("Project Layout", selection: layoutSelection) {
-                    Text("Board").tag(false)
-                    Text("Table").tag(true)
+                    ForEach(ProjectLayout.allCases, id: \.self) { layout in
+                        Text(layout.title).tag(layout)
+                    }
                 }
                 .pickerStyle(.segmented)
                 .fixedSize()
@@ -275,10 +276,10 @@ struct KanbanBoardView: View {
         if let project = store.selectedProject {
             ToolbarItem(placement: .automatic) {
                 Group {
-                    if usesTable {
+                    if layout == .table {
                         TableDisplayOptions(project: project, preferenceID: tablePreferenceID,
                                             collapsedGroups: $collapsedTableGroups)
-                    } else {
+                    } else if layout == .board {
                         BoardDisplayOptions(project: project, preferenceID: tablePreferenceID,
                                             visibleStatusIDs: visibleStatusBinding(project))
                     }
@@ -348,7 +349,7 @@ struct KanbanBoardView: View {
         guard let projectID = store.selectedProjectId else { return }
         let view = SavedProjectWorkView(projectID: projectID,
             name: viewName.trimmingCharacters(in: .whitespacesAndNewlines),
-            filter: workFilter, usesTable: usesTable,
+            filter: workFilter, layout: layout,
             hiddenStatusIDs: Set(store.selectedProject?.statusOptions.map(\.id) ?? []).subtracting(
                 store.selectedProject.map { Set(visibleStatuses(in: $0).map(\.id)) } ?? []))
         do {
@@ -392,6 +393,8 @@ struct KanbanBoardView: View {
                 perform: refresh
             )
         )
+
+        if store.selectedProject != nil { context.projectLayout = layoutSelection }
 
         context.toggleSelection = showsProjectEditingActions
             ? .init(
@@ -555,7 +558,7 @@ struct KanbanBoardView: View {
         case .loading:
             loadingView
         case .content(let project, _, _):
-            if usesTable {
+            if layout == .table {
                 ProjectTableView(
                     project: project,
                     items: filteredItems(for: project.items),
@@ -569,14 +572,27 @@ struct KanbanBoardView: View {
                     reportError: report
                 )
                 .id(tablePreferenceID)
+            } else if layout == .roadmap {
+                roadmapContent(project)
             } else {
                 boardContent(project)
             }
         case .empty(let project, _, _):
-            emptyProjectView(project)
+            if layout == .roadmap { roadmapContent(project) }
+            else { emptyProjectView(project) }
         case .failed(let project, let message):
             projectErrorView(project, message: message)
         }
+    }
+
+    private func roadmapContent(_ project: Project) -> some View {
+        ProjectRoadmapView(
+            project: project, items: filteredItems(for: project.items), store: store,
+            preferenceID: tablePreferenceID, isSelecting: isSelecting,
+            selectedItemIDs: $selectedItemIDs, showItemDetail: openItemDetail,
+            clearFilters: workControls(project).clearFilters, reportError: report
+        )
+        .id(tablePreferenceID)
     }
 
     private func emptyProjectView(_ project: Project) -> some View {

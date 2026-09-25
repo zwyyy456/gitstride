@@ -13,7 +13,10 @@ struct ProjectTableTests {
         let values: [String: NSObject] = [
             "columns": NSData(data: Data([1, 2, 3])), "sortColumn": "title" as NSString,
             "sortAscending": false as NSNumber, "fieldID": "priority" as NSString,
-            "groupsByStatus": true as NSNumber, "cardFields": "labels,milestone" as NSString
+            "groupsByStatus": true as NSNumber, "cardFields": "labels,milestone" as NSString,
+            "roadmapStartField": "start" as NSString, "roadmapEndField": "end" as NSString,
+            "roadmapZoom": "quarter" as NSString, "roadmapGroupsByStatus": false as NSNumber,
+            "roadmapTitleWidth": 280 as NSNumber
         ]
         for (key, value) in values {
             defaults.set(value, forKey: "projectTable.P1.\(key)")
@@ -92,7 +95,7 @@ struct ProjectTableTests {
         #expect(filter.apply(to: [first], currentUserLogin: "octocat").isEmpty)
 
         let view = SavedProjectWorkView(projectID: "project", name: "Delivery", filter: filter,
-                                       usesTable: true, hiddenStatusIDs: ["done"])
+                                       layout: .table, hiddenStatusIDs: ["done"])
         let restored = try JSONDecoder().decode(SavedProjectWorkView.self, from: JSONEncoder().encode(view))
         #expect(restored.id == view.id)
         #expect(restored.filter == filter)

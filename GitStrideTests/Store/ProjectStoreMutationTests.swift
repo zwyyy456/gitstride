@@ -399,3 +399,100 @@ extension ProjectStoreTests {
         #expect(detail.bodyHTML == "Updated")
     }
 }
+
+extension ProjectStoreTests {
+    private static var roadmapFields: String {
+        mutationFieldsResponse.replacingOccurrences(of: #""fields":{"nodes":["#, with:
+            #""fields":{"nodes":[{"__typename":"ProjectV2Field","id":"START","name":"Start","dataType":"DATE"},{"__typename":"ProjectV2Field","id":"END","name":"End","dataType":"DATE"},"#)
+    }
+
+    private static func roadmapItems(start: String = "2026-09-20", end: String = "2026-09-25") -> String {
+        mutationItemsResponse.replacingOccurrences(of: #""fieldValues":{"nodes":["#, with:
+            #""fieldValues":{"nodes":[{"__typename":"ProjectV2ItemFieldDateValue","date":"\#(start)","field":{"id":"START"}},{"__typename":"ProjectV2ItemFieldDateValue","date":"\#(end)","field":{"id":"END"}},"#)
+    }
+
+    private static var roadmapResponses: [String] {
+        [sessionResponse, ownersResponse, mutationProjectsResponse, roadmapFields, roadmapItems()]
+    }
+
+    @Test func roadmapWriteHoldsTheItemLockAcrossBothFieldsAndRejectsStaleDrafts() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: Self.roadmapResponses.map { .response($0) } + [
+            .suspended("end", Self.graphQLSuccessResponse), .suspended("start", Self.graphQLSuccessResponse)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let project = try #require(store.selectedProject)
+        let item = try #require(project.items.first)
+        let saving = Task { try await store.updateRoadmap(on: item, in: project.id,
+            startFieldID: "START", endFieldID: "END", kind: .move, days: 2) }
+        await runner.waitUntilSuspended("end")
+        #expect(store.isUpdatingRoadmap(itemID: item.id, projectID: project.id))
+        #expect(store.project(id: project.id)?.items.first?.fieldValues["START"] == .date("2026-09-22"))
+        await runner.release("end")
+        await runner.waitUntilSuspended("start")
+        let callCount = await runner.recordedCallCount()
+        await #expect(throws: ProjectStoreError.self) {
+            try await store.archiveItem(item, in: project.id)
+        }
+        #expect(await runner.recordedCallCount() == callCount)
+        await runner.release("start")
+        try await saving.value
+        #expect(!store.isUpdatingRoadmap(itemID: item.id, projectID: project.id))
+        #expect(store.project(id: project.id)?.items.first?.fieldValues["END"] == .date("2026-09-27"))
+        await #expect(throws: RoadmapEditError.self) {
+            try await store.updateRoadmap(on: item, in: project.id,
+                startFieldID: "START", endFieldID: "END", kind: .move, days: 1)
+        }
+        #expect(await runner.recordedCallCount() == callCount)
+    }
+
+    @Test func roadmapPartialFailureKeepsTheConfirmedFieldAndReconcilesWithoutRetryingWrites() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: Self.roadmapResponses.map { .response($0) } + [
+            .response(Self.graphQLSuccessResponse), .response(Self.graphQLFailureResponse),
+            .suspended("reconcile", Self.roadmapFields), .response(Self.roadmapItems(end: "2026-09-27"))
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let item = try #require(store.selectedProject?.items.first)
+        await #expect(throws: RoadmapEditError.self) {
+            try await store.updateRoadmap(on: item, in: "P1",
+                startFieldID: "START", endFieldID: "END", kind: .move, days: 2)
+        }
+        await runner.waitUntilSuspended("reconcile")
+        #expect(!store.isUpdatingRoadmap(itemID: item.id, projectID: "P1"))
+        #expect(store.project(id: "P1")?.items.first?.fieldValues["START"] == .date("2026-09-20"))
+        #expect(store.project(id: "P1")?.items.first?.fieldValues["END"] == .date("2026-09-27"))
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.updateDateField }.count == 2)
+        let release = Task { await runner.release("reconcile") }
+        await store.loadProjectDetails(id: "P1")
+        await release.value
+        #expect(store.project(id: "P1")?.items.first?.fieldValues["END"] == .date("2026-09-27"))
+    }
+
+    @Test func cancelledRoadmapWriteDoesNotSendTheSecondField() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: Self.roadmapResponses.map { .response($0) } + [
+            .suspended("end", Self.graphQLSuccessResponse),
+            .suspended("reconcile", Self.roadmapFields), .response(Self.roadmapItems(end: "2026-09-27"))
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let item = try #require(store.selectedProject?.items.first)
+        let saving = Task { try await store.updateRoadmap(on: item, in: "P1",
+            startFieldID: "START", endFieldID: "END", kind: .move, days: 2) }
+        await runner.waitUntilSuspended("end")
+        saving.cancel()
+        await runner.release("end")
+        await #expect(throws: CancellationError.self) { try await saving.value }
+        await runner.waitUntilSuspended("reconcile")
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.updateDateField }.count == 1)
+        #expect(!store.isUpdatingRoadmap(itemID: item.id, projectID: "P1"))
+        let release = Task { await runner.release("reconcile") }
+        await store.loadProjectDetails(id: "P1")
+        await release.value
+    }
+}

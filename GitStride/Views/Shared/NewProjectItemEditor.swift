@@ -22,6 +22,8 @@ struct NewProjectItemDraft {
     var quickEntry = ""
     var status = ""
     var priority = ""
+    var startDate: Date?
+    var targetDate: Date?
     var labels = ""
     var assignees = ""
     var usesQuickEntry = false
@@ -116,7 +118,6 @@ struct NewProjectItemEditor: View {
     @FocusState private var focusedField: Field?
     private enum Field { case title, quickEntry }
     private static let horizontalPadding = AddProjectItemView.horizontalPadding
-    private static let labelWidth: CGFloat = 88
     private static let fieldSpacing: CGFloat = 12
 
     var body: some View {
@@ -169,23 +170,13 @@ struct NewProjectItemEditor: View {
 
             GridRow(alignment: .firstTextBaseline) {
                 fieldLabel(String(localized: "Type"))
-                HStack(alignment: .firstTextBaseline, spacing: 24) {
-                    Picker("Type", selection: $draft.itemType) {
-                        ForEach(NewProjectItemDraft.ItemType.allCases) { type in
-                            Text(type.title).tag(type)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-
-                    if draft.itemType == .issue, statusOptions.isEmpty == false {
-                        HStack(alignment: .firstTextBaseline, spacing: Self.fieldSpacing) {
-                            Text("Status")
-                                .fixedSize()
-                            statusPicker
-                        }
+                Picker("Type", selection: $draft.itemType) {
+                    ForEach(NewProjectItemDraft.ItemType.allCases) { type in
+                        Text(type.title).tag(type)
                     }
                 }
+                .labelsHidden()
+                .fixedSize()
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -232,12 +223,30 @@ struct NewProjectItemEditor: View {
                     }
                 }
 
+                Divider()
+                    .gridCellColumns(2)
+                    .padding(.vertical, 4)
+
+                if statusOptions.isEmpty == false {
+                    GridRow(alignment: .firstTextBaseline) {
+                        fieldLabel(String(localized: "Status"))
+                        statusPicker
+                    }
+                }
+
                 if priorityOptions.isEmpty == false {
                     GridRow(alignment: .firstTextBaseline) {
                         fieldLabel(String(localized: "Priority"))
                         priorityPicker.labelsHidden()
                     }
                 }
+                if hasDateField("Start date") {
+                    dateRow("Start date", selection: $draft.startDate)
+                }
+                if hasDateField("Target date") {
+                    dateRow("Target date", selection: $draft.targetDate)
+                }
+
             }
         }
         .pickerStyle(.menu)
@@ -245,7 +254,42 @@ struct NewProjectItemEditor: View {
 
     private func fieldLabel(_ labelTitle: String) -> some View {
         Text(labelTitle)
-            .frame(width: Self.labelWidth, alignment: .trailing)
+            .fixedSize()
+            .gridColumnAlignment(.trailing)
+    }
+
+    private func hasDateField(_ name: String) -> Bool {
+        store.selectedProject?.fields.contains {
+            $0.kind == .date && $0.name.caseInsensitiveCompare(name) == .orderedSame
+        } == true
+    }
+
+    private func dateRow(_ title: LocalizedStringKey, selection: Binding<Date?>) -> some View {
+        GridRow(alignment: .firstTextBaseline) {
+            Text(title)
+                .fixedSize()
+                .gridColumnAlignment(.trailing)
+            HStack {
+                if let date = selection.wrappedValue {
+                    DatePicker(title, selection: Binding(
+                        get: { selection.wrappedValue ?? date },
+                        set: { selection.wrappedValue = $0 }
+                    ), displayedComponents: .date)
+                    .labelsHidden()
+                    .fixedSize()
+                    Button("Clear", systemImage: "xmark.circle.fill") {
+                        selection.wrappedValue = nil
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(Text("Clear") + Text(" ") + Text(title))
+                } else {
+                    Text("Not set")
+                        .foregroundStyle(.secondary)
+                    Button("Set date…") { selection.wrappedValue = Date() }
+                }
+            }
+        }
     }
 
     private var statusPicker: some View {
