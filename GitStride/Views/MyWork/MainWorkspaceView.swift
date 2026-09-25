@@ -50,133 +50,138 @@ struct MainWorkspaceView: View {
 
     var body: some View {
         NavigationSplitView {
-            VStack(spacing: 0) {
-                Picker("Owner", selection: Binding(
-                    get: { model.projectStore.selectedOwnerId },
-                    set: { id in
-                        guard let owner = model.projectStore.owners.first(where: { $0.id == id }) else { return }
-                        destination = .project
-                        detailPath = NavigationPath()
-                        Task { await model.projectStore.selectOwner(owner) }
+            List(selection: sidebarSelection) {
+                Section("Owner") {
+                    Picker("Owner", selection: Binding(
+                        get: { model.projectStore.selectedOwnerId },
+                        set: { id in
+                            guard let owner = model.projectStore.owners.first(where: { $0.id == id }) else { return }
+                            destination = .project
+                            detailPath = NavigationPath()
+                            Task { await model.projectStore.selectOwner(owner) }
+                        }
+                    )) {
+                        if model.projectStore.selectedOwnerId == nil {
+                            Text("Select an owner").tag(String?.none)
+                        }
+                        ForEach(model.projectStore.owners) { owner in
+                            Label(owner.login, systemImage: owner.kind == .organization ? "building.2" : "person")
+                                .tag(Optional(owner.id))
+                        }
                     }
-                )) {
-                    if model.projectStore.selectedOwnerId == nil {
-                        Text("Select an owner").tag(String?.none)
-                    }
-                    ForEach(model.projectStore.owners) { owner in
-                        Label(owner.login, systemImage: owner.kind == .organization ? "building.2" : "person")
-                            .tag(Optional(owner.id))
-                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineLimit(1)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .help(model.projectStore.selectedOwner?.login ?? String(localized: "Select owner"))
+                    .disabled(model.projectStore.owners.isEmpty)
                 }
-                .padding(12)
-                .disabled(model.projectStore.owners.isEmpty)
 
-                List(selection: sidebarSelection) {
-                    Section {
-                        ForEach(model.projectStore.projects.filter { $0.owner.id == model.projectStore.selectedOwnerId }) { project in
-                            HStack(spacing: 8) {
-                                ProjectIcon(projectID: project.id)
-                                Text(project.title)
-                            }
-                                .accessibilityElement(children: .combine)
-                                .lineLimit(1)
-                                .help(project.title)
-                                .tag(SidebarSelection.project(project.id))
-                                .contextMenu {
-                                    ProjectManagementMenu(model: model, projectID: project.id)
-                                }
+                Section {
+                    ForEach(model.projectStore.projects.filter { $0.owner.id == model.projectStore.selectedOwnerId }) { project in
+                        HStack(spacing: 8) {
+                            ProjectIcon(projectID: project.id)
+                            Text(project.title)
                         }
-                        if model.projectStore.isLoading == false {
-                            if let error = model.projectStore.error {
-                                Text(error.localizedDescription).font(.caption).foregroundStyle(.secondary)
-                                if let error = error as? GitHubError,
-                                   [.ghCLINotFound, .notAuthenticated, .missingProjectScope, .accountChanged, .insufficientPermissions].contains(error) {
-                                    Button("Open GitHub Settings") {
-                                        UserDefaults.standard.set("github", forKey: "selectedSettingsPane")
-                                        openSettings()
-                                    }
-                                } else {
-                                    Button("Retry") { Task { await model.projectStore.loadProjects() } }
-                                }
-                            } else if model.projectStore.projects.isEmpty {
-                                Text("No projects").foregroundStyle(.secondary)
+                            .accessibilityElement(children: .combine)
+                            .lineLimit(1)
+                            .help(project.title)
+                            .tag(SidebarSelection.project(project.id))
+                            .contextMenu {
+                                ProjectManagementMenu(model: model, projectID: project.id)
                             }
-                        }
-                    } header: {
-                        HStack {
-                            Text("Projects")
-                            Spacer()
-                            Group {
-                                if model.projectStore.isLoading {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                        .help("Loading projects…")
-                                        .accessibilityLabel("Loading projects")
-                                } else {
-                                    RefreshProjectsButton(store: model.projectStore)
-                                        .labelStyle(.iconOnly)
-                                        .buttonStyle(.borderless)
+                    }
+                    if model.projectStore.isLoading == false {
+                        if let error = model.projectStore.error {
+                            Text(error.localizedDescription).font(.caption).foregroundStyle(.secondary)
+                            if let error = error as? GitHubError,
+                               [.ghCLINotFound, .notAuthenticated, .missingProjectScope, .accountChanged, .insufficientPermissions].contains(error) {
+                                Button("Open GitHub Settings") {
+                                    UserDefaults.standard.set("github", forKey: "selectedSettingsPane")
+                                    openSettings()
                                 }
+                            } else {
+                                Button("Retry") { Task { await model.projectStore.loadProjects() } }
                             }
-                            .frame(width: 16, height: 16)
-                            NewProjectButton()
-                                .labelStyle(.iconOnly)
-                                .buttonStyle(.borderless)
-                                .help("New Project")
+                        } else if model.projectStore.projects.isEmpty {
+                            Text("No projects").foregroundStyle(.secondary)
                         }
                     }
-
-                    Section {
-                        ForEach(model.myWorkStore.filters) { filter in
-                            Label(filter.title, systemImage: filter.icon)
-                                .tag(SidebarSelection.myWork(filter))
-                                .contextMenu {
-                                    Button("Move Up", systemImage: "arrow.up") {
-                                        moveFilterUp(filter)
-                                    }
-                                    .disabled(model.myWorkStore.filters.first == filter)
-
-                                    Button("Move Down", systemImage: "arrow.down") {
-                                        moveFilterDown(filter)
-                                    }
-                                    .disabled(model.myWorkStore.filters.last == filter)
-
-                                    Divider()
-
-                                    Button("Hide from Sidebar", systemImage: "eye.slash") {
-                                        hideFilter(filter)
-                                    }
-                                    .disabled(model.myWorkStore.filters.count == 1)
-                                }
-                        }
-                        .onMove { offsets, destination in
-                            model.myWorkStore.moveFilters(
-                                fromOffsets: offsets,
-                                toOffset: destination
-                            )
-                        }
-                    } header: {
-                        HStack {
-                            Text("My Work")
-                            Spacer()
-                            Menu {
-                                filterVisibilityControls
-                            } label: {
-                                Label("Configure My Work", systemImage: "ellipsis.circle")
+                } header: {
+                    HStack {
+                        Text("Projects")
+                        Spacer()
+                        Group {
+                            if model.projectStore.isLoading {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                    .help("Loading projects…")
+                                    .accessibilityLabel("Loading projects")
+                            } else {
+                                RefreshProjectsButton(store: model.projectStore)
                                     .labelStyle(.iconOnly)
+                                    .buttonStyle(.borderless)
                             }
-                            .menuStyle(.borderlessButton)
-                            .menuIndicator(.hidden)
-                            .fixedSize()
-                            .help("Configure My Work views")
                         }
-                        .contextMenu {
-                            filterVisibilityControls
-                        }
+                        .frame(width: 16, height: 16)
+                        NewProjectButton()
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                            .help("New Project")
                     }
                 }
-                .modifier(SidebarKeyboardNavigation())
+
+                Section {
+                    ForEach(model.myWorkStore.filters) { filter in
+                        Label(filter.title, systemImage: filter.icon)
+                            .tag(SidebarSelection.myWork(filter))
+                            .contextMenu {
+                                Button("Move Up", systemImage: "arrow.up") {
+                                    moveFilterUp(filter)
+                                }
+                                .disabled(model.myWorkStore.filters.first == filter)
+
+                                Button("Move Down", systemImage: "arrow.down") {
+                                    moveFilterDown(filter)
+                                }
+                                .disabled(model.myWorkStore.filters.last == filter)
+
+                                Divider()
+
+                                Button("Hide from Sidebar", systemImage: "eye.slash") {
+                                    hideFilter(filter)
+                                }
+                                .disabled(model.myWorkStore.filters.count == 1)
+                            }
+                    }
+                    .onMove { offsets, destination in
+                        model.myWorkStore.moveFilters(
+                            fromOffsets: offsets,
+                            toOffset: destination
+                        )
+                    }
+                } header: {
+                    HStack {
+                        Text("My Work")
+                        Spacer()
+                        Menu {
+                            filterVisibilityControls
+                        } label: {
+                            Label("Configure My Work", systemImage: "ellipsis.circle")
+                                .labelStyle(.iconOnly)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .fixedSize()
+                        .help("Configure My Work views")
+                    }
+                    .contextMenu {
+                        filterVisibilityControls
+                    }
+                }
             }
+            .modifier(SidebarKeyboardNavigation())
             .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 320)
         } detail: {
             NavigationStack(path: $detailPath) {
