@@ -349,12 +349,23 @@ struct CommandPaletteView: View {
                         }.padding(16)
                         shortcutHelp
                     } else {
-                        HStack(spacing: 12) {
-                            if statusTarget != nil {
-                                Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly)
+                        if let target = statusTarget {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    if initialStatusTarget == nil {
+                                        Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly)
+                                    }
+                                    Text("Change Status").font(.headline)
+                                }
+                                Text(targetTitle(target)).font(.callout).foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16).padding(.top, 16)
+                        }
+                        HStack(spacing: 12) {
                             CommandSearchField(text: $query,
-                                prompt: statusTarget == nil ? String(localized: "Search commands, projects, and loaded items") : String(localized: "Search options"),
+                                prompt: statusTarget == nil ? String(localized: "Search commands, projects, and loaded items") : String(localized: "Search statuses"),
                                 move: move, submit: submit, cancel: back)
                                 .frame(height: 28)
                             if statusTarget == nil {
@@ -372,27 +383,22 @@ struct CommandPaletteView: View {
                                 .help("Search scope")
                             }
                         }.padding(16)
-                        if let target = statusTarget {
-                            Text(targetTitle(target)).font(.callout).foregroundStyle(.secondary)
-                                .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16).padding(.bottom, 12)
-                        }
                         Divider()
                         resultList
                         Divider()
                         HStack {
-                            Text(statusTarget == nil
-                                ? "↑↓ Navigate · Return Execute · Esc Close"
-                                : "↑↓ Navigate · Return Execute · Esc Back")
+                            Text(navigationHint)
                                 .font(.caption).foregroundStyle(.secondary)
                             Spacer()
                             if let reference = selectedResult?.reference {
                                 Button("Change Status…") { showStatuses(reference) }
                                     .disabled(store.statusChangeUnavailableReason(reference) != nil)
                             }
-                            Button("Keyboard Shortcuts", systemImage: "keyboard") { showsShortcuts = true }
-                                .labelStyle(.iconOnly).buttonStyle(.borderless)
-                                .help("Keyboard Shortcuts")
+                            if statusTarget == nil {
+                                Button("Keyboard Shortcuts", systemImage: "keyboard") { showsShortcuts = true }
+                                    .labelStyle(.iconOnly).buttonStyle(.borderless)
+                                    .help("Keyboard Shortcuts")
+                            }
                             Button("Close", action: close)
                                 .buttonStyle(.borderless)
                         }.padding(12)
@@ -527,6 +533,15 @@ struct CommandPaletteView: View {
         }.frame(height: 370)
     }
 
+    private var navigationHint: String {
+        if statusTarget != nil {
+            return initialStatusTarget == nil
+                ? String(localized: "↑↓ Navigate · Return Apply · Esc Back")
+                : String(localized: "↑↓ Navigate · Return Apply · Esc Close")
+        }
+        return String(localized: "↑↓ Navigate · Return Execute · Esc Close")
+    }
+
     private func move(_ offset: Int) {
         selection = ItemKeyboardNavigation.next(from: selection, in: results.map(\.id), offset: offset)
     }
@@ -538,7 +553,7 @@ struct CommandPaletteView: View {
     private func back() {
         if showsShortcuts {
             showsShortcuts = false
-        } else if statusTarget != nil {
+        } else if statusTarget != nil && initialStatusTarget == nil {
             statusTarget = nil
             query = ""
         } else {
@@ -560,9 +575,10 @@ struct CommandPaletteView: View {
         }
         return project.statusOptions.map { status in
             PaletteResult(
-                id: "status:" + status.id, title: status.name, subtitle: project.title,
+                id: "status:" + status.id, title: status.name, subtitle: "",
                 symbol: item.statusOptionId == status.id ? "checkmark.circle" : "circle", scope: .commands,
-                unavailable: store.statusChangeUnavailableReason(reference)
+                unavailable: store.statusChangeUnavailableReason(reference),
+                isCurrent: item.statusOptionId == status.id
             ) {
                 execute { changeStatus(reference, status.id) }
             }
@@ -856,7 +872,7 @@ private struct ItemPropertyCommandView: View {
                 if let back {
                     Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly).disabled(isSaving)
                 }
-                Text(request.shortcut == .labels ? String(localized: "Labels")
+                Text(request.shortcut == .labels ? String(localized: "Edit Labels")
                      : request.shortcut == .assignees ? String(localized: "Assignees") : String(localized: "Priority"))
                     .font(.headline)
                 Spacer()
@@ -866,7 +882,8 @@ private struct ItemPropertyCommandView: View {
                 .font(.callout).foregroundStyle(.secondary).lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.bottom, 12)
             CommandSearchField(text: $query,
-                prompt: request.shortcut == .assignees ? String(localized: "Search GitHub users") : String(localized: "Search options"),
+                prompt: request.shortcut == .labels ? String(localized: "Search repository labels")
+                    : request.shortcut == .assignees ? String(localized: "Search GitHub users") : String(localized: "Search options"),
                 move: { selection = ItemKeyboardNavigation.next(from: selection, in: choices.map(\.id), offset: $0) },
                 submit: submit, cancel: cancel)
                 .frame(height: 28).padding(.horizontal, 16).padding(.bottom, 12).disabled(isSaving)
@@ -930,8 +947,11 @@ private struct ItemPropertyCommandView: View {
             Divider()
             HStack {
                 Text(request.shortcut == .priority
-                     ? String(localized: "↑↓ Navigate · Return Apply · Esc Back")
-                     : String(localized: "↑↓ Navigate · Return Toggle · Esc Back"))
+                     ? (back == nil ? String(localized: "↑↓ Navigate · Return Apply · Esc Close")
+                        : String(localized: "↑↓ Navigate · Return Apply · Esc Back"))
+                     : (back == nil
+                        ? String(localized: "↑↓ Navigate · Return Toggle · Esc Close")
+                        : String(localized: "↑↓ Navigate · Return Toggle · Esc Back")))
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Done", action: close).disabled(isSaving)

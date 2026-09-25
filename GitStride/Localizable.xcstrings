@@ -7,116 +7,6 @@
     " " : {
 
     },
-    "Application" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用"
-          }
-        }
-      }
-    },
-    "Current" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前"
-          }
-        }
-      }
-    },
-    "Current Project" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前项目"
-          }
-        }
-      }
-    },
-    "Current View" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前视图"
-          }
-        }
-      }
-    },
-    "Go to My Work" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "前往我的工作"
-          }
-        }
-      }
-    },
-    "Item Actions" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "条目操作"
-          }
-        }
-      }
-    },
-    "Switch Project" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换项目"
-          }
-        }
-      }
-    },
-    "Switch View" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换视图"
-          }
-        }
-      }
-    },
-    "Switch to Board View" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换到看板视图"
-          }
-        }
-      }
-    },
-    "Switch to Roadmap View" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换到路线图视图"
-          }
-        }
-      }
-    },
-    "Switch to Table View" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切换到表格视图"
-          }
-        }
-      }
-    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -600,7 +490,18 @@
         }
       }
     },
+    "↑↓ Navigate · Return Apply · Esc Close" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车应用 · Esc 关闭"
+          }
+        }
+      }
+    },
     "↑↓ Navigate · Return Execute · Esc Back" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -637,6 +538,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "↑↓ 选择 · 回车勾选或移除 · Esc 返回"
+          }
+        }
+      }
+    },
+    "↑↓ Navigate · Return Toggle · Esc Close" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车勾选或移除 · Esc 关闭"
           }
         }
       }
@@ -1229,6 +1140,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "任意类型"
+          }
+        }
+      }
+    },
+    "Application" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用"
           }
         }
       }
@@ -1957,6 +1878,16 @@
         }
       }
     },
+    "Change Status" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改状态"
+          }
+        }
+      }
+    },
     "Change Status…" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2076,6 +2007,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请检查排期日期"
+          }
+        }
+      }
+    },
+    "Check to add a label; uncheck to remove it. Changes save immediately." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "勾选添加标签，取消勾选移除标签；更改立即保存。"
           }
         }
       }
@@ -3003,6 +2944,26 @@
         }
       }
     },
+    "Current" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前"
+          }
+        }
+      }
+    },
+    "Current Project" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前项目"
+          }
+        }
+      }
+    },
     "Current service" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3016,6 +2977,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前服务"
+          }
+        }
+      }
+    },
+    "Current View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前视图"
           }
         }
       }
@@ -3681,6 +3652,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑条目…"
+          }
+        }
+      }
+    },
+    "Edit Labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑标签"
           }
         }
       }
@@ -4636,6 +4617,16 @@
         }
       }
     },
+    "Go to My Work" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前往我的工作"
+          }
+        }
+      }
+    },
     "Group By" : {
       "localizations" : {
         "en" : {
@@ -4888,6 +4879,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "条目"
+          }
+        }
+      }
+    },
+    "Item Actions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目操作"
           }
         }
       }
@@ -8946,12 +8947,32 @@
         }
       }
     },
+    "Search repository labels" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索仓库标签"
+          }
+        }
+      }
+    },
     "Search scope" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索范围"
+          }
+        }
+      }
+    },
+    "Search statuses" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索状态"
           }
         }
       }
@@ -10000,6 +10021,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "暂时无法购买支持项目。"
+          }
+        }
+      }
+    },
+    "Switch Project" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换项目"
+          }
+        }
+      }
+    },
+    "Switch to Board View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到看板视图"
+          }
+        }
+      }
+    },
+    "Switch to Roadmap View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到路线图视图"
+          }
+        }
+      }
+    },
+    "Switch to Table View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到表格视图"
+          }
+        }
+      }
+    },
+    "Switch View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换视图"
           }
         }
       }

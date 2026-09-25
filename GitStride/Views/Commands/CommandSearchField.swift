@@ -26,6 +26,8 @@ struct CommandSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: NSSearchField, context: Context) {
         context.coordinator.parent = self
+        field.placeholderString = prompt
+        field.setAccessibilityLabel(prompt)
         if field.stringValue != text { field.stringValue = text }
     }
 
