@@ -30,6 +30,28 @@ extension ProjectStoreTests {
     private static let addedBacklogResponse =
         #"{"data":{"updateProjectV2Field":{"projectV2Field":{"id":"STATUS","options":[{"id":"TODO","name":"Todo","color":"GRAY","description":""},{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"},{"id":"BACKLOG","name":"Backlog","color":"GRAY","description":""}]}}}}"#
 
+    @Test func priorityAssignmentRetryKeepsCreatedFieldAndDoesNotCreateAnIssue() async throws {
+        let field = #"{"id":"PRIORITY","name":"Priority","dataType":"SINGLE_SELECT","options":[{"id":"URGENT","name":"Urgent","color":"RED"},{"id":"HIGH","name":"High","color":"ORANGE"},{"id":"MEDIUM","name":"Medium","color":"YELLOW"},{"id":"LOW","name":"Low","color":"BLUE"}]}"#
+        let created = "{\"data\":{\"createProjectV2Field\":{\"projectV2Field\":" + field + "}}}"
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.mutationFieldsResponse, created, Self.graphQLFailureResponse, Self.graphQLSuccessResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let item = try #require(store.selectedProject?.items.first)
+        await #expect(throws: GitHubError.graphQLError("Status failed")) {
+            try await store.setDefaultPriority(.high, on: item, in: "P1")
+        }
+        #expect(store.selectedProject?.fields.contains { $0.id == "PRIORITY" } == true)
+        try await store.setDefaultPriority(.high, on: item, in: "P1")
+        #expect(store.selectedProject?.items.first(where: { $0.id == item.id })?.fieldValues["PRIORITY"]
+            == .singleSelect(optionId: "HIGH", name: "High"))
+        let calls = await runner.recordedRequests()
+        #expect(calls.filter { $0.graphQLQuery == GraphQLQueries.createPriorityField }.count == 1)
+        #expect(calls.filter { $0.graphQLQuery == GraphQLQueries.createIssue }.isEmpty)
+    }
+
     @Test func missingDateFieldIsPreparedOnceBeforeIssueAndResumesOnlyTheValueWrite() async throws {
         let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [

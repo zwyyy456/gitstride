@@ -159,3 +159,48 @@ extension ProjectField {
         return matches[0]
     }
 }
+
+/// Default options only for a newly created Priority field; existing options are preserved.
+enum ProjectPriority: String, CaseIterable {
+    case urgent = "Urgent", high = "High", medium = "Medium", low = "Low"
+
+    var title: String {
+        switch self {
+        case .urgent: String(localized: "Urgent")
+        case .high: String(localized: "High")
+        case .medium: String(localized: "Medium")
+        case .low: String(localized: "Low")
+        }
+    }
+    var color: String {
+        switch self {
+        case .urgent: "RED"
+        case .high: "ORANGE"
+        case .medium: "YELLOW"
+        case .low: "BLUE"
+        }
+    }
+}
+
+extension ProjectField {
+    enum PriorityResolutionError: LocalizedError {
+        case conflictingField, changedOptions
+        var errorDescription: String? {
+            switch self {
+            case .conflictingField:
+                String(localized: "Priority must be a single select field with no duplicate names. Resolve the conflicting fields on GitHub.")
+            case .changedOptions:
+                String(localized: "Priority options have changed. Choose from the updated options.")
+            }
+        }
+    }
+
+    static func priorityField(in fields: [ProjectField]) throws -> ProjectField? {
+        let matches = fields.filter { $0.name.caseInsensitiveCompare("Priority") == .orderedSame }
+        guard !matches.isEmpty else { return nil }
+        guard matches.count == 1, matches[0].kind == .singleSelect else {
+            throw PriorityResolutionError.conflictingField
+        }
+        return matches[0]
+    }
+}

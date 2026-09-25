@@ -1622,6 +1622,31 @@ final class ProjectStore {
         await persistCache()
     }
 
+    func setDefaultPriority(_ priority: ProjectPriority, on item: ProjectItem, in projectID: String) async throws {
+        let project = try editableProject(id: projectID)
+        let field: ProjectField
+        if let existing = try ProjectField.priorityField(in: project.fields) {
+            field = existing
+        } else {
+            field = try await performProjectMutation(projectID: projectID, itemID: item.id) {
+                try await self.gitHubService.ensureProjectPriorityField(projectID: projectID)
+            } apply: { field in
+                if var project = self.projectStates[projectID]?.snapshot {
+                    project.fields.removeAll { $0.id == field.id }
+                    project.fields.append(field)
+                    self.projectStates[projectID]?.snapshot = project
+                }
+            }
+        }
+        // Retain the confirmed field even if assigning the item fails. A retry reuses it.
+        let matches = field.options.filter { $0.name.caseInsensitiveCompare(priority.rawValue) == .orderedSame }
+        guard matches.count == 1, let option = matches.first else {
+            throw ProjectField.PriorityResolutionError.changedOptions
+        }
+        try await updateField(on: item, in: projectID, field: field,
+                              value: .singleSelect(optionId: option.id, name: option.name))
+    }
+
     func updateField(
         on item: ProjectItem, in projectID: String, field: ProjectField, value: ProjectFieldValue?
     ) async throws {

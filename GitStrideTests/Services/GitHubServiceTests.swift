@@ -9,6 +9,41 @@ struct GitHubServiceTests {
         """
     }
 
+    @Test func priorityFieldRetryReusesLowercaseFieldAfterLostCreateResponse() async throws {
+        let field = #"{"id":"PRIORITY","name":"priority","dataType":"SINGLE_SELECT","options":[{"id":"CUSTOM","name":"Critical","color":"RED"}]}"#
+        let client = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.dateFieldsResponse("")), .failure(.networkConnectionLost),
+            .response(Self.dateFieldsResponse(field))
+        ])
+        let service = GitHubService(http: client)
+        await #expect(throws: (any Error).self) {
+            _ = try await service.ensureProjectPriorityField(projectID: "P1")
+        }
+        let resolved = try await service.ensureProjectPriorityField(projectID: "P1")
+        #expect(resolved.id == "PRIORITY")
+        #expect(resolved.options.map(\.name) == ["Critical"])
+        let requests = await client.recordedRequests()
+        let create = try #require(requests.first { $0.graphQLQuery == GraphQLQueries.createPriorityField })
+        let body = try #require(create.httpBody)
+        let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let variables = try #require(json["variables"] as? [String: Any])
+        let options = try #require(variables["options"] as? [[String: String]])
+        #expect(options.compactMap { $0["name"] } == ["Urgent", "High", "Medium", "Low"])
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.createPriorityField }.count == 1)
+    }
+
+    @Test(arguments: [
+        #"{"id":"TEXT","name":"Priority","dataType":"TEXT"}"#,
+        #"{"id":"ONE","name":"Priority","dataType":"SINGLE_SELECT"},{"id":"TWO","name":"PRIORITY","dataType":"SINGLE_SELECT"}"#
+    ])
+    func priorityFieldConflictsNeverCreateAnotherField(_ fields: String) async throws {
+        let client = FixtureGitHubHTTPClient(responses: [Self.dateFieldsResponse(fields)])
+        await #expect(throws: ProjectField.PriorityResolutionError.self) {
+            _ = try await GitHubService(http: client).ensureProjectPriorityField(projectID: "P1")
+        }
+        #expect(await client.recordedRequests().count == 1)
+    }
+
     @Test func dateFieldRetryReusesFieldAfterLostCreateResponse() async throws {
         let field = #"{"id":"START","name":"Start date","dataType":"DATE"}"#
         let client = SuspendingGitHubHTTPClient(steps: [

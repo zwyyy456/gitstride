@@ -112,7 +112,7 @@ extension GitHubResponse {
         }
     }
 
-    struct CreateDateFieldPayload: Decodable {
+    struct CreateProjectFieldPayload: Decodable {
         let createProjectV2Field: Result
         struct Result: Decodable { let projectV2Field: FieldNode? }
     }

@@ -120,6 +120,7 @@ actor GitHubService {
     private let http: any GitHubHTTPClient
     private let credentials: any GitHubAuthenticating
     private let decoder = JSONDecoder()
+    private var priorityFieldPreparations: [String: Task<ProjectField, Error>] = [:]
     private var dateFieldPreparations: [String: Task<ProjectField, Error>] = [:]
 
     init(http: any GitHubHTTPClient, credentials: any GitHubAuthenticating) {
@@ -134,6 +135,7 @@ actor GitHubService {
     }
 
     func invalidate() async {
+        priorityFieldPreparations.values.forEach { $0.cancel() }
         dateFieldPreparations.values.forEach { $0.cancel() }
         await credentials.invalidate()
         await http.cancel()
@@ -662,6 +664,32 @@ actor GitHubService {
         return payload.addProjectV2DraftIssue.projectItem.id
     }
 
+    func ensureProjectPriorityField(projectID: String) async throws -> ProjectField {
+        if let preparation = priorityFieldPreparations[projectID] { return try await preparation.value }
+        let preparation = Task { try await self.resolveOrCreatePriorityField(projectID: projectID) }
+        priorityFieldPreparations[projectID] = preparation
+        defer { priorityFieldPreparations[projectID] = nil }
+        return try await preparation.value
+    }
+
+    private func resolveOrCreatePriorityField(projectID: String) async throws -> ProjectField {
+        let project = try await fetchProjectFields(projectID: projectID)
+        if let field = try ProjectField.priorityField(in: project.fields.compactMap(makeProjectField)) { return field }
+        let options = ProjectPriority.allCases.map {
+            ["name": $0.rawValue, "color": $0.color, "description": ""]
+        }
+        let payload: GitHubResponse.CreateProjectFieldPayload = try await request(
+            GraphQLQueries.createPriorityField, variables: ["projectId": projectID],
+            objectArrayVariables: ["options": options], as: GitHubResponse.CreateProjectFieldPayload.self)
+        guard let node = payload.createProjectV2Field.projectV2Field,
+              let field = makeProjectField(from: node),
+              try ProjectField.priorityField(in: [field]) != nil,
+              ProjectPriority.allCases.allSatisfy({ level in field.options.contains { $0.name == level.rawValue } }) else {
+            throw GitHubError.invalidResponse
+        }
+        return field
+    }
+
     func ensureProjectDateField(projectID: String, name: String) async throws -> ProjectField {
         let key = projectID + ":" + name.lowercased()
         if let preparation = dateFieldPreparations[key] { return try await preparation.value }
@@ -678,9 +706,9 @@ actor GitHubService {
         if let field = try ProjectField.dateField(named: name, in: project.fields.compactMap(makeProjectField)) {
             return field
         }
-        let payload: GitHubResponse.CreateDateFieldPayload = try await request(
+        let payload: GitHubResponse.CreateProjectFieldPayload = try await request(
             GraphQLQueries.createDateField, variables: ["projectId": projectID, "name": name],
-            as: GitHubResponse.CreateDateFieldPayload.self)
+            as: GitHubResponse.CreateProjectFieldPayload.self)
         guard let node = payload.createProjectV2Field.projectV2Field, let field = makeProjectField(from: node),
               field.kind == .date, field.name.caseInsensitiveCompare(name) == .orderedSame else {
             throw GitHubError.invalidResponse

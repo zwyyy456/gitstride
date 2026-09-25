@@ -48,7 +48,14 @@ struct CommandPaletteHost: ViewModifier {
                     guard let shortcut = action.shortcut else { return false }
                     let expected: NSEvent.ModifierFlags = shortcut == .copyLink ? [.command, .shift] : []
                     return modifiers == expected && event.charactersIgnoringModifiers?.lowercased() == String(shortcut.key.character)
-                }), action.isEnabled else { return false }
+                }) else { return false }
+                guard action.isEnabled else {
+                    if action.shortcut == .priority {
+                        errorMessage = action.disabledReason
+                        return true
+                    }
+                    return false
+                }
                 action.perform()
                 return true
             })
@@ -794,12 +801,13 @@ private struct ItemPropertyCommandView: View {
     @State private var reloadAttempt = 0
 
     private enum Choice: Identifiable {
-        case label(RepositoryLabel), user(Assignee), option(ProjectFieldOption), clear
+        case label(RepositoryLabel), user(Assignee), option(ProjectFieldOption), defaultPriority(ProjectPriority), clear
         var id: String {
             switch self {
             case .label(let value): "label:" + value.id
             case .user(let value): "user:" + value.id
             case .option(let value): "option:" + value.id
+            case .defaultPriority(let value): "priority:" + value.rawValue
             case .clear: "clear"
             }
         }
@@ -808,6 +816,7 @@ private struct ItemPropertyCommandView: View {
             case .label(let value): value.name
             case .user(let value): value.name ?? value.login
             case .option(let value): value.name
+            case .defaultPriority(let value): value.title
             case .clear: String(localized: "Not Set")
             }
         }
@@ -818,7 +827,9 @@ private struct ItemPropertyCommandView: View {
     }
 
     private var item: ProjectItem? { store.item(for: request.reference) }
-    private var field: ProjectField? { store.project(id: request.reference.projectID)?.priorityCommandField }
+    private var field: ProjectField? {
+        try? ProjectField.priorityField(in: store.project(id: request.reference.projectID)?.fields ?? [])
+    }
     private var choices: [Choice] {
         let values: [Choice]
         switch request.shortcut {
@@ -829,7 +840,11 @@ private struct ItemPropertyCommandView: View {
             let assigned = item?.assignees ?? []
             values = (assigned + users.filter { value in !assigned.contains { $0.id == value.id } }).map(Choice.user)
         case .priority:
-            values = [.clear] + (field?.options ?? []).map(Choice.option)
+            if let field {
+                values = [.clear] + field.options.map(Choice.option)
+            } else {
+                values = [.clear] + ProjectPriority.allCases.map(Choice.defaultPriority)
+            }
         default: values = []
         }
         return values.filter { CommandSearch.rank(query, title: $0.title, keywords: $0.subtitle) != nil }
@@ -855,6 +870,20 @@ private struct ItemPropertyCommandView: View {
                 move: { selection = ItemKeyboardNavigation.next(from: selection, in: choices.map(\.id), offset: $0) },
                 submit: submit, cancel: cancel)
                 .frame(height: 28).padding(.horizontal, 16).padding(.bottom, 12).disabled(isSaving)
+            if request.shortcut == .labels {
+                Text("Check to add a label; uncheck to remove it. Changes save immediately.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16).padding(.bottom, 12)
+            }
+            if request.shortcut == .priority && field == nil {
+                Text("Choosing a priority will create a Priority field for this project.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16).padding(.bottom, 12)
+            }
             Divider()
             ScrollViewReader { proxy in
                 List(selection: $selection) {
@@ -947,7 +976,8 @@ private struct ItemPropertyCommandView: View {
         case .user(let value): item?.assignees.contains { $0.id == value.id } == true
         case .option(let value):
             if let field, case .singleSelect(let id, _) = item?.fieldValues[field.id] { id == value.id } else { false }
-        case .clear: field.map { item?.fieldValues[$0.id] == nil } ?? false
+        case .defaultPriority: false
+        case .clear: field.map { item?.fieldValues[$0.id] == nil } ?? true
         }
     }
     private func cancel() { if !isSaving { (back ?? close)() } }
@@ -977,20 +1007,18 @@ private struct ItemPropertyCommandView: View {
                     try await store.updateField(on: item, in: request.reference.projectID, field: field,
                                                 value: .singleSelect(optionId: option.id, name: option.name))
                     close()
+                case .defaultPriority(let priority):
+                    try await store.setDefaultPriority(priority, on: item, in: request.reference.projectID)
+                    close()
                 case .clear:
-                    guard let field else { throw ProjectStoreError.itemUnavailable }
-                    try await store.updateField(on: item, in: request.reference.projectID, field: field, value: nil)
+                    if let field {
+                        try await store.updateField(on: item, in: request.reference.projectID, field: field, value: nil)
+                    }
                     close()
                 }
             } catch is CancellationError { return }
             catch { saveError = error.localizedDescription }
         }
-    }
-}
-
-private extension Project {
-    var priorityCommandField: ProjectField? {
-        fields.first { $0.kind == .singleSelect && $0.name.caseInsensitiveCompare("Priority") == .orderedSame }
     }
 }
 
@@ -1026,8 +1054,10 @@ private extension ProjectStore {
             return String(localized: "This item is read-only.")
         }
         if shortcut == .priority {
-            return project(id: reference.projectID)?.priorityCommandField == nil
-                ? String(localized: "This project has no Priority field.") : nil
+            do {
+                _ = try ProjectField.priorityField(in: project(id: reference.projectID)?.fields ?? [])
+                return nil
+            } catch { return error.localizedDescription }
         }
         if shortcut == .labels, item.contentType != .issue {
             return String(localized: "Labels are available for issues.")

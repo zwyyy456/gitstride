@@ -184,6 +184,14 @@ enum GraphQLQueries {
         }
         """
 
+    static let createPriorityField = """
+        mutation($projectId: ID!, $options: [ProjectV2SingleSelectFieldOptionInput!]!) {
+            createProjectV2Field(input: {projectId: $projectId, dataType: SINGLE_SELECT, name: "Priority", singleSelectOptions: $options}) {
+                projectV2Field { ... on ProjectV2SingleSelectField { id name dataType options { id name color } } }
+            }
+        }
+        """
+
     static let createDateField = """
         mutation($projectId: ID!, $name: String!) {
             createProjectV2Field(input: {projectId: $projectId, dataType: DATE, name: $name}) {

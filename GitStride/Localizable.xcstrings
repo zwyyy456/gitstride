@@ -2270,6 +2270,16 @@
         }
       }
     },
+    "Choosing a priority will create a Priority field for this project." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择优先级后，将为此项目创建 Priority 字段。"
+          }
+        }
+      }
+    },
     "CI Failed" : {
       "localizations" : {
         "en" : {
@@ -4709,6 +4719,16 @@
         }
       }
     },
+    "High" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高"
+          }
+        }
+      }
+    },
     "ID" : {
       "shouldTranslate" : false
     },
@@ -5503,6 +5523,16 @@
         }
       }
     },
+    "Low" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "低"
+          }
+        }
+      }
+    },
     "Manage My Work Projects" : {
       "localizations" : {
         "en" : {
@@ -5548,6 +5578,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已自动选择匹配的状态。你可以在启用自动化前更改。"
+          }
+        }
+      }
+    },
+    "Medium" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中"
           }
         }
       }
@@ -7165,6 +7205,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "优先级 %@"
+          }
+        }
+      }
+    },
+    "Priority must be a single select field with no duplicate names. Resolve the conflicting fields on GitHub." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Priority 必须是唯一的同名单选字段。请在 GitHub 上处理重名或类型冲突。"
+          }
+        }
+      }
+    },
+    "Priority options have changed. Choose from the updated options." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优先级选项已变化，请从更新后的选项中重新选择。"
           }
         }
       }
@@ -10445,6 +10505,7 @@
       }
     },
     "This project has no Priority field." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -10978,6 +11039,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新"
+          }
+        }
+      }
+    },
+    "Urgent" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紧急"
           }
         }
       }
