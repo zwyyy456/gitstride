@@ -28,6 +28,7 @@ struct CommandPaletteHost: ViewModifier {
     @Binding var requested: Bool
     @FocusedValue(\.workspaceCommandContext) private var context
     @FocusedValue(\.roadmapCommands) private var roadmap
+    @FocusedValue(\.itemCommandScope) private var itemCommandScope
     @State private var session: PaletteSession?
     @State private var window: NSWindow?
     @State private var previousResponder: NSResponder?
@@ -35,10 +36,22 @@ struct CommandPaletteHost: ViewModifier {
     @State private var errorMessage: String?
     @State private var editRequest: ItemInspectorReference?
     @State private var editor: PaletteEditor?
+    @State private var propertyEditor: ItemPropertyRequest?
 
     func body(content: Content) -> some View {
         content
             .background(MenuBarWindowFinder(window: $window))
+            .background(WorkspaceKeyHandler { event in
+                guard itemCommandScope == true, session == nil, editor == nil, propertyEditor == nil, editRequest == nil else { return false }
+                let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+                guard let action = keyboardActions.first(where: { action in
+                    guard let shortcut = action.shortcut else { return false }
+                    let expected: NSEvent.ModifierFlags = shortcut == .copyLink ? [.command, .shift] : []
+                    return modifiers == expected && event.charactersIgnoringModifiers?.lowercased() == String(shortcut.key.character)
+                }), action.isEnabled else { return false }
+                action.perform()
+                return true
+            })
             .safeAreaInset(edge: .top, spacing: 0) {
                 OperationErrorBanner(message: errorMessage, dismiss: { errorMessage = nil })
                 if editRequest != nil {
@@ -53,7 +66,8 @@ struct CommandPaletteHost: ViewModifier {
                 \.commandPaletteRequest,
                 CommandPaletteRequest(
                     show: { show(shortcuts: false) }, showShortcuts: { show(shortcuts: true) },
-                    showStatus: { show(shortcuts: false, statusTarget: context?.itemReference) }
+                    showStatus: { show(shortcuts: false, statusTarget: context?.itemReference) },
+                    itemActions: itemActions
                 )
             )
             .sheet(item: $session, onDismiss: finish) { session in
@@ -82,6 +96,9 @@ struct CommandPaletteHost: ViewModifier {
                     changeStatus: changeStatus,
                     editItem: { editRequest = $0 },
                     close: { self.session = nil })
+            }
+            .sheet(item: $propertyEditor) { request in
+                ItemPropertyCommandView(store: store, request: request, close: { propertyEditor = nil }).id(request.id)
             }
             .sheet(item: $editor) { editor in
                 ItemContentEditorView(store: store, reference: editor.reference, detail: editor.detail)
@@ -121,6 +138,36 @@ struct CommandPaletteHost: ViewModifier {
             }
     }
 
+    private var keyboardActions: [WorkspaceCommandContext.Action] {
+        var actions = itemActions
+        if var create = context?.addItem {
+            create.shortcut = .createItem
+            actions.append(create)
+        }
+        return actions
+    }
+
+    private var itemActions: [WorkspaceCommandContext.Action] {
+        guard let reference = context?.itemReference, store.item(for: reference) != nil else { return [] }
+        return [WorkspaceShortcut.status, .assignees, .labels, .priority, .edit, .copyLink].map { shortcut in
+            let reason = store.itemCommandUnavailableReason(shortcut, reference: reference)
+            return .init(id: "item-" + shortcut.rawValue, title: shortcut.title,
+                isEnabled: reason == nil, keywords: itemCommandKeywords(shortcut), disabledReason: reason,
+                shortcut: shortcut, perform: {
+                    guard store.itemCommandUnavailableReason(shortcut, reference: reference) == nil else { return }
+                    switch shortcut {
+                    case .status: show(shortcuts: false, statusTarget: reference)
+                    case .edit: editRequest = reference
+                    case .copyLink:
+                        guard let url = store.item(for: reference)?.url else { return }
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(url, forType: .string)
+                    default: propertyEditor = ItemPropertyRequest(reference: reference, shortcut: shortcut)
+                    }
+                })
+        }
+    }
+
     private func openWorkspace() {
         if opensWorkspaceForNavigation { openWindow(id: "kanban-board") }
     }
@@ -129,7 +176,9 @@ struct CommandPaletteHost: ViewModifier {
         guard session == nil, editRequest == nil, let window, window.attachedSheet == nil else { return }
         window.makeKeyAndOrderFront(nil)
         previousResponder = window.firstResponder
-        session = PaletteSession(context: context, roadmap: roadmap, shortcuts: shortcuts, statusTarget: statusTarget)
+        var paletteContext = context
+        paletteContext?.itemActions = itemActions.filter { $0.shortcut != .status && $0.shortcut != .edit }
+        session = PaletteSession(context: paletteContext, roadmap: roadmap, shortcuts: shortcuts, statusTarget: statusTarget)
     }
 
     private func finish() {
@@ -185,6 +234,24 @@ private enum PaletteScope: String, CaseIterable, Identifiable {
     }
 }
 
+private enum PaletteGroup: Int, CaseIterable, Identifiable {
+    case currentContext, itemActions, views, myWork, projects, items, application
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .currentContext: String(localized: "Current Project")
+        case .itemActions: String(localized: "Item Actions")
+        case .views: String(localized: "Switch View")
+        case .myWork: String(localized: "Go to My Work")
+        case .projects: String(localized: "Switch Project")
+        case .items: String(localized: "Loaded Items")
+        case .application: String(localized: "Application")
+        }
+    }
+}
+
 private struct PaletteResult: Identifiable {
     let id: String
     let title: String
@@ -195,8 +262,31 @@ private struct PaletteResult: Identifiable {
     var shortcut: WorkspaceShortcut? = nil
     var unavailable: String? = nil
     var destructive = false
+    var isCurrent = false
+    var projectID: String? = nil
     var reference: ItemInspectorReference? = nil
     let perform: () -> Void
+
+    var group: PaletteGroup {
+        if scope == .projects { return .projects }
+        if scope == .items { return .items }
+        if id.hasPrefix("command:layout:") || id.hasPrefix("command:roadmap-")
+            || id.hasPrefix("command:zoom:") { return .views }
+        if id.hasPrefix("command:mywork:") { return .myWork }
+        if id.hasPrefix("command:item-") || id.hasPrefix("command:move-selection-") {
+            return .itemActions
+        }
+        switch id {
+        case "change-status", "command:refresh-item", "command:edit-item", "command:toggle-item-inspector",
+             "command:open-item-in-github", "command:open-focused-item", "command:edit-focused-item",
+             "command:open-focused-item-in-github", "command:archive-selection":
+            return .itemActions
+        case "shortcuts", "command:settings", "command:new-project", "command:quick-add", "command:refresh-projects":
+            return .application
+        default:
+            return .currentContext
+        }
+    }
 }
 
 struct CommandPaletteView: View {
@@ -219,6 +309,7 @@ struct CommandPaletteView: View {
     @State private var statusTarget: ItemInspectorReference?
     @State private var showsShortcuts = false
     @State private var confirmation: PaletteResult?
+    @State private var propertyTarget: ItemPropertyRequest?
 
     private var results: [PaletteResult] {
         let candidates = statusTarget.map(statusResults) ?? rootResults
@@ -229,54 +320,77 @@ struct CommandPaletteView: View {
             else { return nil }
             return (rank, index, result)
         }.sorted {
-            let lhsScope = PaletteScope.allCases.firstIndex(of: $0.2.scope) ?? 0
-            let rhsScope = PaletteScope.allCases.firstIndex(of: $1.2.scope) ?? 0
-            return (lhsScope, $0.0, $0.1) < (rhsScope, $1.0, $1.1)
+            return ($0.2.group.rawValue, $0.0, $0.1) < ($1.2.group.rawValue, $1.0, $1.1)
         }.map(\.2)
     }
 
     private var selectedResult: PaletteResult? { results.first { $0.id == selection } }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                if statusTarget != nil || showsShortcuts {
-                    Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly)
-                }
-                Text(showsShortcuts ? String(localized: "Keyboard Shortcuts") : String(localized: "Command Palette"))
-                    .font(.headline)
-                Spacer()
-                Button("Close", systemImage: "xmark", action: close).labelStyle(.iconOnly)
-            }
-            .padding(16)
-            if showsShortcuts {
-                shortcutHelp
+        Group {
+            if let propertyTarget {
+                ItemPropertyCommandView(store: store, request: propertyTarget,
+                    back: { self.propertyTarget = nil }, close: close).id(propertyTarget.id)
             } else {
-                CommandSearchField(text: $query, move: move, submit: submit, cancel: back)
-                    .frame(height: 28).padding(.horizontal, 16)
-                if let target = statusTarget {
-                    Text(targetTitle(target)).font(.callout).foregroundStyle(.secondary)
-                        .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                } else {
-                    Picker("Search scope", selection: $scope) {
-                        ForEach(PaletteScope.allCases) { Text($0.title).tag($0) }
+                VStack(spacing: 0) {
+                    if showsShortcuts {
+                        HStack {
+                            Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly)
+                            Text("Keyboard Shortcuts").font(.headline)
+                            Spacer()
+                            Button("Close", systemImage: "xmark", action: close).labelStyle(.iconOnly)
+                        }.padding(16)
+                        shortcutHelp
+                    } else {
+                        HStack(spacing: 12) {
+                            if statusTarget != nil {
+                                Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly)
+                            }
+                            CommandSearchField(text: $query,
+                                prompt: statusTarget == nil ? String(localized: "Search commands, projects, and loaded items") : String(localized: "Search options"),
+                                move: move, submit: submit, cancel: back)
+                                .frame(height: 28)
+                            if statusTarget == nil {
+                                Menu {
+                                    Picker("Search scope", selection: $scope) {
+                                        ForEach(PaletteScope.allCases) { Text($0.title).tag($0) }
+                                    }
+                                } label: {
+                                    Text(scope.title)
+                                }
+                                .menuStyle(.borderlessButton)
+                                .fixedSize()
+                                .accessibilityLabel("Search scope")
+                                .accessibilityValue(scope.title)
+                                .help("Search scope")
+                            }
+                        }.padding(16)
+                        if let target = statusTarget {
+                            Text(targetTitle(target)).font(.callout).foregroundStyle(.secondary)
+                                .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 16).padding(.bottom, 12)
+                        }
+                        Divider()
+                        resultList
+                        Divider()
+                        HStack {
+                            Text(statusTarget == nil
+                                ? "↑↓ Navigate · Return Execute · Esc Close"
+                                : "↑↓ Navigate · Return Execute · Esc Back")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            if let reference = selectedResult?.reference {
+                                Button("Change Status…") { showStatuses(reference) }
+                                    .disabled(store.statusChangeUnavailableReason(reference) != nil)
+                            }
+                            Button("Keyboard Shortcuts", systemImage: "keyboard") { showsShortcuts = true }
+                                .labelStyle(.iconOnly).buttonStyle(.borderless)
+                                .help("Keyboard Shortcuts")
+                            Button("Close", action: close)
+                                .buttonStyle(.borderless)
+                        }.padding(12)
                     }
-                    .pickerStyle(.segmented).padding(16)
                 }
-                Divider()
-                resultList
-                Divider()
-                HStack {
-                    Text("↑↓ Navigate · Return Select · Esc Back")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    if let reference = selectedResult?.reference {
-                        Button("Change Status…") { showStatuses(reference) }
-                            .disabled(store.statusChangeUnavailableReason(reference) != nil)
-                    }
-                    Button("Keyboard Shortcuts") { showsShortcuts = true }
-                        .font(.caption)
-                }.padding(12)
             }
         }
         .frame(minWidth: 480, idealWidth: 600, maxWidth: 640)
@@ -308,38 +422,64 @@ struct CommandPaletteView: View {
     }
 
     private var resultList: some View {
-        ScrollViewReader { proxy in
+        let visibleResults = results
+        let visibleGroups = PaletteGroup.allCases.filter { group in
+            visibleResults.contains { $0.group == group }
+        }
+        let showsGroupTitles = statusTarget == nil && (query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || visibleGroups.count > 1)
+        return ScrollViewReader { proxy in
             List(selection: $selection) {
-                ForEach(PaletteScope.allCases.filter { $0 != .all }) { group in
-                    let groupResults = results.filter { $0.scope == group }
-                    if !groupResults.isEmpty {
-                        Section(group.title) {
-                            ForEach(groupResults) { result in
-                                HStack(spacing: 10) {
-                                    Image(systemName: result.symbol).frame(width: 20).accessibilityHidden(true)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(result.title).lineLimit(1)
-                                        Text(result.unavailable ?? result.subtitle).font(.caption)
-                                            .foregroundStyle(.secondary).lineLimit(2)
-                                    }
-                                    Spacer(minLength: 8)
-                                    if let shortcut = result.shortcut {
-                                        Text(shortcut.label).font(.caption.monospaced()).foregroundStyle(.secondary)
-                                    }
+                ForEach(visibleGroups) { group in
+                    let groupResults = visibleResults.filter { $0.group == group }
+                    if showsGroupTitles {
+                        Text(group == .currentContext && context?.projectID == nil
+                            ? String(localized: "Current View") : group.title)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 2, trailing: 12))
+                            .listRowSeparator(.hidden)
+                            .selectionDisabled()
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    ForEach(groupResults) { result in
+                        HStack(spacing: 10) {
+                            Group {
+                                if let projectID = result.projectID {
+                                    ProjectIcon(projectID: projectID)
+                                } else {
+                                    Image(systemName: result.symbol)
                                 }
-                                .padding(.vertical, 4)
-                                .opacity(result.unavailable == nil ? 1 : 0.55)
-                                .contentShape(Rectangle())
-                                .tag(result.id).id(result.id)
-                                .onTapGesture {
-                                    selection = result.id
-                                    activate(result)
+                            }
+                            .frame(width: 20).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(result.title).lineLimit(1)
+                                if let detail = result.unavailable ?? (result.subtitle.isEmpty ? nil : result.subtitle) {
+                                    Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                                 }
-                                .accessibilityElement(children: .combine)
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityAction { activate(result) }
+                            }
+                            Spacer(minLength: 8)
+                            if result.isCurrent {
+                                Text("Current")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            if let shortcut = result.shortcut {
+                                Text(shortcut.label).font(.caption.monospaced()).foregroundStyle(.tertiary)
+                                    .help("Shortcut outside the command palette")
                             }
                         }
+                        .frame(minHeight: 32)
+                        .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12))
+                        .listRowSeparator(.hidden)
+                        .opacity(result.unavailable == nil ? 1 : 0.55)
+                        .contentShape(Rectangle())
+                        .tag(result.id).id(result.id)
+                        .onTapGesture {
+                            selection = result.id
+                            activate(result)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { activate(result) }
                     }
                 }
             }
@@ -370,7 +510,8 @@ struct CommandPaletteView: View {
                 }
             }
             Section("Navigation") {
-                Text("Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection.")
+                Text("Arrow keys navigate items. Return opens details. X toggles selection. Shift–Up/Down extends selection; Command–A selects visible items. Escape clears selection. In selection mode, Space toggles selection.")
+                Text("Item shortcuts work outside text fields and editors.").foregroundStyle(.secondary)
                 Text("On a board, Left and Right move between visible columns. Tab moves between controls.")
                 Text(
                     "Shortcuts apply to the active window. While editing text, typing and arrow keys stay in the editor."
@@ -421,6 +562,14 @@ struct CommandPaletteView: View {
         }
     }
 
+    private func layoutCommandTitle(_ layout: ProjectLayout) -> String {
+        switch layout {
+        case .board: String(localized: "Switch to Board View")
+        case .table: String(localized: "Switch to Table View")
+        case .roadmap: String(localized: "Switch to Roadmap View")
+        }
+    }
+
     private func layoutKeywords(_ layout: ProjectLayout) -> String {
         switch layout {
         case .board: "layout board kanban 布局 看板"
@@ -435,21 +584,53 @@ struct CommandPaletteView: View {
         return true
     }
 
+    private func commandSymbol(_ id: String) -> String {
+        if id.hasPrefix("refresh") { return "arrow.clockwise" }
+        if id == "layout:board" { return "rectangle.3.group" }
+        if id == "layout:table" { return "tablecells" }
+        if id == "layout:roadmap" { return "chart.bar.xaxis" }
+        if id.hasPrefix("mywork:") { return "briefcase" }
+        if id.hasPrefix("move-selection") { return "arrow.right.circle" }
+        if id.hasPrefix("zoom:") { return "plus.magnifyingglass" }
+        switch id {
+        case "find": return "magnifyingglass"
+        case "add-item", "quick-add", "new-project": return "plus"
+        case "edit-item", "edit-focused-item": return "pencil"
+        case "toggle-selection": return "checkmark.circle"
+        case "toggle-following": return "briefcase"
+        case "archive-selection": return "archivebox"
+        case "item-assignees": return "person"
+        case "item-labels": return "tag"
+        case "item-priority": return "flag"
+        case "item-copyLink": return "link"
+        case "settings", "roadmap-options": return "slider.horizontal.3"
+        case "roadmap-today": return "calendar"
+        case "toggle-item-inspector": return "sidebar.right"
+        case "open-focused-item": return "doc.text"
+        default: return id.contains("github") ? "arrow.up.right.square" : "arrow.right"
+        }
+    }
+
     private var rootResults: [PaletteResult] {
         var values: [PaletteResult] = []
-        func add(_ action: WorkspaceCommandContext.Action, contextual: Bool = false) {
+        func add(_ action: WorkspaceCommandContext.Action, contextual: Bool = false, isCurrent: Bool = false) {
             values.append(
                 PaletteResult(
                     id: "command:" + action.id, title: action.title,
-                    subtitle: String(localized: "Commands"), symbol: "command", scope: .commands,
+                    subtitle: "", symbol: commandSymbol(action.id), scope: .commands,
                     keywords: action.keywords, shortcut: action.shortcut,
                     unavailable: contextual && !contextIsCurrent
                         ? String(localized: "The context changed. Reopen the command palette.")
                         : (action.isEnabled
                             ? nil
                             : (action.disabledReason ?? String(localized: "Unavailable in the current context."))),
-                    destructive: action.isDestructive,
+                    destructive: action.isDestructive, isCurrent: isCurrent,
                     perform: {
+                        if let shortcut = action.shortcut, [.assignees, .labels, .priority].contains(shortcut),
+                           let reference = context?.itemReference {
+                            propertyTarget = ItemPropertyRequest(reference: reference, shortcut: shortcut)
+                            return
+                        }
                         execute {
                             guard !contextual || contextIsCurrent else {
                                 reportError(String(localized: "The context changed. Reopen the command palette."))
@@ -465,8 +646,9 @@ struct CommandPaletteView: View {
                 for value in ProjectLayout.allCases {
                     add(
                         .init(
-                            id: "layout:" + value.rawValue, title: value.title,
-                            keywords: layoutKeywords(value), perform: { layout.wrappedValue = value }), contextual: true
+                            id: "layout:" + value.rawValue, title: layoutCommandTitle(value),
+                            keywords: layoutKeywords(value), perform: { layout.wrappedValue = value }),
+                        contextual: true, isCurrent: layout.wrappedValue == value
                     )
                 }
             }
@@ -483,7 +665,7 @@ struct CommandPaletteView: View {
                     PaletteResult(
                         id: "change-status", title: String(localized: "Change Status…"),
                         subtitle: targetTitle(reference), symbol: "arrow.right.circle", scope: .commands,
-                        keywords: "status move 状态 移动", unavailable: reason,
+                        keywords: "status move 状态 移动", shortcut: .status, unavailable: reason,
                         perform: { showStatuses(reference) }))
                 if let item = store.item(for: reference) {
                     add(
@@ -495,8 +677,8 @@ struct CommandPaletteView: View {
                         add(
                             .init(
                                 id: "edit-focused-item", title: String(localized: "Edit Item…"),
-                                isEnabled: item.contentId != nil && store.pendingCreationState(for: item.id) == nil,
-                                keywords: "edit 编辑", perform: { editItem(reference) }), contextual: true)
+                                isEnabled: store.itemCommandUnavailableReason(.edit, reference: reference) == nil,
+                                keywords: "edit 编辑", shortcut: .edit, perform: { editItem(reference) }), contextual: true)
                     }
                     if context.openInGitHub?.id != "open-item-in-github", let url = item.url.flatMap(URL.init(string:))
                     {
@@ -552,11 +734,14 @@ struct CommandPaletteView: View {
             }
             return ($0.title, $0.id) < ($1.title, $1.id)
         }
+        let showsProjectOwners = Set(projects.map { $0.owner.id }).count > 1
         for project in projects {
             values.append(
                 .init(
                     id: "project:" + project.id, title: project.title,
-                    subtitle: project.owner.login, symbol: "rectangle.3.group", scope: .projects,
+                    subtitle: showsProjectOwners ? project.owner.login : "", symbol: "square.fill", scope: .projects,
+                    keywords: project.owner.login, isCurrent: project.id == store.selectedProjectId,
+                    projectID: project.id,
                     perform: { execute { navigation.openProject(project.id) } }))
             guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || scope == .items else { continue }
             let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -583,5 +768,273 @@ struct CommandPaletteView: View {
             }
         }
         return values
+    }
+}
+
+private struct ItemPropertyRequest: Identifiable {
+    let reference: ItemInspectorReference
+    let shortcut: WorkspaceShortcut
+    var id: String { reference.projectID + ":" + reference.itemID + ":" + shortcut.rawValue }
+}
+
+private struct ItemPropertyCommandView: View {
+    @Bindable var store: ProjectStore
+    let request: ItemPropertyRequest
+    var back: (() -> Void)? = nil
+    let close: () -> Void
+    @State private var query = ""
+    @State private var selection: String?
+    @State private var labels: [RepositoryLabel] = []
+    @State private var users: [Assignee] = []
+    @State private var isLoading = false
+    @State private var isSearching = false
+    @State private var isSaving = false
+    @State private var loadError: String?
+    @State private var saveError: String?
+    @State private var reloadAttempt = 0
+
+    private enum Choice: Identifiable {
+        case label(RepositoryLabel), user(Assignee), option(ProjectFieldOption), clear
+        var id: String {
+            switch self {
+            case .label(let value): "label:" + value.id
+            case .user(let value): "user:" + value.id
+            case .option(let value): "option:" + value.id
+            case .clear: "clear"
+            }
+        }
+        var title: String {
+            switch self {
+            case .label(let value): value.name
+            case .user(let value): value.name ?? value.login
+            case .option(let value): value.name
+            case .clear: String(localized: "Not Set")
+            }
+        }
+        var subtitle: String {
+            if case .user(let value) = self { return "@" + value.login }
+            return ""
+        }
+    }
+
+    private var item: ProjectItem? { store.item(for: request.reference) }
+    private var field: ProjectField? { store.project(id: request.reference.projectID)?.priorityCommandField }
+    private var choices: [Choice] {
+        let values: [Choice]
+        switch request.shortcut {
+        case .labels:
+            let assigned = (item?.labels ?? []).map { RepositoryLabel(id: $0.id, name: $0.name) }
+            values = (assigned + labels.filter { value in !assigned.contains { $0.id == value.id } }).map(Choice.label)
+        case .assignees:
+            let assigned = item?.assignees ?? []
+            values = (assigned + users.filter { value in !assigned.contains { $0.id == value.id } }).map(Choice.user)
+        case .priority:
+            values = [.clear] + (field?.options ?? []).map(Choice.option)
+        default: values = []
+        }
+        return values.filter { CommandSearch.rank(query, title: $0.title, keywords: $0.subtitle) != nil }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                if let back {
+                    Button("Back", systemImage: "chevron.left", action: back).labelStyle(.iconOnly).disabled(isSaving)
+                }
+                Text(request.shortcut == .labels ? String(localized: "Labels")
+                     : request.shortcut == .assignees ? String(localized: "Assignees") : String(localized: "Priority"))
+                    .font(.headline)
+                Spacer()
+                Button("Close", systemImage: "xmark", action: close).labelStyle(.iconOnly).disabled(isSaving)
+            }.padding(16)
+            Text(item?.displayTitle ?? String(localized: "This item is no longer available."))
+                .font(.callout).foregroundStyle(.secondary).lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.bottom, 12)
+            CommandSearchField(text: $query,
+                prompt: request.shortcut == .assignees ? String(localized: "Search GitHub users") : String(localized: "Search options"),
+                move: { selection = ItemKeyboardNavigation.next(from: selection, in: choices.map(\.id), offset: $0) },
+                submit: submit, cancel: cancel)
+                .frame(height: 28).padding(.horizontal, 16).padding(.bottom, 12).disabled(isSaving)
+            Divider()
+            ScrollViewReader { proxy in
+                List(selection: $selection) {
+                    ForEach(choices) { choice in
+                        HStack {
+                            Image(systemName: isSelected(choice) ? "checkmark" : "circle")
+                                .foregroundStyle(isSelected(choice) ? Color.accentColor : .secondary)
+                                .frame(width: 18)
+                            Text(choice.title)
+                            if !choice.subtitle.isEmpty { Text(choice.subtitle).foregroundStyle(.secondary) }
+                            Spacer()
+                        }
+                        .padding(.vertical, 4).contentShape(Rectangle()).tag(choice.id).id(choice.id)
+                        .onTapGesture { selection = choice.id; apply(choice) }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityValue(isSelected(choice) ? String(localized: "Selected") : String(localized: "Not selected"))
+                        .accessibilityAction { apply(choice) }
+                    }
+                }
+                .listStyle(.inset).frame(height: 260).disabled(isSaving)
+                .onChange(of: selection) { _, id in if let id { proxy.scrollTo(id) } }
+                .onKeyPress(.return) { submit(); return .handled }
+                .overlay {
+                    if choices.isEmpty && !isLoading && !isSearching && loadError == nil {
+                        Text(request.shortcut == .assignees && query.isEmpty
+                             ? String(localized: "Enter a GitHub login or name.") : String(localized: "No Results"))
+                            .foregroundStyle(.secondary).allowsHitTesting(false)
+                    }
+                }
+            }
+            if isLoading || isSearching || isSaving {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text(isSaving ? String(localized: "Saving field") : String(localized: "Loading options…"))
+                }.padding(8)
+            }
+            if let error = saveError ?? loadError {
+                HStack {
+                    Text(error).font(.callout).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+                    if loadError != nil { Button("Retry") { reloadAttempt += 1 }.disabled(isSaving) }
+                }.padding(12)
+            }
+            Divider()
+            HStack {
+                Text(request.shortcut == .priority
+                     ? String(localized: "↑↓ Navigate · Return Apply · Esc Back")
+                     : String(localized: "↑↓ Navigate · Return Toggle · Esc Back"))
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Done", action: close).disabled(isSaving)
+            }.padding(12)
+        }
+        .frame(minWidth: 480, idealWidth: 560, maxWidth: 640)
+        .interactiveDismissDisabled(isSaving)
+        .onExitCommand(perform: cancel)
+        .onChange(of: choices.map(\.id), initial: true) { old, new in
+            selection = ItemKeyboardNavigation.reconciled(selection, old: old, new: new) ?? new.first
+        }
+        .task(id: reloadAttempt) {
+            guard request.shortcut == .labels else { return }
+            isLoading = true
+            loadError = nil
+            defer { isLoading = false }
+            do { labels = try await store.repositoryLabels(for: request.reference) }
+            catch is CancellationError { return }
+            catch { loadError = error.localizedDescription }
+        }
+        .task(id: "\(query):\(reloadAttempt)") {
+            guard request.shortcut == .assignees else { return }
+            users = []
+            loadError = nil
+            let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !query.isEmpty else { isSearching = false; return }
+            isSearching = true
+            do {
+                try await Task.sleep(for: .milliseconds(250))
+                let results = try await store.searchUsers(query: query)
+                try Task.checkCancellation()
+                users = results
+                isSearching = false
+            } catch is CancellationError { return }
+            catch { if !Task.isCancelled { loadError = error.localizedDescription; isSearching = false } }
+        }
+    }
+
+    private func isSelected(_ choice: Choice) -> Bool {
+        switch choice {
+        case .label(let value): item?.labels.contains { $0.id == value.id } == true
+        case .user(let value): item?.assignees.contains { $0.id == value.id } == true
+        case .option(let value):
+            if let field, case .singleSelect(let id, _) = item?.fieldValues[field.id] { id == value.id } else { false }
+        case .clear: field.map { item?.fieldValues[$0.id] == nil } ?? false
+        }
+    }
+    private func cancel() { if !isSaving { (back ?? close)() } }
+    private func submit() { if let choice = choices.first(where: { $0.id == selection }) { apply(choice) } }
+    private func apply(_ choice: Choice) {
+        guard !isSaving else { return }
+        if let reason = store.itemCommandUnavailableReason(request.shortcut, reference: request.reference) {
+            saveError = reason
+            return
+        }
+        guard let item else { return }
+        let remove = isSelected(choice)
+        isSaving = true
+        saveError = nil
+        Task { @MainActor in
+            defer { isSaving = false }
+            do {
+                switch choice {
+                case .label(let label):
+                    if remove { try await store.removeLabel(from: item, in: request.reference.projectID, name: label.name) }
+                    else { try await store.addLabel(to: item, in: request.reference.projectID, name: label.name) }
+                case .user(let user):
+                    if remove { try await store.removeAssignee(from: item, in: request.reference.projectID, user: user) }
+                    else { try await store.addAssignee(to: item, in: request.reference.projectID, user: user) }
+                case .option(let option):
+                    guard let field else { throw ProjectStoreError.itemUnavailable }
+                    try await store.updateField(on: item, in: request.reference.projectID, field: field,
+                                                value: .singleSelect(optionId: option.id, name: option.name))
+                    close()
+                case .clear:
+                    guard let field else { throw ProjectStoreError.itemUnavailable }
+                    try await store.updateField(on: item, in: request.reference.projectID, field: field, value: nil)
+                    close()
+                }
+            } catch is CancellationError { return }
+            catch { saveError = error.localizedDescription }
+        }
+    }
+}
+
+private extension Project {
+    var priorityCommandField: ProjectField? {
+        fields.first { $0.kind == .singleSelect && $0.name.caseInsensitiveCompare("Priority") == .orderedSame }
+    }
+}
+
+private func itemCommandKeywords(_ shortcut: WorkspaceShortcut) -> String {
+    switch shortcut {
+    case .status: "status 状态"
+    case .assignees: "assignee assign 负责人 指派"
+    case .labels: "label 标签"
+    case .priority: "priority 优先级"
+    case .copyLink: "copy link url 复制 链接"
+    case .edit: "edit 编辑"
+    default: ""
+    }
+}
+
+private extension ProjectStore {
+    func itemCommandUnavailableReason(_ shortcut: WorkspaceShortcut, reference: ItemInspectorReference) -> String? {
+        guard let item = item(for: reference) else { return String(localized: "This item is no longer available.") }
+        if shortcut == .copyLink { return item.url == nil ? String(localized: "This item has no link.") : nil }
+        if shortcut == .status { return statusChangeUnavailableReason(reference) }
+        if shortcut == .edit {
+            guard item.contentId != nil, pendingCreationState(for: item.id) == nil else {
+                return String(localized: "This item is read-only.")
+            }
+            // The editor request loads details before checking content permissions. Browsing a
+            // board must not require opening details once just to enable the edit command.
+            if case .loaded = itemDetailState(for: item), !canEditItemContent(reference) {
+                return String(localized: "This item is read-only.")
+            }
+            return nil
+        }
+        guard canEditProject(id: reference.projectID), pendingCreationState(for: item.id) == nil else {
+            return String(localized: "This item is read-only.")
+        }
+        if shortcut == .priority {
+            return project(id: reference.projectID)?.priorityCommandField == nil
+                ? String(localized: "This project has no Priority field.") : nil
+        }
+        if shortcut == .labels, item.contentType != .issue {
+            return String(localized: "Labels are available for issues.")
+        }
+        if shortcut == .assignees, item.contentType != .issue && item.contentType != .pullRequest {
+            return String(localized: "Assignees are available for issues and pull requests.")
+        }
+        return nil
     }
 }

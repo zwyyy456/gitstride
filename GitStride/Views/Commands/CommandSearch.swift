@@ -7,6 +7,7 @@ enum CommandSearch {
         let title = normalized(title)
         guard !query.isEmpty else { return 0 }
         if title == query { return 0 }
+        if query.count == 1 && normalized(keywords).split(whereSeparator: \.isWhitespace).contains(Substring(query)) { return 0 }
         if title.hasPrefix(query) { return 1 }
         if title.contains(query) { return 2 }
         let terms = query.split(whereSeparator: \.isWhitespace)

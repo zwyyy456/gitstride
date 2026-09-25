@@ -26,6 +26,7 @@ struct WorkspaceCommandContext {
     var moveSelection: [Action] = []
     var archiveSelection: Action? = nil
     var stopFollowing: [Action] = []
+    var itemActions: [Action] = []
 }
 
 private struct WorkspaceCommandContextKey: FocusedValueKey {
@@ -42,9 +43,16 @@ extension FocusedValues {
 
 enum WorkspaceShortcut: String, CaseIterable, Identifiable {
     case palette, find, refresh, refreshProjects, newProject, addItem, inspector
+    case status, assignees, labels, priority, edit, copyLink, createItem
     var id: Self { self }
     var key: KeyEquivalent {
         switch self {
+        case .status: "s"
+        case .assignees: "a"
+        case .labels: "l"
+        case .priority: "p"
+        case .edit: "e"
+        case .copyLink, .createItem: "c"
         case .palette: "k"
         case .find: "f"
         case .refresh, .refreshProjects: "r"
@@ -54,13 +62,21 @@ enum WorkspaceShortcut: String, CaseIterable, Identifiable {
     }
     var modifiers: EventModifiers {
         switch self {
-        case .refreshProjects, .addItem: [.command, .shift]
+        case .status, .assignees, .labels, .priority, .edit, .createItem: []
+        case .refreshProjects, .addItem, .copyLink: [.command, .shift]
         case .inspector: [.command, .option]
         default: .command
         }
     }
     var label: String {
         switch self {
+        case .createItem: "C"
+        case .status: "S"
+        case .assignees: "A"
+        case .labels: "L"
+        case .priority: "P"
+        case .edit: "E"
+        case .copyLink: "⇧⌘C"
         case .palette: "⌘K"
         case .find: "⌘F"
         case .refresh: "⌘R"
@@ -72,6 +88,13 @@ enum WorkspaceShortcut: String, CaseIterable, Identifiable {
     }
     var title: String {
         switch self {
+        case .createItem: String(localized: "Add Item…")
+        case .status: String(localized: "Change Status…")
+        case .assignees: String(localized: "Edit Assignees…")
+        case .labels: String(localized: "Edit Labels…")
+        case .priority: String(localized: "Change Priority…")
+        case .edit: String(localized: "Edit Item…")
+        case .copyLink: String(localized: "Copy Item Link")
         case .palette: String(localized: "Show Command Palette…")
         case .find: String(localized: "Find in Current View")
         case .refresh: String(localized: "Refresh")
@@ -93,6 +116,7 @@ struct CommandPaletteRequest {
     let show: () -> Void
     let showShortcuts: () -> Void
     let showStatus: () -> Void
+    var itemActions: [WorkspaceCommandContext.Action] = []
 }
 private struct CommandPaletteRequestKey: FocusedValueKey {
     typealias Value = CommandPaletteRequest
@@ -108,12 +132,16 @@ extension WorkspaceCommandContext {
     var actions: [Action] {
         var refresh = refresh
         refresh.shortcut = .refresh
-        refresh.keywords = "refresh reload 刷新"
+        refresh.keywords = "r refresh reload 刷新"
         var inspector = toggleInspector
         inspector?.shortcut = .inspector
+        var create = addItem
+        create?.shortcut = .createItem
+        var edit = editItem
+        edit?.shortcut = .edit
         var archive = archiveSelection
         archive?.isDestructive = true
-        return [refresh, find, addItem, editItem, toggleSelection, toggleFollowing, inspector, openInGitHub, archive]
+        return [refresh, find, create, edit, toggleSelection, toggleFollowing, inspector, openInGitHub, archive]
             .compactMap { $0 }.map { action in
                 var action = action
                 let aliases: [String: String] = [
@@ -128,6 +156,6 @@ extension WorkspaceCommandContext {
                 ]
                 action.keywords += " " + (aliases[action.id] ?? "")
                 return action
-            } + stopFollowing
+            } + stopFollowing + itemActions
     }
 }

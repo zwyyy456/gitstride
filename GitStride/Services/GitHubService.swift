@@ -609,6 +609,27 @@ actor GitHubService {
         try await editIssue(url: issueUrl, suffix: "assignees", method: "DELETE", body: ["assignees": [userLogin]])
     }
 
+    func repositoryLabels(issueURL: String) async throws -> [RepositoryLabel] {
+        guard let address = GitHubItemAddress(issueURL) else { throw GitHubError.invalidItemURL }
+        var after: String?
+        var labels: [RepositoryLabel] = []
+        repeat {
+            try Task.checkCancellation()
+            var variables = cursorVariables(after)
+            variables["owner"] = address.owner
+            variables["name"] = address.repository
+            let payload: GitHubResponse.IssueRepositoryPayload = try await request(
+                GraphQLQueries.issueRepository, variables: variables,
+                as: GitHubResponse.IssueRepositoryPayload.self)
+            guard let repository = payload.repository else {
+                throw GitHubError.graphQLError(String(localized: "Repository not found or no longer accessible."))
+            }
+            labels += repository.labels.nodes.map { RepositoryLabel(id: $0.id, name: $0.name) }
+            after = try nextCursor(from: repository.labels.pageInfo)
+        } while after != nil
+        return labels
+    }
+
     func addLabel(issueUrl: String, label: String) async throws {
         try await editIssue(url: issueUrl, suffix: "labels", method: "POST", body: ["labels": [label]])
     }

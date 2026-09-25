@@ -11,6 +11,8 @@ struct CommandSearchTests {
         #expect(CommandSearch.rank("刷新", title: "Refresh", keywords: "刷新 reload") == 3)
         #expect(CommandSearch.rank("status move", title: "Change Status", keywords: "move") == 3)
         #expect(CommandSearch.rank("missing", title: "Refresh") == nil)
+        #expect(CommandSearch.rank("r", title: "刷新当前项目", keywords: "r refresh reload") == 0)
+        #expect(CommandSearch.rank("r", title: "刷新项目目录", keywords: "refresh reload") == 3)
     }
 
     @Test func boardNavigationSkipsEmptyColumnsAndClampsRowAndColumnEdges() {

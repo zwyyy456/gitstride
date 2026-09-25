@@ -40,6 +40,32 @@ struct GitHubServiceTests {
         #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.createDateField }.count == 1)
     }
 
+    @Test func repositoryLabelChoicesFollowPaginationAndPreserveIdentity() async throws {
+        let client = FixtureGitHubHTTPClient(responses: [
+            #"{"data":{"repository":{"id":"REPO","labels":{"nodes":[{"id":"BUG","name":"bug"}],"pageInfo":{"hasNextPage":true,"endCursor":"next"}}}}}"#,
+            #"{"data":{"repository":{"id":"REPO","labels":{"nodes":[{"id":"DOCS","name":"文档"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}"#
+        ])
+        let labels = try await GitHubService(http: client).repositoryLabels(issueURL: "https://github.com/acme/widgets/issues/42")
+        #expect(labels == [RepositoryLabel(id: "BUG", name: "bug"), RepositoryLabel(id: "DOCS", name: "文档")])
+        let requests = await client.recordedRequests()
+        #expect(requests.count == 2)
+        #expect(requests[0].hasVariable("owner", "acme"))
+        #expect(requests[0].hasVariable("name", "widgets"))
+        #expect(requests[1].hasVariable("after", "next"))
+    }
+
+    @Test func repositoryLabelChoicesRejectInvalidURLsAndInaccessibleRepositories() async throws {
+        let client = FixtureGitHubHTTPClient(responses: [#"{"data":{"repository":null}}"#])
+        let service = GitHubService(http: client)
+        await #expect(throws: GitHubError.invalidItemURL) {
+            _ = try await service.repositoryLabels(issueURL: "https://example.com/acme/widgets/issues/42")
+        }
+        #expect(await client.recordedRequests().isEmpty)
+        await #expect(throws: GitHubError.graphQLError(String(localized: "Repository not found or no longer accessible."))) {
+            _ = try await service.repositoryLabels(issueURL: "https://github.com/acme/widgets/issues/42")
+        }
+    }
+
     @Test func contentEditingRejectsMissingMarkdownAndUnconfirmedUpdates() async throws {
         let runner = FixtureGitHubHTTPClient(responses: [
             #"{"data":{"node":{"__typename":"PullRequest","id":"CONTENT","title":"Title","bodyHTML":"<p>Body</p>"}}}"#,

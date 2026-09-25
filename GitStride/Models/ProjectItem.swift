@@ -237,3 +237,9 @@ extension GitHubItemCandidate: Decodable {
         repository = try values.decode(Repository.self, forKey: .repository).nameWithOwner
     }
 }
+
+/// Repository choices have identity and name; assigned labels carry their display color separately.
+struct RepositoryLabel: Identifiable, Equatable {
+    let id: String
+    let name: String
+}

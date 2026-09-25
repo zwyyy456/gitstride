@@ -1707,6 +1707,13 @@ final class ProjectStore {
         }
     }
 
+    func repositoryLabels(for reference: ItemInspectorReference) async throws -> [RepositoryLabel] {
+        guard isActive, let url = item(for: reference)?.url else { throw ProjectStoreError.itemUnavailable }
+        let labels = try await gitHubService.repositoryLabels(issueURL: url)
+        guard isActive else { throw CancellationError() }
+        return labels
+    }
+
     func addLabel(to item: ProjectItem, in projectID: String, name: String) async throws {
         try await setLabel(name, assigned: true, on: item, in: projectID)
     }

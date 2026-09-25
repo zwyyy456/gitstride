@@ -245,9 +245,10 @@ private struct GitStrideCommands: Commands {
             Button("Find in Current View") { workspaceCommandContext?.find?.perform() }
                 .workspaceShortcut(.find)
                 .disabled(workspaceCommandContext?.find == nil)
-            if let changeStatus = workspaceCommandContext?.itemReference {
-                Button("Change Status…") { paletteRequest?.showStatus() }
-                    .disabled(store.statusChangeUnavailableReason(changeStatus) != nil)
+            ForEach(paletteRequest?.itemActions ?? []) { action in
+                // Single-letter actions are dispatched by the window-local handler, never by text editors.
+                Button(action.title + "    " + (action.shortcut?.label ?? ""), action: action.perform)
+                    .disabled(!action.isEnabled)
             }
             Divider()
             if let layout = workspaceCommandContext?.projectLayout {
@@ -273,11 +274,6 @@ private struct GitStrideCommands: Commands {
             if let addItem = workspaceCommandContext?.addItem {
                 Button(addItem.title, action: addItem.perform)
                     .disabled(addItem.isEnabled == false)
-            }
-
-            if let editItem = workspaceCommandContext?.editItem {
-                Button(editItem.title, action: editItem.perform)
-                    .disabled(editItem.isEnabled == false)
             }
 
             if let toggleSelection = workspaceCommandContext?.toggleSelection {

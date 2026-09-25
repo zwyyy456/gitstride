@@ -7,6 +7,116 @@
     " " : {
 
     },
+    "Application" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用"
+          }
+        }
+      }
+    },
+    "Current" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前"
+          }
+        }
+      }
+    },
+    "Current Project" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前项目"
+          }
+        }
+      }
+    },
+    "Current View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前视图"
+          }
+        }
+      }
+    },
+    "Go to My Work" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前往我的工作"
+          }
+        }
+      }
+    },
+    "Item Actions" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目操作"
+          }
+        }
+      }
+    },
+    "Switch Project" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换项目"
+          }
+        }
+      }
+    },
+    "Switch View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换视图"
+          }
+        }
+      }
+    },
+    "Switch to Board View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到看板视图"
+          }
+        }
+      }
+    },
+    "Switch to Roadmap View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到路线图视图"
+          }
+        }
+      }
+    },
+    "Switch to Table View" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到表格视图"
+          }
+        }
+      }
+    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -480,7 +590,38 @@
         }
       }
     },
+    "↑↓ Navigate · Return Apply · Esc Back" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车应用 · Esc 返回"
+          }
+        }
+      }
+    },
+    "↑↓ Navigate · Return Execute · Esc Back" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车执行 · Esc 返回"
+          }
+        }
+      }
+    },
+    "↑↓ Navigate · Return Execute · Esc Close" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "↑↓ 选择 · 回车执行 · Esc 关闭"
+          }
+        }
+      }
+    },
     "↑↓ Navigate · Return Select · Esc Back" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1370,6 +1511,16 @@
         }
       }
     },
+    "Assignees are available for issues and pull requests." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "负责人操作适用于 Issue 和 Pull Request。"
+          }
+        }
+      }
+    },
     "Authorization required" : {
       "localizations" : {
         "en" : {
@@ -1776,6 +1927,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更改父 Issue"
+          }
+        }
+      }
+    },
+    "Change Priority…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "修改优先级…"
           }
         }
       }
@@ -2308,6 +2469,7 @@
       }
     },
     "Command Palette" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2573,6 +2735,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "复制代码并打开 GitHub"
+          }
+        }
+      }
+    },
+    "Copy Item Link" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制条目链接"
           }
         }
       }
@@ -3456,6 +3628,16 @@
         }
       }
     },
+    "Edit Assignees…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑负责人…"
+          }
+        }
+      }
+    },
     "Edit Dates…" : {
       "localizations" : {
         "zh-Hans" : {
@@ -3489,6 +3671,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑条目…"
+          }
+        }
+      }
+    },
+    "Edit Labels…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑标签…"
           }
         }
       }
@@ -4738,6 +4930,16 @@
         }
       }
     },
+    "Item shortcuts work outside text fields and editors." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目快捷键仅在文本输入框和编辑器之外生效。"
+          }
+        }
+      }
+    },
     "Item source" : {
       "localizations" : {
         "en" : {
@@ -4889,6 +5091,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "标签"
+          }
+        }
+      }
+    },
+    "Labels are available for issues." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标签操作适用于 Issue。"
           }
         }
       }
@@ -5133,6 +5345,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在加载我的工作…"
+          }
+        }
+      }
+    },
+    "Loading options…" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载选项…"
           }
         }
       }
@@ -8638,6 +8860,16 @@
         }
       }
     },
+    "Search options" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索选项"
+          }
+        }
+      }
+    },
     "Search project items" : {
       "localizations" : {
         "en" : {
@@ -9081,6 +9313,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置…"
+          }
+        }
+      }
+    },
+    "Shortcut outside the command palette" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无需打开命令面板时使用的快捷键"
           }
         }
       }
@@ -10140,6 +10382,16 @@
         }
       }
     },
+    "This item has no link." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此条目没有可复制的链接。"
+          }
+        }
+      }
+    },
     "This item is no longer available." : {
       "localizations" : {
         "en" : {
@@ -10188,6 +10440,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此条目不可用，或已无权访问。"
+          }
+        }
+      }
+    },
+    "This project has no Priority field." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此项目没有 Priority 单选字段。"
           }
         }
       }
