@@ -152,8 +152,12 @@ struct ProjectRoadmapView: View {
         ))
         .sheet(isPresented: $showsOptions) { options }
         .onChange(of: dateFields.map(\.id), initial: true) { _, ids in
-            if !ids.contains(startFieldID) { startFieldID = "" }
-            if !ids.contains(endFieldID) { endFieldID = "" }
+            if !ids.contains(startFieldID) {
+                startFieldID = (try? ProjectField.dateField(named: "Start date", in: project.fields))?.id ?? ""
+            }
+            if !ids.contains(endFieldID) {
+                endFieldID = (try? ProjectField.dateField(named: "Target date", in: project.fields))?.id ?? ""
+            }
         }
         .onChange(of: items.map(\.id)) { _, ids in selectedItemIDs.formIntersection(ids) }
         .onChange(of: rows.compactMap { $0.item?.id }) { old, new in

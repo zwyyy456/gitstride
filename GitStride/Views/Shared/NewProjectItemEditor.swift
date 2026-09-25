@@ -240,11 +240,12 @@ struct NewProjectItemEditor: View {
                         priorityPicker.labelsHidden()
                     }
                 }
-                if hasDateField("Start date") {
-                    dateRow("Start date", selection: $draft.startDate)
-                }
-                if hasDateField("Target date") {
-                    dateRow("Target date", selection: $draft.targetDate)
+                dateRow("Start date", selection: $draft.startDate)
+                dateRow("Target date", selection: $draft.targetDate)
+                GridRow {
+                    Color.clear.frame(width: 0, height: 0)
+                    Text("Missing date fields are created only when you submit a date.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
 
             }
@@ -256,12 +257,6 @@ struct NewProjectItemEditor: View {
         Text(labelTitle)
             .fixedSize()
             .gridColumnAlignment(.trailing)
-    }
-
-    private func hasDateField(_ name: String) -> Bool {
-        store.selectedProject?.fields.contains {
-            $0.kind == .date && $0.name.caseInsensitiveCompare(name) == .orderedSame
-        } == true
     }
 
     private func dateRow(_ title: LocalizedStringKey, selection: Binding<Date?>) -> some View {

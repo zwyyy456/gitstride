@@ -2851,6 +2851,7 @@
       }
     },
     "Date field unavailable: %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -5368,6 +5369,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "里程碑：%@"
+          }
+        }
+      }
+    },
+    "Missing date fields are created only when you submit a date." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅在提交已填写的日期时创建缺失字段。"
           }
         }
       }
@@ -9946,6 +9957,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法刷新项目列表：%@"
+          }
+        }
+      }
+    },
+    "The project must have exactly one date field named %@. Rename duplicate fields or change the conflicting field type on GitHub." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目中必须有且仅有一个名为 %@ 的日期字段。请在 GitHub 上重命名重复字段，或调整冲突字段的类型。"
           }
         }
       }

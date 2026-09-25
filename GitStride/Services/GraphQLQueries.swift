@@ -184,6 +184,14 @@ enum GraphQLQueries {
         }
         """
 
+    static let createDateField = """
+        mutation($projectId: ID!, $name: String!) {
+            createProjectV2Field(input: {projectId: $projectId, dataType: DATE, name: $name}) {
+                projectV2Field { ... on ProjectV2Field { id name dataType } }
+            }
+        }
+        """
+
     static let issueRepository = """
         query($owner: String!, $name: String!, $after: String) {
             repository(owner: $owner, name: $name) {

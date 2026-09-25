@@ -30,6 +30,31 @@ extension ProjectStoreTests {
     private static let addedBacklogResponse =
         #"{"data":{"updateProjectV2Field":{"projectV2Field":{"id":"STATUS","options":[{"id":"TODO","name":"Todo","color":"GRAY","description":""},{"id":"REVIEW","name":"Review","color":"YELLOW","description":"Existing"},{"id":"BACKLOG","name":"Backlog","color":"GRAY","description":""}]}}}}"#
 
+    @Test func missingDateFieldIsPreparedOnceBeforeIssueAndResumesOnlyTheValueWrite() async throws {
+        let createdWithProject = #"{"data":{"createIssue":{"issue":{"id":"CONTENT1","url":"https://github.com/acme/app/issues/1","projectItems":{"nodes":[{"id":"NEW_ITEM","project":{"id":"P1"}}]}}}}}"#
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            Self.mutationFieldsResponse,
+            #"{"data":{"createProjectV2Field":{"projectV2Field":{"id":"START","name":"Start date","dataType":"DATE"}}}}"#,
+            Self.issueRepositoryResponse, createdWithProject,
+            Self.graphQLFailureResponse, Self.graphQLSuccessResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let date = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 1)))
+        let creation = try store.prepareIssueCreation(repository: "acme/app", title: "Scheduled", body: "",
+            labels: [], assignees: [], startDate: date)
+        await #expect(throws: GitHubError.self) { try await store.resumeIssueCreation(creation) }
+        try await store.resumeIssueCreation(creation)
+        let calls = await runner.recordedRequests()
+        #expect(calls.filter { $0.graphQLQuery == GraphQLQueries.createDateField }.count == 1)
+        #expect(calls.filter { $0.graphQLQuery == GraphQLQueries.createIssue }.count == 1)
+        #expect(store.selectedProject?.fields.contains { $0.id == "START" } == true)
+        #expect(store.selectedProject?.fields.contains { $0.name == "Target date" } == false)
+        let item = try #require(store.selectedProject?.items.first { $0.id == "NEW_ITEM" })
+        #expect(item.fieldValues["START"] == .date("2026-10-01"))
+    }
+
     @Test func creationDatesResumeWithoutRecreatingIssueOrRepeatingConfirmedFields() async throws {
         let fields = Self.mutationFieldsResponse.replacingOccurrences(
             of: "\"fields\":{\"nodes\":[",

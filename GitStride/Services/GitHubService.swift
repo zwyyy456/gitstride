@@ -120,6 +120,7 @@ actor GitHubService {
     private let http: any GitHubHTTPClient
     private let credentials: any GitHubAuthenticating
     private let decoder = JSONDecoder()
+    private var dateFieldPreparations: [String: Task<ProjectField, Error>] = [:]
 
     init(http: any GitHubHTTPClient, credentials: any GitHubAuthenticating) {
         self.http = http
@@ -133,6 +134,7 @@ actor GitHubService {
     }
 
     func invalidate() async {
+        dateFieldPreparations.values.forEach { $0.cancel() }
         await credentials.invalidate()
         await http.cancel()
     }
@@ -637,6 +639,32 @@ actor GitHubService {
             as: GitHubResponse.DraftIssuePayload.self
         )
         return payload.addProjectV2DraftIssue.projectItem.id
+    }
+
+    func ensureProjectDateField(projectID: String, name: String) async throws -> ProjectField {
+        let key = projectID + ":" + name.lowercased()
+        if let preparation = dateFieldPreparations[key] { return try await preparation.value }
+        // Coalesce overlapping submissions. Every new attempt reads GitHub before creating,
+        // including retries whose previous create response was lost.
+        let preparation = Task { try await self.resolveOrCreateDateField(projectID: projectID, name: name) }
+        dateFieldPreparations[key] = preparation
+        defer { dateFieldPreparations[key] = nil }
+        return try await preparation.value
+    }
+
+    private func resolveOrCreateDateField(projectID: String, name: String) async throws -> ProjectField {
+        let project = try await fetchProjectFields(projectID: projectID)
+        if let field = try ProjectField.dateField(named: name, in: project.fields.compactMap(makeProjectField)) {
+            return field
+        }
+        let payload: GitHubResponse.CreateDateFieldPayload = try await request(
+            GraphQLQueries.createDateField, variables: ["projectId": projectID, "name": name],
+            as: GitHubResponse.CreateDateFieldPayload.self)
+        guard let node = payload.createProjectV2Field.projectV2Field, let field = makeProjectField(from: node),
+              field.kind == .date, field.name.caseInsensitiveCompare(name) == .orderedSame else {
+            throw GitHubError.invalidResponse
+        }
+        return field
     }
 
     func ensureProjectStatusOption(fieldID: String, name: String, color: String) async throws -> [ProjectFieldOption] {

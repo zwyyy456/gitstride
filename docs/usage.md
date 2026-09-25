@@ -108,3 +108,9 @@ Keyboard navigation follows the visible order in tables, My Work, and roadmaps. 
 | `⌘ →` | Next status tab in the menu bar popover, outside text input |
 | `> title` + `Return` | Open a prefilled creation form from project or menu bar search |
 | `Esc` | Cancel quick-create input in search |
+
+### Default scheduling fields
+
+Issue creation always offers optional **Start date** and **Target date** inputs. Existing date fields with these names are reused (case-insensitive). A missing field is created only after submitting a value for it; leaving both dates empty does not create fields. Conflicting field types or duplicate names report an error. Field preparation happens before Issue creation, and retries query GitHub before creating missing fields. Confirmed Issues and field writes are retained when resuming a failed submission.
+
+Roadmap defaults to these two date fields when no valid field mapping is selected, including when they first become available. Existing valid custom mappings remain selected. Date values are shared with GitHub; the roadmap mapping is local to GitStride.

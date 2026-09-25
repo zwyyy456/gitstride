@@ -138,3 +138,24 @@ enum RepositoryListState {
         return []
     }
 }
+
+extension ProjectField {
+    enum DateResolutionError: LocalizedError {
+        case conflictingField(String)
+        var errorDescription: String? {
+            switch self {
+            case .conflictingField(let name):
+                String(localized: "The project must have exactly one date field named \(name). Rename duplicate fields or change the conflicting field type on GitHub.")
+            }
+        }
+    }
+
+    static func dateField(named name: String, in fields: [ProjectField]) throws -> ProjectField? {
+        let matches = fields.filter { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        guard !matches.isEmpty else { return nil }
+        guard matches.count == 1, matches[0].kind == .date else {
+            throw DateResolutionError.conflictingField(name)
+        }
+        return matches[0]
+    }
+}

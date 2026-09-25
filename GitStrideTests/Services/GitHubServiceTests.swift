@@ -3,6 +3,43 @@ import Testing
 @testable import GitStride
 
 struct GitHubServiceTests {
+    private static func dateFieldsResponse(_ fields: String) -> String {
+        """
+        {"data":{"node":{"title":"Project","number":1,"url":"https://github.com/users/me/projects/1","viewerCanUpdate":true,"fields":{"nodes":[\(fields)],"pageInfo":{"hasNextPage":false,"endCursor":null}},"repositories":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}
+        """
+    }
+
+    @Test func dateFieldRetryReusesFieldAfterLostCreateResponse() async throws {
+        let field = #"{"id":"START","name":"Start date","dataType":"DATE"}"#
+        let client = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.dateFieldsResponse("")), .failure(.networkConnectionLost),
+            .response(Self.dateFieldsResponse(field))
+        ])
+        let service = GitHubService(http: client)
+        await #expect(throws: (any Error).self) {
+            _ = try await service.ensureProjectDateField(projectID: "P1", name: "Start date")
+        }
+        let resolved = try await service.ensureProjectDateField(projectID: "P1", name: "Start date")
+        #expect(resolved.id == "START")
+        let requests = await client.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.createDateField }.count == 1)
+    }
+
+    @Test func dateFieldCreationAndTypeConflict() async throws {
+        let client = FixtureGitHubHTTPClient(responses: [
+            Self.dateFieldsResponse(""),
+            #"{"data":{"createProjectV2Field":{"projectV2Field":{"id":"TARGET","name":"Target date","dataType":"DATE"}}}}"#,
+            Self.dateFieldsResponse(#"{"id":"TEXT","name":"Start date","dataType":"TEXT"}"#)
+        ])
+        let service = GitHubService(http: client)
+        #expect(try await service.ensureProjectDateField(projectID: "P1", name: "Target date").id == "TARGET")
+        await #expect(throws: ProjectField.DateResolutionError.self) {
+            _ = try await service.ensureProjectDateField(projectID: "P1", name: "Start date")
+        }
+        let requests = await client.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.createDateField }.count == 1)
+    }
+
     @Test func contentEditingRejectsMissingMarkdownAndUnconfirmedUpdates() async throws {
         let runner = FixtureGitHubHTTPClient(responses: [
             #"{"data":{"node":{"__typename":"PullRequest","id":"CONTENT","title":"Title","bodyHTML":"<p>Body</p>"}}}"#,

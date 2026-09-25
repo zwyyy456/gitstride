@@ -26,7 +26,6 @@ enum ProjectStoreError: LocalizedError {
     case operationInProgress
     case emptyItemTitle
     case itemDetailsFailed(String)
-    case missingDateField(String)
     case missingFieldOption(field: String, option: String)
 
     var errorDescription: String? {
@@ -45,8 +44,6 @@ enum ProjectStoreError: LocalizedError {
             message
         case .itemUnavailable:
             String(localized: "This item is no longer available.")
-        case .missingDateField(let name):
-            String(localized: "Date field unavailable: \(name)")
         case .missingFieldOption(let field, let option):
             String(localized: "\(field) has no option named \(option).")
         }
@@ -74,6 +71,7 @@ final class IssueCreation {
     fileprivate let assignees: [String]
     fileprivate let selectedStatusName: String?
     fileprivate var backlogFieldToPrepare: ProjectField?
+    fileprivate var dateFieldsToPrepare: [(String, ProjectFieldValue)]
     fileprivate var remainingFields: [(ProjectField, ProjectFieldValue)]
     fileprivate var createdIssue: CreatedIssue?
     fileprivate var createdItem: ProjectItem?
@@ -91,7 +89,8 @@ final class IssueCreation {
 
     fileprivate init(sessionID: UUID, projectID: String, repository: String, title: String, body: String,
                      labels: [String], assignees: [String], selectedStatusName: String?,
-                     backlogFieldToPrepare: ProjectField?, fields: [(ProjectField, ProjectFieldValue)]) {
+                     backlogFieldToPrepare: ProjectField?, fields: [(ProjectField, ProjectFieldValue)],
+                     dateFieldsToPrepare: [(String, ProjectFieldValue)] = []) {
         self.sessionID = sessionID
         self.projectID = projectID
         self.repository = repository
@@ -101,6 +100,7 @@ final class IssueCreation {
         self.assignees = assignees
         self.selectedStatusName = selectedStatusName
         self.backlogFieldToPrepare = backlogFieldToPrepare
+        self.dateFieldsToPrepare = dateFieldsToPrepare
         remainingFields = fields
     }
 }
@@ -1765,19 +1765,20 @@ final class ProjectStore {
             resolvedFields.append((field, .singleSelect(optionId: option.id, name: option.name)))
         }
 
+        var dateFieldsToPrepare: [(String, ProjectFieldValue)] = []
         for (name, date) in [("Start date", startDate), ("Target date", targetDate)] {
             guard let date else { continue }
-            guard let field = project.fields.first(where: {
-                $0.kind == .date && $0.name.caseInsensitiveCompare(name) == .orderedSame
-            }) else { throw ProjectStoreError.missingDateField(name) }
+            let field = try ProjectField.dateField(named: name, in: project.fields)
             let components = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: date)
             let value = String(format: "%04d-%02d-%02d", components.year!, components.month!, components.day!)
-            resolvedFields.append((field, .date(value)))
+            if let field { resolvedFields.append((field, .date(value))) }
+            else { dateFieldsToPrepare.append((name, .date(value))) }
         }
 
         return IssueCreation(sessionID: sessionID, projectID: project.id, repository: repository, title: title, body: body,
                              labels: labels, assignees: assignees, selectedStatusName: status,
-                             backlogFieldToPrepare: backlogFieldToPrepare, fields: resolvedFields)
+                             backlogFieldToPrepare: backlogFieldToPrepare, fields: resolvedFields,
+                             dateFieldsToPrepare: dateFieldsToPrepare)
     }
 
     var pendingCreationList: [PendingItemCreation] {
@@ -1880,6 +1881,25 @@ final class ProjectStore {
         defer { creation.isRunning = false }
         do {
             if creation.phase == .ready {
+                while let (name, value) = creation.dateFieldsToPrepare.first {
+                    do {
+                        let _: ProjectField = try await performProjectMutation(projectID: creation.projectID) {
+                            try await self.gitHubService.ensureProjectDateField(projectID: creation.projectID, name: name)
+                        } apply: { field in
+                            if var project = projectStates[creation.projectID]?.snapshot {
+                                project.fields.removeAll { $0.id == field.id }
+                                project.fields.append(field)
+                                projectStates[creation.projectID]?.snapshot = project
+                            }
+                            creation.remainingFields.append((field, value))
+                            creation.dateFieldsToPrepare.removeFirst()
+                        }
+                    } catch is CancellationError { throw CancellationError() }
+                    catch {
+                        throw GitHubError.issueCreationNotStarted(error.localizedDescription,
+                            retryable: shouldRetryTransientWrite(error))
+                    }
+                }
                 if let field = creation.backlogFieldToPrepare {
                     do {
                         let _: [ProjectFieldOption] = try await performProjectMutation(projectID: creation.projectID) {
