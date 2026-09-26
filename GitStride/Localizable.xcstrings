@@ -3024,17 +3024,6 @@
         }
       }
     },
-    "Date field unavailable: %@" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "日期字段不可用：%@"
-          }
-        }
-      }
-    },
     "Default service" : {
       "localizations" : {
         "en" : {

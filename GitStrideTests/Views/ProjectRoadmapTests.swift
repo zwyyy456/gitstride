@@ -11,7 +11,7 @@ struct ProjectRoadmapTests {
         ])
     ]
 
-    @Test func calendarDatesAndIterationDurationsDoNotShiftAcrossDST() throws {
+    @Test func calendarDatesValidateComponentsAndIterationEndIncludesStartDay() throws {
         let schedule = RoadmapSchedule.make(values: ["sprint": .iteration(id: "i1", title: "Past iteration")],
                                             fields: fields, startFieldID: "sprint", endFieldID: "sprint")
         #expect(schedule.start == RoadmapCalendar.date("2024-03-09"))

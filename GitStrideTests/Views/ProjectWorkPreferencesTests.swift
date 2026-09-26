@@ -3,6 +3,33 @@ import Testing
 @testable import GitStride
 
 struct ProjectWorkPreferencesTests {
+    @Test func roadmapDefaultsPreserveExplicitNoneAndDoNotReplaceRemovedFields() throws {
+        let suite = "GitStrideTests.RoadmapMapping.\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let project = ProjectDisplayPreferences(projectID: "P1", viewID: nil)
+        let saved = ProjectDisplayPreferences(projectID: "P1", viewID: "V1")
+        let fields = [
+            ProjectField(id: "start", name: "Start date", kind: .date, options: [], iterations: []),
+            ProjectField(id: "sprint", name: "Sprint", kind: .iteration, options: [], iterations: [])
+        ]
+        func resolved(_ preferences: ProjectDisplayPreferences, fields: [ProjectField]) -> String {
+            ProjectDisplayPreferences.roadmapFieldID(
+                defaults.string(forKey: preferences.key(for: .roadmapStartField)),
+                defaultName: "Start date", fields: fields)
+        }
+        #expect(resolved(project, fields: []) == "")
+        #expect(resolved(project, fields: fields) == "start")
+        defaults.set("", forKey: project.key(for: .roadmapStartField))
+        project.copy(to: saved, defaults: defaults)
+        #expect(resolved(project, fields: fields) == "")
+        #expect(resolved(saved, fields: fields) == "")
+        defaults.set("sprint", forKey: project.key(for: .roadmapStartField))
+        #expect(resolved(project, fields: fields) == "sprint")
+        #expect(resolved(project, fields: [fields[0]]) == "")
+        #expect(resolved(saved, fields: fields) == "")
+    }
+
     @Test func savedViewsKeepTheirOwnLayoutFilterAndDisplayPreferences() throws {
         let suite = "GitStrideTests.WorkPreferences.\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))

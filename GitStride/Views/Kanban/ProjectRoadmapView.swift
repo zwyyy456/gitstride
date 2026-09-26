@@ -34,8 +34,8 @@ struct ProjectRoadmapView: View {
     let clearFilters: () -> Void
     let reportError: (Error) -> Void
 
-    @AppStorage private var startFieldID: String
-    @AppStorage private var endFieldID: String
+    @AppStorage private var storedStartFieldID: String?
+    @AppStorage private var storedEndFieldID: String?
     @AppStorage private var zoom: RoadmapZoom
     @AppStorage private var groupsByStatus: Bool
     @AppStorage private var titleWidth: Double
@@ -69,8 +69,8 @@ struct ProjectRoadmapView: View {
         self.clearFilters = clearFilters
         self.reportError = reportError
         let preferences = ProjectDisplayPreferences(id: preferenceID)
-        _startFieldID = AppStorage(wrappedValue: "", preferences.key(for: .roadmapStartField))
-        _endFieldID = AppStorage(wrappedValue: "", preferences.key(for: .roadmapEndField))
+        _storedStartFieldID = AppStorage(preferences.key(for: .roadmapStartField))
+        _storedEndFieldID = AppStorage(preferences.key(for: .roadmapEndField))
         _zoom = AppStorage(wrappedValue: .quarter, preferences.key(for: .roadmapZoom))
         _groupsByStatus = AppStorage(wrappedValue: true, preferences.key(for: .roadmapGroupsByStatus))
         _titleWidth = AppStorage(wrappedValue: 300, preferences.key(for: .roadmapTitleWidth))
@@ -78,6 +78,14 @@ struct ProjectRoadmapView: View {
 
     private var dateFields: [ProjectField] {
         project.fields.filter { $0.kind == .date || $0.kind == .iteration }
+    }
+
+    private var startFieldID: String {
+        ProjectDisplayPreferences.roadmapFieldID(storedStartFieldID, defaultName: "Start date", fields: project.fields)
+    }
+
+    private var endFieldID: String {
+        ProjectDisplayPreferences.roadmapFieldID(storedEndFieldID, defaultName: "Target date", fields: project.fields)
     }
 
     private var isConfigured: Bool { !startFieldID.isEmpty || !endFieldID.isEmpty }
@@ -153,14 +161,6 @@ struct ProjectRoadmapView: View {
         .sheet(isPresented: $showsOptions) { options }
         .itemSelectionKeyboard(ids: rows.compactMap(\.item).filter { store.pendingCreationState(for: $0.id) == nil }.map(\.id), current: $currentItemID,
             selected: $selectedItemIDs, isSelecting: $isSelecting)
-        .onChange(of: dateFields.map(\.id), initial: true) { _, ids in
-            if !ids.contains(startFieldID) {
-                startFieldID = (try? ProjectField.dateField(named: "Start date", in: project.fields))?.id ?? ""
-            }
-            if !ids.contains(endFieldID) {
-                endFieldID = (try? ProjectField.dateField(named: "Target date", in: project.fields))?.id ?? ""
-            }
-        }
         .onChange(of: items.map(\.id)) { _, ids in selectedItemIDs.formIntersection(ids) }
         .onChange(of: rows.compactMap { $0.item?.id }) { old, new in
             currentItemID = ItemKeyboardNavigation.reconciled(currentItemID, old: old, new: new)
@@ -180,8 +180,8 @@ struct ProjectRoadmapView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Roadmap Options").font(.headline)
             Form {
-                fieldPicker("Start Date", selection: $startFieldID)
-                fieldPicker("Target Date", selection: $endFieldID)
+                fieldPicker("Start Date", selection: Binding(get: { startFieldID }, set: { storedStartFieldID = $0 }))
+                fieldPicker("Target Date", selection: Binding(get: { endFieldID }, set: { storedEndFieldID = $0 }))
                 Toggle("Group by Status", isOn: $groupsByStatus)
                 Slider(value: $titleWidth, in: 220...420) { Text("Title Column Width") }
             }
