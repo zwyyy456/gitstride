@@ -167,7 +167,7 @@ struct MyWorkView: View {
     private var commandContext: WorkspaceCommandContext {
         var context = WorkspaceCommandContext(
             find: .init(id: "find", title: WorkspaceShortcut.find.title, shortcut: .find,
-                        perform: { searchPresented = true }),
+                        symbol: "magnifyingglass", perform: { searchPresented = true }),
             itemReference: !isSelecting ? items.first(where: { $0.id == selectedID }).map {
                 ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id)
             } : nil,
@@ -175,26 +175,26 @@ struct MyWorkView: View {
                 id: "refresh-my-work",
                 title: String(localized: "Refresh My Work"),
                 isEnabled: model.projectStore.isLoadingFollowedProjects == false,
-                perform: refresh
+                keywords: "r refresh reload 刷新", shortcut: .refresh, symbol: "arrow.clockwise", perform: refresh
             ),
             stopFollowing: model.myWorkStore.followedProjects.map { reference in
                 .init(
                     id: "stop-following-\(reference.id)",
                     title: String(localized: "Remove \(followedProjectTitle(reference)) from My Work"),
-                    perform: { stopFollowing(reference) }
+                    keywords: "follow 关注 我的工作", symbol: "briefcase", perform: { stopFollowing(reference) }
                 )
             }
         )
         context.toggleSelection = .init(id: "toggle-selection",
             title: isSelecting ? String(localized: "Done Selecting") : String(localized: "Select Items"),
-            isEnabled: !isBulkWorking, perform: { isSelecting.toggle(); selectedIDs = [] })
+            isEnabled: !isBulkWorking, keywords: "select 选择", symbol: "checkmark.circle", perform: { isSelecting.toggle(); selectedIDs = [] })
         if isSelecting {
             context.moveSelection = commonStatuses.map { name in
                 .init(id: "move-selection-" + name, title: name, isEnabled: canWork,
-                      perform: { performBulk(status: name) })
+                      symbol: "arrow.right.circle", group: .itemActions, perform: { performBulk(status: name) })
             }
             context.archiveSelection = .init(id: "archive-selection", title: String(localized: "Archive Selected Items"),
-                isEnabled: canWork, perform: { performBulk(status: nil) })
+                isEnabled: canWork, keywords: "archive 归档", isDestructive: true, symbol: "archivebox", group: .itemActions, perform: { performBulk(status: nil) })
         }
         return context
     }

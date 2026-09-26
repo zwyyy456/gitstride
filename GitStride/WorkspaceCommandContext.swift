@@ -3,12 +3,14 @@ import SwiftUI
 struct WorkspaceCommandContext {
     struct Action: Identifiable {
         let id: String
-        let title: String
+        var title: String
         var isEnabled = true
         var keywords = ""
         var disabledReason: String? = nil
         var shortcut: WorkspaceShortcut? = nil
         var isDestructive = false
+        let symbol: String
+        var group: WorkspaceCommandGroup = .currentContext
         let perform: () -> Void
     }
 
@@ -26,7 +28,6 @@ struct WorkspaceCommandContext {
     var moveSelection: [Action] = []
     var archiveSelection: Action? = nil
     var stopFollowing: [Action] = []
-    var itemActions: [Action] = []
 }
 
 private struct WorkspaceCommandContextKey: FocusedValueKey {
@@ -115,7 +116,6 @@ extension View {
 struct CommandPaletteRequest {
     let show: () -> Void
     let showShortcuts: () -> Void
-    let showStatus: () -> Void
     var itemActions: [WorkspaceCommandContext.Action] = []
 }
 private struct CommandPaletteRequestKey: FocusedValueKey {
@@ -130,32 +130,25 @@ extension FocusedValues {
 
 extension WorkspaceCommandContext {
     var actions: [Action] {
-        var refresh = refresh
-        refresh.shortcut = .refresh
-        refresh.keywords = "r refresh reload 刷新"
-        var inspector = toggleInspector
-        inspector?.shortcut = .inspector
-        var create = addItem
-        create?.shortcut = .createItem
-        var edit = editItem
-        edit?.shortcut = .edit
-        var archive = archiveSelection
-        archive?.isDestructive = true
-        return [refresh, find, create, edit, toggleSelection, toggleFollowing, inspector, openInGitHub, archive]
-            .compactMap { $0 }.map { action in
-                var action = action
-                let aliases: [String: String] = [
-                    "add-item": "add create 新增 添加",
-                    "edit-item": "edit 编辑",
-                    "toggle-selection": "select 选择",
-                    "toggle-following": "follow 关注 我的工作",
-                    "toggle-item-inspector": "inspector 检查器",
-                    "open-project-in-github": "github 打开项目",
-                    "open-item-in-github": "github 打开条目",
-                    "archive-selection": "archive 归档"
-                ]
-                action.keywords += " " + (aliases[action.id] ?? "")
-                return action
-            } + stopFollowing + itemActions
+        [refresh, find, addItem, editItem, toggleSelection, toggleFollowing, toggleInspector, openInGitHub, archiveSelection]
+            .compactMap { $0 } + stopFollowing
+    }
+}
+
+enum WorkspaceCommandGroup: Int, CaseIterable, Identifiable {
+    case currentContext, itemActions, views, myWork, projects, items, application
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .currentContext: String(localized: "Current Project")
+        case .itemActions: String(localized: "Item Actions")
+        case .views: String(localized: "Switch View")
+        case .myWork: String(localized: "Go to My Work")
+        case .projects: String(localized: "Switch Project")
+        case .items: String(localized: "Loaded Items")
+        case .application: String(localized: "Application")
+        }
     }
 }

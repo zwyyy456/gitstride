@@ -73,7 +73,6 @@ struct CommandPaletteHost: ViewModifier {
                 \.commandPaletteRequest,
                 CommandPaletteRequest(
                     show: { show(shortcuts: false) }, showShortcuts: { show(shortcuts: true) },
-                    showStatus: { show(shortcuts: false, statusTarget: context?.itemReference) },
                     itemActions: itemActions
                 )
             )
@@ -147,31 +146,22 @@ struct CommandPaletteHost: ViewModifier {
 
     private var keyboardActions: [WorkspaceCommandContext.Action] {
         var actions = itemActions
-        if var create = context?.addItem {
-            create.shortcut = .createItem
-            actions.append(create)
-        }
+        if let create = context?.addItem { actions.append(create) }
         return actions
     }
 
     private var itemActions: [WorkspaceCommandContext.Action] {
         guard let reference = context?.itemReference, store.item(for: reference) != nil else { return [] }
         return [WorkspaceShortcut.status, .assignees, .labels, .priority, .edit, .copyLink].map { shortcut in
-            let reason = store.itemCommandUnavailableReason(shortcut, reference: reference)
-            return .init(id: "item-" + shortcut.rawValue, title: shortcut.title,
-                isEnabled: reason == nil, keywords: itemCommandKeywords(shortcut), disabledReason: reason,
-                shortcut: shortcut, perform: {
-                    guard store.itemCommandUnavailableReason(shortcut, reference: reference) == nil else { return }
-                    switch shortcut {
-                    case .status: show(shortcuts: false, statusTarget: reference)
-                    case .edit: editRequest = reference
-                    case .copyLink:
-                        guard let url = store.item(for: reference)?.url else { return }
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(url, forType: .string)
-                    default: propertyEditor = ItemPropertyRequest(reference: reference, shortcut: shortcut)
-                    }
-                })
+            itemCommand(shortcut, store: store, reference: reference) {
+                guard store.itemCommandUnavailableReason(shortcut, reference: reference) == nil else { return }
+                switch shortcut {
+                case .status: show(shortcuts: false, statusTarget: reference)
+                case .edit: editRequest = reference
+                case .copyLink: copyItemLink(store: store, reference: reference)
+                default: propertyEditor = ItemPropertyRequest(reference: reference, shortcut: shortcut)
+                }
+            }
         }
     }
 
@@ -183,9 +173,7 @@ struct CommandPaletteHost: ViewModifier {
         guard session == nil, editRequest == nil, let window, window.attachedSheet == nil else { return }
         window.makeKeyAndOrderFront(nil)
         previousResponder = window.firstResponder
-        var paletteContext = context
-        paletteContext?.itemActions = itemActions.filter { $0.shortcut != .status && $0.shortcut != .edit }
-        session = PaletteSession(context: paletteContext, roadmap: roadmap, shortcuts: shortcuts, statusTarget: statusTarget)
+        session = PaletteSession(context: context, roadmap: roadmap, shortcuts: shortcuts, statusTarget: statusTarget)
     }
 
     private func finish() {
@@ -241,24 +229,6 @@ private enum PaletteScope: String, CaseIterable, Identifiable {
     }
 }
 
-private enum PaletteGroup: Int, CaseIterable, Identifiable {
-    case currentContext, itemActions, views, myWork, projects, items, application
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .currentContext: String(localized: "Current Project")
-        case .itemActions: String(localized: "Item Actions")
-        case .views: String(localized: "Switch View")
-        case .myWork: String(localized: "Go to My Work")
-        case .projects: String(localized: "Switch Project")
-        case .items: String(localized: "Loaded Items")
-        case .application: String(localized: "Application")
-        }
-    }
-}
-
 private struct PaletteResult: Identifiable {
     let id: String
     let title: String
@@ -272,28 +242,8 @@ private struct PaletteResult: Identifiable {
     var isCurrent = false
     var projectID: String? = nil
     var reference: ItemInspectorReference? = nil
+    var group: WorkspaceCommandGroup = .currentContext
     let perform: () -> Void
-
-    var group: PaletteGroup {
-        if scope == .projects { return .projects }
-        if scope == .items { return .items }
-        if id.hasPrefix("command:layout:") || id.hasPrefix("command:roadmap-")
-            || id.hasPrefix("command:zoom:") { return .views }
-        if id.hasPrefix("command:mywork:") { return .myWork }
-        if id.hasPrefix("command:item-") || id.hasPrefix("command:move-selection-") {
-            return .itemActions
-        }
-        switch id {
-        case "change-status", "command:refresh-item", "command:edit-item", "command:toggle-item-inspector",
-             "command:open-item-in-github", "command:open-focused-item", "command:edit-focused-item",
-             "command:open-focused-item-in-github", "command:archive-selection":
-            return .itemActions
-        case "shortcuts", "command:settings", "command:new-project", "command:quick-add", "command:refresh-projects":
-            return .application
-        default:
-            return .currentContext
-        }
-    }
 }
 
 struct CommandPaletteView: View {
@@ -436,7 +386,7 @@ struct CommandPaletteView: View {
 
     private var resultList: some View {
         let visibleResults = results
-        let visibleGroups = PaletteGroup.allCases.filter { group in
+        let visibleGroups = WorkspaceCommandGroup.allCases.filter { group in
             visibleResults.contains { $0.group == group }
         }
         let showsGroupTitles = statusTarget == nil && (query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -578,7 +528,7 @@ struct CommandPaletteView: View {
                 id: "status:" + status.id, title: status.name, subtitle: "",
                 symbol: item.statusOptionId == status.id ? "checkmark.circle" : "circle", scope: .commands,
                 unavailable: store.statusChangeUnavailableReason(reference),
-                isCurrent: item.statusOptionId == status.id
+                isCurrent: item.statusOptionId == status.id, group: .itemActions
             ) {
                 execute { changeStatus(reference, status.id) }
             }
@@ -590,6 +540,14 @@ struct CommandPaletteView: View {
         case .board: String(localized: "Switch to Board View")
         case .table: String(localized: "Switch to Table View")
         case .roadmap: String(localized: "Switch to Roadmap View")
+        }
+    }
+
+    private func layoutSymbol(_ layout: ProjectLayout) -> String {
+        switch layout {
+        case .board: "rectangle.3.group"
+        case .table: "tablecells"
+        case .roadmap: "chart.bar.xaxis"
         }
     }
 
@@ -607,60 +565,30 @@ struct CommandPaletteView: View {
         return true
     }
 
-    private func commandSymbol(_ id: String) -> String {
-        if id.hasPrefix("refresh") { return "arrow.clockwise" }
-        if id == "layout:board" { return "rectangle.3.group" }
-        if id == "layout:table" { return "tablecells" }
-        if id == "layout:roadmap" { return "chart.bar.xaxis" }
-        if id.hasPrefix("mywork:") { return "briefcase" }
-        if id.hasPrefix("move-selection") { return "arrow.right.circle" }
-        if id.hasPrefix("zoom:") { return "plus.magnifyingglass" }
-        switch id {
-        case "find": return "magnifyingglass"
-        case "add-item", "quick-add", "new-project": return "plus"
-        case "edit-item", "edit-focused-item": return "pencil"
-        case "toggle-selection": return "checkmark.circle"
-        case "toggle-following": return "briefcase"
-        case "archive-selection": return "archivebox"
-        case "item-assignees": return "person"
-        case "item-labels": return "tag"
-        case "item-priority": return "flag"
-        case "item-copyLink": return "link"
-        case "settings", "roadmap-options": return "slider.horizontal.3"
-        case "roadmap-today": return "calendar"
-        case "toggle-item-inspector": return "sidebar.right"
-        case "open-focused-item": return "doc.text"
-        default: return id.contains("github") ? "arrow.up.right.square" : "arrow.right"
-        }
-    }
-
     private var rootResults: [PaletteResult] {
         var values: [PaletteResult] = []
-        func add(_ action: WorkspaceCommandContext.Action, contextual: Bool = false, isCurrent: Bool = false) {
+        func add(_ action: WorkspaceCommandContext.Action, contextual: Bool = false,
+                 isCurrent: Bool = false, dismissesPalette: Bool = true) {
             values.append(
                 PaletteResult(
                     id: "command:" + action.id, title: action.title,
-                    subtitle: "", symbol: commandSymbol(action.id), scope: .commands,
+                    subtitle: "", symbol: action.symbol, scope: .commands,
                     keywords: action.keywords, shortcut: action.shortcut,
                     unavailable: contextual && !contextIsCurrent
                         ? String(localized: "The context changed. Reopen the command palette.")
                         : (action.isEnabled
                             ? nil
                             : (action.disabledReason ?? String(localized: "Unavailable in the current context."))),
-                    destructive: action.isDestructive, isCurrent: isCurrent,
+                    destructive: action.isDestructive, isCurrent: isCurrent, group: action.group,
                     perform: {
-                        if let shortcut = action.shortcut, [.assignees, .labels, .priority].contains(shortcut),
-                           let reference = context?.itemReference {
-                            propertyTarget = ItemPropertyRequest(reference: reference, shortcut: shortcut)
-                            return
-                        }
-                        execute {
+                        let perform = {
                             guard !contextual || contextIsCurrent else {
                                 reportError(String(localized: "The context changed. Reopen the command palette."))
                                 return
                             }
                             action.perform()
                         }
+                        if dismissesPalette { execute(perform) } else { perform() }
                     }))
         }
         if let context {
@@ -670,86 +598,93 @@ struct CommandPaletteView: View {
                     add(
                         .init(
                             id: "layout:" + value.rawValue, title: layoutCommandTitle(value),
-                            keywords: layoutKeywords(value), perform: { layout.wrappedValue = value }),
+                            keywords: layoutKeywords(value), symbol: layoutSymbol(value), group: .views, perform: { layout.wrappedValue = value }),
                         contextual: true, isCurrent: layout.wrappedValue == value
                     )
                 }
             }
             for action in context.moveSelection {
                 var action = action
-                action = .init(
-                    id: action.id, title: String(localized: "Move Selected Items: \(action.title)"),
-                    isEnabled: action.isEnabled, perform: action.perform)
+                action.title = String(localized: "Move Selected Items: \(action.title)")
                 add(action, contextual: true)
             }
             if let reference = context.itemReference {
+                for shortcut in [WorkspaceShortcut.assignees, .labels, .priority] {
+                    let action = itemCommand(shortcut, store: store, reference: reference) {
+                        propertyTarget = ItemPropertyRequest(reference: reference, shortcut: shortcut)
+                    }
+                    add(action, contextual: true, dismissesPalette: false)
+                }
+                add(itemCommand(.copyLink, store: store, reference: reference) {
+                    copyItemLink(store: store, reference: reference)
+                }, contextual: true)
                 let reason = store.statusChangeUnavailableReason(reference)
                 values.append(
                     PaletteResult(
                         id: "change-status", title: String(localized: "Change Status…"),
                         subtitle: targetTitle(reference), symbol: "arrow.right.circle", scope: .commands,
-                        keywords: "status move 状态 移动", shortcut: .status, unavailable: reason,
+                        keywords: "status move 状态 移动", shortcut: .status, unavailable: reason, group: .itemActions,
                         perform: { showStatuses(reference) }))
                 if let item = store.item(for: reference) {
                     add(
                         .init(
                             id: "open-focused-item", title: String(localized: "Open Item Details"),
                             isEnabled: store.pendingCreationState(for: item.id) == nil,
-                            perform: { navigation.openItem(reference) }))
+                            symbol: "doc.text", group: .itemActions, perform: { navigation.openItem(reference) }))
                     if context.editItem == nil {
                         add(
                             .init(
                                 id: "edit-focused-item", title: String(localized: "Edit Item…"),
                                 isEnabled: store.itemCommandUnavailableReason(.edit, reference: reference) == nil,
-                                keywords: "edit 编辑", shortcut: .edit, perform: { editItem(reference) }), contextual: true)
+                                keywords: "edit 编辑", shortcut: .edit, symbol: "pencil", group: .itemActions, perform: { editItem(reference) }), contextual: true)
                     }
                     if context.openInGitHub?.id != "open-item-in-github", let url = item.url.flatMap(URL.init(string:))
                     {
                         add(
                             .init(
                                 id: "open-focused-item-in-github", title: String(localized: "Open Item in GitHub"),
-                                keywords: "github 打开", perform: { NSWorkspace.shared.open(url) }), contextual: true)
+                                keywords: "github 打开", symbol: "arrow.up.right.square", group: .itemActions, perform: { NSWorkspace.shared.open(url) }), contextual: true)
                     }
                 }
             }
         }
         if let roadmap {
-            add(.init(id: "roadmap-today", title: String(localized: "Today"), perform: roadmap.today), contextual: true)
-            add(.init(id: "roadmap-options", title: String(localized: "Roadmap Options"), perform: roadmap.showOptions), contextual: true)
+            add(.init(id: "roadmap-today", title: String(localized: "Today"), symbol: "calendar", group: .views, perform: roadmap.today), contextual: true)
+            add(.init(id: "roadmap-options", title: String(localized: "Roadmap Options"), symbol: "slider.horizontal.3", group: .views, perform: roadmap.showOptions), contextual: true)
             for zoom in RoadmapZoom.allCases {
                 add(
                     .init(
                         id: "zoom:" + zoom.rawValue, title: zoom.title, keywords: "zoom 缩放",
-                        perform: { roadmap.zoom.wrappedValue = zoom }), contextual: true)
+                        symbol: "plus.magnifyingglass", group: .views, perform: { roadmap.zoom.wrappedValue = zoom }), contextual: true)
             }
         }
         for filter in MyWorkFilter.allCases {
             add(
                 .init(
                     id: "mywork:" + filter.rawValue, title: filter.title, keywords: "My Work 我的工作",
-                    perform: { navigation.openMyWork(filter) }))
+                    symbol: "briefcase", group: .myWork, perform: { navigation.openMyWork(filter) }))
         }
         add(
             .init(
                 id: "new-project", title: WorkspaceShortcut.newProject.title, shortcut: .newProject,
-                perform: { openWindow(id: "new-project") }))
+                symbol: "plus", group: .application, perform: { openWindow(id: "new-project") }))
         add(
             .init(
                 id: "quick-add", title: WorkspaceShortcut.addItem.title, shortcut: .addItem,
-                perform: { openWindow(id: "quick-add") }))
+                symbol: "plus", group: .application, perform: { openWindow(id: "quick-add") }))
         add(
             .init(
                 id: "refresh-projects", title: WorkspaceShortcut.refreshProjects.title,
                 isEnabled: !store.isLoading && !store.isCreatingProject, shortcut: .refreshProjects,
-                perform: { Task { await store.loadProjects() } }))
+                symbol: "arrow.clockwise", group: .application, perform: { Task { await store.loadProjects() } }))
         add(
             .init(
                 id: "settings", title: String(localized: "Settings…"), keywords: "settings 设置",
-                perform: { openSettings() }))
+                symbol: "slider.horizontal.3", group: .application, perform: { openSettings() }))
         values.append(
             .init(
                 id: "shortcuts", title: String(localized: "Keyboard Shortcuts"), subtitle: "",
-                symbol: "keyboard", scope: .commands, keywords: "keyboard shortcuts 快捷键",
+                symbol: "keyboard", scope: .commands, keywords: "keyboard shortcuts 快捷键", group: .application,
                 perform: { showsShortcuts = true }))
         let projects = store.allProjects.sorted {
             if ($0.id == store.selectedProjectId) != ($1.id == store.selectedProjectId) {
@@ -764,7 +699,7 @@ struct CommandPaletteView: View {
                     id: "project:" + project.id, title: project.title,
                     subtitle: showsProjectOwners ? project.owner.login : "", symbol: "square.fill", scope: .projects,
                     keywords: project.owner.login, isCurrent: project.id == store.selectedProjectId,
-                    projectID: project.id,
+                    projectID: project.id, group: .projects,
                     perform: { execute { navigation.openProject(project.id) } }))
             guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || scope == .items else { continue }
             let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -786,7 +721,7 @@ struct CommandPaletteView: View {
                         keywords: (query.hasPrefix("@") || query.hasPrefix("#") ? query : "") + " "
                             + item.assignees.map(\.login).joined(separator: " "),
                         unavailable: pending ? String(localized: "This item is still syncing.") : nil,
-                        reference: reference,
+                        reference: reference, group: .items,
                         perform: { execute { navigation.openItem(reference) } }))
             }
         }
@@ -1042,16 +977,33 @@ private struct ItemPropertyCommandView: View {
     }
 }
 
-private func itemCommandKeywords(_ shortcut: WorkspaceShortcut) -> String {
+@MainActor
+private func itemCommand(
+    _ shortcut: WorkspaceShortcut, store: ProjectStore, reference: ItemInspectorReference,
+    perform: @escaping () -> Void
+) -> WorkspaceCommandContext.Action {
+    let keywords: String
+    let symbol: String
     switch shortcut {
-    case .status: "status 状态"
-    case .assignees: "assignee assign 负责人 指派"
-    case .labels: "label 标签"
-    case .priority: "priority 优先级"
-    case .copyLink: "copy link url 复制 链接"
-    case .edit: "edit 编辑"
-    default: ""
+    case .status: (keywords, symbol) = ("status move 状态 移动", "arrow.right.circle")
+    case .assignees: (keywords, symbol) = ("assignee assign 负责人 指派", "person")
+    case .labels: (keywords, symbol) = ("label 标签", "tag")
+    case .priority: (keywords, symbol) = ("priority 优先级", "flag")
+    case .copyLink: (keywords, symbol) = ("copy link url 复制 链接", "link")
+    case .edit: (keywords, symbol) = ("edit 编辑", "pencil")
+    default: (keywords, symbol) = ("", "arrow.right")
     }
+    let reason = store.itemCommandUnavailableReason(shortcut, reference: reference)
+    return .init(id: "item-" + shortcut.rawValue, title: shortcut.title,
+        isEnabled: reason == nil, keywords: keywords, disabledReason: reason,
+        shortcut: shortcut, symbol: symbol, group: .itemActions, perform: perform)
+}
+
+@MainActor
+private func copyItemLink(store: ProjectStore, reference: ItemInspectorReference) {
+    guard let url = store.item(for: reference)?.url else { return }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(url, forType: .string)
 }
 
 private extension ProjectStore {

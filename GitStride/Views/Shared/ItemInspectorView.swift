@@ -167,24 +167,24 @@ struct ItemDetailView: View {
                 id: "refresh-item",
                 title: String(localized: "Refresh Item"),
                 isEnabled: isRefreshing == false && isArchiving == false,
-                perform: refreshItem
+                keywords: "r refresh reload 刷新", shortcut: .refresh, symbol: "arrow.clockwise", group: .itemActions, perform: refreshItem
             ),
             editItem: .init(
                 id: "edit-item",
                 title: String(localized: "Edit Item…"),
                 isEnabled: canEdit,
-                perform: editItem
+                keywords: "edit 编辑", shortcut: .edit, symbol: "pencil", group: .itemActions, perform: editItem
             ),
             toggleInspector: .init(
                 id: "toggle-item-inspector",
                 title: isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"),
-                perform: toggleInspector
+                keywords: "inspector 检查器", shortcut: .inspector, symbol: "sidebar.right", group: .itemActions, perform: toggleInspector
             ),
             openInGitHub: itemURL.map { _ in
                 .init(
                     id: "open-item-in-github",
                     title: openInGitHubTitle,
-                    perform: openInGitHub
+                    keywords: "github 打开条目", symbol: "arrow.up.right.square", group: .itemActions, perform: openInGitHub
                 )
             }
         )

@@ -500,34 +500,12 @@
         }
       }
     },
-    "↑↓ Navigate · Return Execute · Esc Back" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑↓ 选择 · 回车执行 · Esc 返回"
-          }
-        }
-      }
-    },
     "↑↓ Navigate · Return Execute · Esc Close" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "↑↓ 选择 · 回车执行 · Esc 关闭"
-          }
-        }
-      }
-    },
-    "↑↓ Navigate · Return Select · Esc Back" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "↑↓ 浏览 · 回车选择 · Esc 返回"
           }
         }
       }
@@ -1263,17 +1241,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在归档条目"
-          }
-        }
-      }
-    },
-    "Arrow keys navigate items. Return opens details. In selection mode, Space toggles selection." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用方向键浏览条目，回车打开详情。在选择模式下，空格切换选中状态。"
           }
         }
       }
@@ -2415,17 +2382,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已关闭"
-          }
-        }
-      }
-    },
-    "Command Palette" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "命令面板"
           }
         }
       }
@@ -9465,17 +9421,6 @@
         }
       }
     },
-    "Show Command Palette… (⌘K)" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示命令面板…（⌘K）"
-          }
-        }
-      }
-    },
     "Show Details" : {
       "localizations" : {
         "en" : {
@@ -10560,17 +10505,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此条目不可用，或已无权访问。"
-          }
-        }
-      }
-    },
-    "This project has no Priority field." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此项目没有 Priority 单选字段。"
           }
         }
       }

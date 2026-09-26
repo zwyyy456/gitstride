@@ -394,7 +394,7 @@ struct KanbanBoardView: View {
         var context = WorkspaceCommandContext(
             projectID: store.selectedProjectId,
             find: .init(id: "find", title: WorkspaceShortcut.find.title, shortcut: .find,
-                        perform: { searchPresented = true }),
+                        symbol: "magnifyingglass", perform: { searchPresented = true }),
             itemReference: !isSelecting ? currentItemID.flatMap { id in
                 store.selectedProject.map { ItemInspectorReference(projectID: $0.id, itemID: id) }
             } : nil,
@@ -402,7 +402,7 @@ struct KanbanBoardView: View {
                 id: "refresh-project",
                 title: String(localized: "Refresh Project"),
                 isEnabled: isRefreshing == false && isSelecting == false,
-                perform: refresh
+                keywords: "r refresh reload 刷新", shortcut: .refresh, symbol: "arrow.clockwise", perform: refresh
             )
         )
 
@@ -413,7 +413,7 @@ struct KanbanBoardView: View {
                 id: "toggle-selection",
                 title: isSelecting ? String(localized: "Done Selecting") : String(localized: "Select Items"),
                 isEnabled: isSelecting || canEditSelectedProject,
-                perform: toggleSelectionMode
+                keywords: "select 选择", symbol: "checkmark.circle", perform: toggleSelectionMode
             )
             : nil
 
@@ -424,14 +424,14 @@ struct KanbanBoardView: View {
                     id: "move-selection-\(status.id)",
                     title: status.name,
                     isEnabled: canWork,
-                    perform: { moveSelection(to: status) }
+                    symbol: "arrow.right.circle", group: .itemActions, perform: { moveSelection(to: status) }
                 )
             }
             context.archiveSelection = .init(
                 id: "archive-selection",
                 title: String(localized: "Archive Selected Items"),
                 isEnabled: canWork,
-                perform: archiveSelection
+                keywords: "archive 归档", isDestructive: true, symbol: "archivebox", group: .itemActions, perform: archiveSelection
             )
             return context
         }
@@ -441,7 +441,7 @@ struct KanbanBoardView: View {
                 id: "add-item",
                 title: String(localized: "Add Item…"),
                 isEnabled: canEditSelectedProject,
-                perform: showAddItem
+                keywords: "add create 新增 添加", shortcut: .createItem, symbol: "plus", perform: showAddItem
             )
         }
 
@@ -452,7 +452,7 @@ struct KanbanBoardView: View {
                 title: isFollowing
                     ? String(localized: "Remove \(project.title) from My Work")
                     : String(localized: "Add \(project.title) to My Work"),
-                perform: toggleFollowingProject
+                keywords: "follow 关注 我的工作", symbol: "briefcase", perform: toggleFollowingProject
             )
         }
 
@@ -460,7 +460,7 @@ struct KanbanBoardView: View {
             context.openInGitHub = .init(
                 id: "open-project-in-github",
                 title: String(localized: "Open Project in GitHub"),
-                perform: openProjectInGitHub
+                keywords: "github 打开项目", symbol: "arrow.up.right.square", perform: openProjectInGitHub
             )
         }
 
