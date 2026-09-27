@@ -45,7 +45,7 @@
 xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
-商店版编译（OAuth-only、沙盒，不含 Sparkle）：
+商店版 macOS 编译（多平台 `GitStrideAppStore` scheme，OAuth-only、沙盒，不含 Sparkle）：
 
 ```bash
 xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
@@ -54,7 +54,7 @@ xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore -destination '
 iOS 编译：
 
 ```bash
-xcodebuild -project GitStride.xcodeproj -scheme GitStrideiOS \
+xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore \
   -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
 

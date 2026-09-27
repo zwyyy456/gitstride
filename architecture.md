@@ -57,7 +57,7 @@
 - 重新登录先失效旧连接，不预先删除已保存的 OAuth 凭据。新 OAuth 登录会话在设备授权成功、账号验证及凭据保存完成前不得读取旧凭据；保存时更新已有条目，不存在时新增。授权失败或取消后保持退出状态，删除凭据只由显式退出登录触发。
 - `GraphQLQueries` 集中保存查询与 mutation 文本。Models 负责已知响应结构；Views 和 Store 不解析原始 JSON 字典。CLI 子进程只服务认证，使用明确 executable URL 与 arguments 数组。
 - HTTP 状态、GraphQL errors、权限、SSO、限流和取消分别处理；凭据及完整响应不进入错误文案或日志。只读请求遇到 401 可以刷新凭据后重试一次，mutation 不自动重发。
-- `GitStride` target 包含 CLI 来源与 Sparkle；`GitStrideAppStore` target 使用 `APP_STORE` 编译条件、沙盒及网络 client entitlement，不编译 CLI runner 和 updater，不链接 Sparkle。业务源码由两个 target 共用。
+- `GitStride` target 包含 CLI 来源与 Sparkle；`GitStrideAppStore` 是 macOS / iOS / iPadOS 共用的多平台 target 和 scheme，使用 `APP_STORE` 编译条件，不编译 CLI runner 和 updater，不链接 Sparkle。Sources 的平台筛选分别装配 macOS 和 iOS 入口及页面；macOS 的沙盒 entitlement 与两个平台的 Info.plist 通过 SDK 条件配置。Mac 使用原生 macOS 入口，不启用 Mac Catalyst 或 Designed for iPad。业务源码由两个 target 共用。
 
 ## 身份、模型与远程变更
 

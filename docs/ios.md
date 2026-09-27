@@ -1,13 +1,13 @@
 # GitStride iOS 开发与使用
 
-GitStrideiOS 是 iPhone / iPad 原生客户端，最低支持 iOS / iPadOS 17。它与 macOS 版本共用项目数据、GitHub 操作和自动化服务源码，使用独立移动端页面。
+GitStride 的移动端是 iPhone / iPad 原生客户端，最低支持 iOS / iPadOS 17。它与 macOS 版本共用项目数据、GitHub 操作和自动化服务源码，使用独立移动端页面。
 
 ## 构建
 
-在 `GitStride.xcodeproj` 中选择 `GitStrideiOS` scheme。
+在 `GitStride.xcodeproj` 中选择 `GitStrideAppStore` scheme，然后选择 iPhone 或 iPad 运行设备；同一 scheme 选择 My Mac 时构建原生 macOS 版本。
 
 ```bash
-xcodebuild -project GitStride.xcodeproj -scheme GitStrideiOS \
+xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore \
   -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
