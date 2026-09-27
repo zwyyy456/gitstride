@@ -3,7 +3,7 @@
 - 权威性：Normative
 - 加载方式：涉及 app composition、scene、状态所有权、并发、外部服务、持久化或目录边界时默认读取
 - 状态：Active
-- 适用平台：macOS 14+
+- 适用平台：macOS 14+、iOS / iPadOS 17+
 - 职责：定义 GitStride 当前长期工程边界；不定义产品功能、视觉设计或发布流程
 
 ## 产品与发行标识
@@ -19,6 +19,8 @@
 - App 层只负责 scene、窗口生命周期、依赖装配和平台 presentation。GitHub 查询、项目变更和筛选规则不进入 `GitStrideApp`。
 - 生产依赖方向为 `App -> Views -> Store -> Services / Models`。Services 不依赖 SwiftUI View、窗口或 scene。
 - `openWindow`、菜单栏关闭、`NSWorkspace` 打开链接和 `NSWindow` 外观等平台 presentation 留在 App 或 Views；它们不得进入 GitHub 数据访问层。
+
+- `GitStrideiOSApp` 是移动端 composition root，持有 app-lifetime 的 `GitStrideModel`。移动端与桌面端共用 Models、Store 和 GitHub/Automation 服务源码，页面与平台控件分别装配。iOS 仅支持 OAuth，不编译 CLI 与 Sparkle，不启动本地项目监控或请求项目通知权限。
 
 ## 状态所有权
 

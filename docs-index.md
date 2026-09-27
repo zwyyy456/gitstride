@@ -50,6 +50,13 @@ xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform
 xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
+iOS 编译：
+
+```bash
+xcodebuild -project GitStride.xcodeproj -scheme GitStrideiOS \
+  -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+```
+
 单元测试：
 
 ```bash

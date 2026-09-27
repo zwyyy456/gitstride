@@ -55,7 +55,7 @@ final class GitStrideModel {
         let defaults = UserDefaults.standard
         let storedMethod = defaults.string(forKey: "githubAuthenticationMethod").flatMap(GitHubAuthenticationMethod.init(rawValue:))
         var initialMethod = storedMethod ?? .oauth
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         if storedMethod == nil, defaults.string(forKey: "selectedOwnerId") != nil { initialMethod = .cli }
         #endif
         authenticationMethod = initialMethod
@@ -64,7 +64,11 @@ final class GitStrideModel {
                                                     initialState: defaults.bool(forKey: "githubSignedOut") ? .signedOut : .restoringSession)
         self.authentication = authentication
         projectStore = ProjectStore(gitHubService: GitHubService(http: http, credentials: authentication))
+        #if os(macOS)
         monitoringEnabled = defaults.bool(forKey: "monitoringEnabled")
+        #else
+        monitoringEnabled = false
+        #endif
         let interval = defaults.integer(forKey: "monitoringIntervalMinutes")
         monitoringIntervalMinutes = interval == 0 ? 15 : interval
         quietStartHour = defaults.object(forKey: "quietStartHour") == nil

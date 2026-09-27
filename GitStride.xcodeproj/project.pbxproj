@@ -192,6 +192,40 @@
 		E96EC83E08924E37AA7DFEFE /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
 		7A5D20464FC24702BFE2BCB6 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
 		243C62428F2544BC8746A097 /* Views/CommandSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */; };
+		C1F7C51428614A238F24C618 = {isa = PBXBuildFile; fileRef = A1000053; };
+		0DDF809E4A624A7D9C8AD16F = {isa = PBXBuildFile; fileRef = A1000028; };
+		EC03F8FB208F49BE8A425F99 = {isa = PBXBuildFile; fileRef = A1000004; };
+		549413A0712A424DBEF09D45 = {isa = PBXBuildFile; fileRef = A1000034; };
+		C84C577EE7F84D68A779CBCB = {isa = PBXBuildFile; fileRef = A1000039; };
+		53B0036A05BD48A0BED8B6B7 = {isa = PBXBuildFile; fileRef = A1000002; };
+		BD490E38E07C4FFA9B3DB718 = {isa = PBXBuildFile; fileRef = DB0000000000000000000001; };
+		CC57881AF76B4BB5B872882B = {isa = PBXBuildFile; fileRef = A1000032; };
+		7510EEF215684354BCAB27D1 = {isa = PBXBuildFile; fileRef = A1000007; };
+		F765D124A1BB4AA4A7CD09E9 = {isa = PBXBuildFile; fileRef = 2DBCD291C4B440DEA92DDCC1; };
+		26AE5473700D45F79B20CA00 = {isa = PBXBuildFile; fileRef = A1000054; };
+		6CD6B73AED1F4CAABDE009F2 = {isa = PBXBuildFile; fileRef = A1000029; };
+		9BBFC18447D04FA79CF560A5 = {isa = PBXBuildFile; fileRef = 77D827C9808D48FD9437123A; };
+		7D7C8D3FEBE94591A74EA885 = {isa = PBXBuildFile; fileRef = A1000005; };
+		8F8F0E280D6D4DDE98566ED3 = {isa = PBXBuildFile; fileRef = A1000035; };
+		89F5F0ED3FD94F90A2019D81 = {isa = PBXBuildFile; fileRef = DB0000000000000000000002; };
+		2A5A2284BA4647E8A9F534F8 = {isa = PBXBuildFile; fileRef = BF0000000000000000000002; };
+		3BF13DDF7D9F49768089FE8D = {isa = PBXBuildFile; fileRef = D10000000000000000000002; };
+		0CE0D2DFB50E427BA36C97FB = {isa = PBXBuildFile; fileRef = BB0000000000000000000001; };
+		25D4456A2A174C2CA9CE9580 = {isa = PBXBuildFile; fileRef = A1000052; };
+		48FC3F67642D4E5685409172 = {isa = PBXBuildFile; fileRef = A1000027; };
+		55E78AA51D004636A7962543 = {isa = PBXBuildFile; fileRef = 52B9F07F89D944F1A1F080FE; };
+		34A35F15C22F476482E4D2CE = {isa = PBXBuildFile; fileRef = A1000003; };
+		EED3F79541DD4CDF9BDEACE2 = {isa = PBXBuildFile; fileRef = 87BFE2EF3051402A84FE3594; };
+		BF7179BBC4824F12B0490921 = {isa = PBXBuildFile; fileRef = A1000033; };
+		0F3DF15DBD084DA0AB42A211 = {isa = PBXBuildFile; fileRef = A1000008; };
+		F25A5CE72A0A456F82562B38 = {isa = PBXBuildFile; fileRef = C889CA74D9304C369C5760E8; };
+		E568621224FC42BC9A2B2A51 = {isa = PBXBuildFile; fileRef = BD0000000000000000000002; };
+		F643CFE7C22D4931BE23796B = {isa = PBXBuildFile; fileRef = DB0000000000000000000003; };
+		9D96BF65071D4041BEDFD73F = {isa = PBXBuildFile; fileRef = BC0000000000000000000002; };
+		CF3B7C87991B40C1BBF04C27 = {isa = PBXBuildFile; fileRef = A1000006; };
+		B5AA3A438AA44E7F8946A113 = {isa = PBXBuildFile; fileRef = D2FBBF38805B473FB1ACAEF5; };
+		6287E58050C84E50AA496E0E = {isa = PBXBuildFile; fileRef = 7953C376615F42CC99EF0A8E; };
+		195208B76AAD46578BB76570 = {isa = PBXBuildFile; fileRef = 9556215604F94FF0B09FC14E; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -313,6 +347,9 @@
 		BF633661D36B4334AACA20F0 /* CommandSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandSearchField.swift; sourceTree = "<group>"; };
 		6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandPaletteView.swift; sourceTree = "<group>"; };
 		99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/CommandSearchTests.swift; sourceTree = "<group>"; };
+		6EFAD74144B84948B6C93091 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = GitStride.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7953C376615F42CC99EF0A8E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStrideiOSApp.swift; sourceTree = "<group>"; };
+		9556215604F94FF0B09FC14E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileAccountView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -338,12 +375,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9706742DF8D54A1C96E9C9CB = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		A3000000 = {
 			isa = PBXGroup;
 			children = (
+				E10000000000000000000001,
 				A3000001 /* GitStride */,
 				A3000013 /* GitStrideTests */,
 				A3000010 /* Products */,
@@ -504,6 +543,7 @@
 		A3000010 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				6EFAD74144B84948B6C93091,
 				DC100000 /* GitStride.app */,
 				A1000000 /* GitStride.app */,
 				A1000024 /* GitStrideTests.xctest */,
@@ -559,6 +599,7 @@
 			path = MyWork;
 			sourceTree = "<group>";
 		};
+		E10000000000000000000001 = {isa = PBXGroup; children = (9556215604F94FF0B09FC14E,7953C376615F42CC99EF0A8E,); path = GitStrideiOS; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -619,6 +660,7 @@
 			productReference = DC100000 /* GitStride.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E10000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = E7B73CACE1CD4229A7ED0220; buildPhases = (AFFC8ED126FF45429BE4E781,9706742DF8D54A1C96E9C9CB,EC783BDDA29A411F8E394986); buildRules = (); dependencies = (); name = GitStrideiOS; productName = GitStride; productReference = 6EFAD74144B84948B6C93091; productType = "com.apple.product-type.application"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -662,6 +704,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				E10000000000000000000002,
 				DC400001 /* GitStrideAppStore */,
 				A4000001 /* GitStride */,
 				A4000002 /* GitStrideTests */,
@@ -697,6 +740,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EC783BDDA29A411F8E394986 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (2A5A2284BA4647E8A9F534F8,E568621224FC42BC9A2B2A51); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -899,6 +943,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AFFC8ED126FF45429BE4E781 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (195208B76AAD46578BB76570,6287E58050C84E50AA496E0E,C1F7C51428614A238F24C618,0DDF809E4A624A7D9C8AD16F,EC03F8FB208F49BE8A425F99,549413A0712A424DBEF09D45,C84C577EE7F84D68A779CBCB,53B0036A05BD48A0BED8B6B7,BD490E38E07C4FFA9B3DB718,CC57881AF76B4BB5B872882B,7510EEF215684354BCAB27D1,F765D124A1BB4AA4A7CD09E9,26AE5473700D45F79B20CA00,6CD6B73AED1F4CAABDE009F2,9BBFC18447D04FA79CF560A5,7D7C8D3FEBE94591A74EA885,8F8F0E280D6D4DDE98566ED3,89F5F0ED3FD94F90A2019D81,3BF13DDF7D9F49768089FE8D,0CE0D2DFB50E427BA36C97FB,25D4456A2A174C2CA9CE9580,48FC3F67642D4E5685409172,55E78AA51D004636A7962543,34A35F15C22F476482E4D2CE,EED3F79541DD4CDF9BDEACE2,BF7179BBC4824F12B0490921,0F3DF15DBD084DA0AB42A211,F25A5CE72A0A456F82562B38,F643CFE7C22D4931BE23796B,9D96BF65071D4041BEDFD73F,CF3B7C87991B40C1BBF04C27,B5AA3A438AA44E7F8946A113); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1188,6 +1233,8 @@
 			};
 			name = Release;
 		};
+		6BF5E21B0155455291B70F75 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {SDKROOT = "iphoneos"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTS_MACCATALYST = "NO"; PRODUCT_NAME = "GitStride"; PRODUCT_BUNDLE_IDENTIFIER = "tech.hyperseek.gitstride"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "1.0"; CURRENT_PROJECT_VERSION = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "complete"; SWIFT_EMIT_LOC_STRINGS = "YES"; GENERATE_INFOPLIST_FILE = "YES"; INFOPLIST_FILE = "GitStrideiOS/Info.plist"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; GITSTRIDE_OAUTH_CLIENT_ID = "Ov23liP4CiYF6mIHqcVa"; GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";}; };
+		25CFB5DAD98B4E64AC132463 = {isa = XCBuildConfiguration; name = Release; buildSettings = {SDKROOT = "iphoneos"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTS_MACCATALYST = "NO"; PRODUCT_NAME = "GitStride"; PRODUCT_BUNDLE_IDENTIFIER = "tech.hyperseek.gitstride"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "1.0"; CURRENT_PROJECT_VERSION = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "complete"; SWIFT_EMIT_LOC_STRINGS = "YES"; GENERATE_INFOPLIST_FILE = "YES"; INFOPLIST_FILE = "GitStrideiOS/Info.plist"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; GITSTRIDE_OAUTH_CLIENT_ID = "Ov23liP4CiYF6mIHqcVa"; GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";}; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1227,6 +1274,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		E7B73CACE1CD4229A7ED0220 = {isa = XCConfigurationList; buildConfigurations = (6BF5E21B0155455291B70F75,25CFB5DAD98B4E64AC132463); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
