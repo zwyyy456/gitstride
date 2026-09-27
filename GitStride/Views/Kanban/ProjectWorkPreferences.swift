@@ -24,8 +24,8 @@ struct ProjectWorkPreferences: DynamicProperty {
         return Dictionary(uniqueKeysWithValues: ids.map { ($0, .table) })
     }
 
-    func layout(projectID: String) -> ProjectLayout {
-        layouts[projectID] ?? .board
+    func layout(projectID: String, defaultLayout: ProjectLayout = .board) -> ProjectLayout {
+        layouts[projectID] ?? defaultLayout
     }
 
     func setLayout(_ layout: ProjectLayout, projectID: String, viewID: String?) throws {

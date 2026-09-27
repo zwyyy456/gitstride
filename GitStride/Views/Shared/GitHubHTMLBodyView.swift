@@ -107,7 +107,12 @@ struct GitHubHTMLBodyView {
         }
 
         private static func document(containing bodyHTML: String) -> String {
-            """
+            #if os(iOS)
+            let platformStyle = "body { font: -apple-system-body; line-height: 1.55; }"
+            #else
+            let platformStyle = ""
+            #endif
+            return """
             <!doctype html>
             <html>
             <head>
@@ -149,6 +154,7 @@ struct GitHubHTMLBodyView {
                   blockquote { color: #9198a1; border-color: #3d444d; }
                   pre, tr:nth-child(2n) { background: #151b23; }
                 }
+                \(platformStyle)
               </style>
             </head>
             <body>\(bodyHTML)</body>

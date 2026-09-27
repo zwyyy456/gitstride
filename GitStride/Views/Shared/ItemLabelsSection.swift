@@ -60,7 +60,11 @@ struct ItemLabelsSection: View {
                     .buttonStyle(.borderless)
                     .disabled(isSaving)
                     .popover(isPresented: $showsLabelPicker) {
+                        #if os(iOS)
+                        MobileLabelsPicker(store: store, reference: ItemInspectorReference(projectID: projectID, itemID: item.id))
+                        #else
                         labelPicker(item)
+                        #endif
                     }
                 }
                 if isSaving { ProgressView().controlSize(.mini).accessibilityLabel("Saving field") }

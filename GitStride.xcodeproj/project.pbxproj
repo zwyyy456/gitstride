@@ -249,6 +249,8 @@
 		05051EA400CD4C4F8946B5DE = {isa = PBXBuildFile; fileRef = A1000058; };
 		CFCD39B581D945A998C4AD5B = {isa = PBXBuildFile; fileRef = A1000056; };
 		03140500DBC8492C84C7C213 = {isa = PBXBuildFile; fileRef = A1000057; };
+		8A500CEF23F94D3AB8AFA4F5 = {isa = PBXBuildFile; fileRef = A1000047; };
+		6DE0BD1554AB4B6087BAB8E6 = {isa = PBXBuildFile; fileRef = E9EDC64330AA4557BE7873EA; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -381,6 +383,7 @@
 		51988F888C33478A83C49836 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileBatchActions.swift; sourceTree = "<group>"; };
 		6944EA08DAB94119A5F0964E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileProjectManagement.swift; sourceTree = "<group>"; };
 		5B9DC0CF0C954F3986A496D5 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileDisplayFields.swift; sourceTree = "<group>"; };
+		E9EDC64330AA4557BE7873EA = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileLabelsPicker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -406,7 +409,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		9706742DF8D54A1C96E9C9CB = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		9706742DF8D54A1C96E9C9CB = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -630,7 +639,24 @@
 			path = MyWork;
 			sourceTree = "<group>";
 		};
-		E10000000000000000000001 = {isa = PBXGroup; children = (5B9DC0CF0C954F3986A496D5,6944EA08DAB94119A5F0964E,51988F888C33478A83C49836,0F4EF1F0DE1D4C9FA1731518,C754123ADFC04769B4F86093,DA481E7964A145C396016722,6AFA70EA2BE643C18FAECB70,06B05A2CAC624B4DA01C8B59,9556215604F94FF0B09FC14E,7953C376615F42CC99EF0A8E,); path = GitStrideiOS; sourceTree = "<group>"; };
+		E10000000000000000000001 = {
+			path = GitStrideiOS;
+			isa = PBXGroup;
+			children = (
+				E9EDC64330AA4557BE7873EA,
+				5B9DC0CF0C954F3986A496D5,
+				6944EA08DAB94119A5F0964E,
+				51988F888C33478A83C49836,
+				0F4EF1F0DE1D4C9FA1731518,
+				C754123ADFC04769B4F86093,
+				DA481E7964A145C396016722,
+				6AFA70EA2BE643C18FAECB70,
+				06B05A2CAC624B4DA01C8B59,
+				9556215604F94FF0B09FC14E,
+				7953C376615F42CC99EF0A8E,
+			);
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -691,7 +717,23 @@
 			productReference = DC100000 /* GitStride.app */;
 			productType = "com.apple.product-type.application";
 		};
-		E10000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = E7B73CACE1CD4229A7ED0220; buildPhases = (AFFC8ED126FF45429BE4E781,9706742DF8D54A1C96E9C9CB,EC783BDDA29A411F8E394986); buildRules = (); dependencies = (); name = GitStrideiOS; productName = GitStride; productReference = 6EFAD74144B84948B6C93091; productType = "com.apple.product-type.application"; };
+		E10000000000000000000002 = {
+			buildConfigurationList = E7B73CACE1CD4229A7ED0220;
+			productReference = 6EFAD74144B84948B6C93091;
+			productType = "com.apple.product-type.application";
+			productName = GitStride;
+			isa = PBXNativeTarget;
+			buildPhases = (
+				AFFC8ED126FF45429BE4E781,
+				9706742DF8D54A1C96E9C9CB,
+				EC783BDDA29A411F8E394986,
+			);
+			dependencies = (
+			);
+			name = GitStrideiOS;
+			buildRules = (
+			);
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -771,7 +813,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		EC783BDDA29A411F8E394986 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (2A5A2284BA4647E8A9F534F8,E568621224FC42BC9A2B2A51); runOnlyForDeploymentPostprocessing = 0; };
+		EC783BDDA29A411F8E394986 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8A500CEF23F94D3AB8AFA4F5,
+				2A5A2284BA4647E8A9F534F8,
+				E568621224FC42BC9A2B2A51,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -974,7 +1025,69 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		AFFC8ED126FF45429BE4E781 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (03140500DBC8492C84C7C213,CFCD39B581D945A998C4AD5B,05051EA400CD4C4F8946B5DE,A989E33297F941319A59BF73,203EEF88D72D45C3BB6B8128,608D6E061B014D6289A2D9F0,B4908FA1D34340A099EC3C83,BCA928F5794F41ECA6C4B962,C76CCF53146847C796E8D2B9,FA64944ABE7E470583B731CA,52DCD037357E41EA8C0955B9,5C6CDB4F474247779886B5BF,50B148D843674F8D817FA05B,2D99E96375E941E3BBED4E66,158E4F4798E540BF87A81B77,15E8A3C46CB64E4E91417D8E,D652B0E9D16C4D0AB886D8DC,75AD8CFE69394D8F86A8950A,CCB5E06C5D2B40729AF11431,441B176AE76C477285992078,A778862D424B42F6B424FCE4,AEBDC9863277477A8619EF7D,C8BC70EDE9D24370A6D61894,195208B76AAD46578BB76570,6287E58050C84E50AA496E0E,C1F7C51428614A238F24C618,0DDF809E4A624A7D9C8AD16F,EC03F8FB208F49BE8A425F99,549413A0712A424DBEF09D45,C84C577EE7F84D68A779CBCB,53B0036A05BD48A0BED8B6B7,BD490E38E07C4FFA9B3DB718,CC57881AF76B4BB5B872882B,7510EEF215684354BCAB27D1,F765D124A1BB4AA4A7CD09E9,26AE5473700D45F79B20CA00,6CD6B73AED1F4CAABDE009F2,9BBFC18447D04FA79CF560A5,7D7C8D3FEBE94591A74EA885,8F8F0E280D6D4DDE98566ED3,89F5F0ED3FD94F90A2019D81,3BF13DDF7D9F49768089FE8D,0CE0D2DFB50E427BA36C97FB,25D4456A2A174C2CA9CE9580,48FC3F67642D4E5685409172,55E78AA51D004636A7962543,34A35F15C22F476482E4D2CE,EED3F79541DD4CDF9BDEACE2,BF7179BBC4824F12B0490921,0F3DF15DBD084DA0AB42A211,F25A5CE72A0A456F82562B38,F643CFE7C22D4931BE23796B,9D96BF65071D4041BEDFD73F,CF3B7C87991B40C1BBF04C27,B5AA3A438AA44E7F8946A113); runOnlyForDeploymentPostprocessing = 0; };
+		AFFC8ED126FF45429BE4E781 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6DE0BD1554AB4B6087BAB8E6,
+				03140500DBC8492C84C7C213,
+				CFCD39B581D945A998C4AD5B,
+				05051EA400CD4C4F8946B5DE,
+				A989E33297F941319A59BF73,
+				203EEF88D72D45C3BB6B8128,
+				608D6E061B014D6289A2D9F0,
+				B4908FA1D34340A099EC3C83,
+				BCA928F5794F41ECA6C4B962,
+				C76CCF53146847C796E8D2B9,
+				FA64944ABE7E470583B731CA,
+				52DCD037357E41EA8C0955B9,
+				5C6CDB4F474247779886B5BF,
+				50B148D843674F8D817FA05B,
+				2D99E96375E941E3BBED4E66,
+				158E4F4798E540BF87A81B77,
+				15E8A3C46CB64E4E91417D8E,
+				D652B0E9D16C4D0AB886D8DC,
+				75AD8CFE69394D8F86A8950A,
+				CCB5E06C5D2B40729AF11431,
+				441B176AE76C477285992078,
+				A778862D424B42F6B424FCE4,
+				AEBDC9863277477A8619EF7D,
+				C8BC70EDE9D24370A6D61894,
+				195208B76AAD46578BB76570,
+				6287E58050C84E50AA496E0E,
+				C1F7C51428614A238F24C618,
+				0DDF809E4A624A7D9C8AD16F,
+				EC03F8FB208F49BE8A425F99,
+				549413A0712A424DBEF09D45,
+				C84C577EE7F84D68A779CBCB,
+				53B0036A05BD48A0BED8B6B7,
+				BD490E38E07C4FFA9B3DB718,
+				CC57881AF76B4BB5B872882B,
+				7510EEF215684354BCAB27D1,
+				F765D124A1BB4AA4A7CD09E9,
+				26AE5473700D45F79B20CA00,
+				6CD6B73AED1F4CAABDE009F2,
+				9BBFC18447D04FA79CF560A5,
+				7D7C8D3FEBE94591A74EA885,
+				8F8F0E280D6D4DDE98566ED3,
+				89F5F0ED3FD94F90A2019D81,
+				3BF13DDF7D9F49768089FE8D,
+				0CE0D2DFB50E427BA36C97FB,
+				25D4456A2A174C2CA9CE9580,
+				48FC3F67642D4E5685409172,
+				55E78AA51D004636A7962543,
+				34A35F15C22F476482E4D2CE,
+				EED3F79541DD4CDF9BDEACE2,
+				BF7179BBC4824F12B0490921,
+				0F3DF15DBD084DA0AB42A211,
+				F25A5CE72A0A456F82562B38,
+				F643CFE7C22D4931BE23796B,
+				9D96BF65071D4041BEDFD73F,
+				CF3B7C87991B40C1BBF04C27,
+				B5AA3A438AA44E7F8946A113,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1264,8 +1377,64 @@
 			};
 			name = Release;
 		};
-		6BF5E21B0155455291B70F75 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {SDKROOT = "iphoneos"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTS_MACCATALYST = "NO"; PRODUCT_NAME = "GitStride"; PRODUCT_BUNDLE_IDENTIFIER = "tech.hyperseek.gitstride"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "1.0"; CURRENT_PROJECT_VERSION = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "complete"; SWIFT_EMIT_LOC_STRINGS = "YES"; GENERATE_INFOPLIST_FILE = "YES"; INFOPLIST_FILE = "GitStrideiOS/Info.plist"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; GITSTRIDE_OAUTH_CLIENT_ID = "Ov23liP4CiYF6mIHqcVa"; GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";}; };
-		25CFB5DAD98B4E64AC132463 = {isa = XCBuildConfiguration; name = Release; buildSettings = {SDKROOT = "iphoneos"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTS_MACCATALYST = "NO"; PRODUCT_NAME = "GitStride"; PRODUCT_BUNDLE_IDENTIFIER = "tech.hyperseek.gitstride"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "1.0"; CURRENT_PROJECT_VERSION = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "complete"; SWIFT_EMIT_LOC_STRINGS = "YES"; GENERATE_INFOPLIST_FILE = "YES"; INFOPLIST_FILE = "GitStrideiOS/Info.plist"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; GITSTRIDE_OAUTH_CLIENT_ID = "Ov23liP4CiYF6mIHqcVa"; GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";}; };
+		6BF5E21B0155455291B70F75 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_STYLE = Automatic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				SDKROOT = iphoneos;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				SWIFT_VERSION = 5.0;
+				PRODUCT_NAME = GitStride;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				INFOPLIST_FILE = GitStrideiOS/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
+			};
+		};
+		25CFB5DAD98B4E64AC132463 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				CODE_SIGN_STYLE = Automatic;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				SDKROOT = iphoneos;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				SWIFT_VERSION = 5.0;
+				PRODUCT_NAME = GitStride;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				INFOPLIST_FILE = GitStrideiOS/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
+			};
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1305,7 +1474,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E7B73CACE1CD4229A7ED0220 = {isa = XCConfigurationList; buildConfigurations = (6BF5E21B0155455291B70F75,25CFB5DAD98B4E64AC132463); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		E7B73CACE1CD4229A7ED0220 = {
+			isa = XCConfigurationList;
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+			buildConfigurations = (
+				6BF5E21B0155455291B70F75,
+				25CFB5DAD98B4E64AC132463,
+			);
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */

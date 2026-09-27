@@ -59,3 +59,7 @@ xcodebuild -project GitStride.xcodeproj -scheme GitStride \
 GitStride 起源于 [yogesharc/GitBoard](https://github.com/yogesharc/GitBoard)，现由 [zwyyy456](https://github.com/zwyyy456) 独立维护并进行了大量重构。项目保留原作者的版权声明，并列明当前维护者的版权声明。
 
 本项目采用 [MIT 许可证](LICENSE)，App 安装包内也包含许可证。GitStride 与 GitHub, Inc. 无关联关系。
+
+## iOS 开发版
+
+工程新增 `GitStrideiOS` target，支持 iOS / iPadOS 17+。功能范围与构建方式见 [iOS 开发与使用](docs/ios.md)。此开发目标不代表已在 App Store 上架。

@@ -210,6 +210,7 @@ final class GitStrideModel {
         let followed = myWorkStore.followedProjects
         let task = Task {
             if !followed.isEmpty { await store.refreshFollowedProjects(followed) }
+            guard !Task.isCancelled else { return }
             if let selectedID = store.selectedProjectId, !followed.contains(where: { $0.id == selectedID }) {
                 await store.refresh()
             }

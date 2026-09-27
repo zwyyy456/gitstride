@@ -10,7 +10,7 @@
 
 ## 1. 项目定位
 
-GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `GitStride.xcodeproj`，包含 `GitStride`、`GitStrideAppStore` app targets 和聚焦确定性边界的 `GitStrideTests` unit test target；两个发行版通过 URLSession 直接访问 GitHub，Release 版还提供 CLI 凭据来源与 Sparkle。
+GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `GitStride.xcodeproj`，包含 `GitStride`、`GitStrideAppStore`、`GitStrideiOS` app targets 和聚焦确定性边界的 `GitStrideTests` unit test target；两个发行版通过 URLSession 直接访问 GitHub，Release 版还提供 CLI 凭据来源与 Sparkle。
 
 ## 2. 最短阅读路径
 
@@ -26,7 +26,8 @@ GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `Git
 
 ## 3. 目录地图
 
-- `GitStride/GitStrideApp.swift`：应用入口、scene 和平台窗口适配。
+- `GitStride/GitStrideApp.swift`：macOS 应用入口、scene 和平台窗口适配。
+- `GitStrideiOS/`：iOS App 入口、移动端导航、项目工作区与表单；共用 `GitStride/Models`、`Store` 和服务源码。
 - `GitStride/Models/`：项目、条目、状态、用户和 GitHub response models。
 - `GitStride/Services/`：GitHub、项目缓存、后台监控、系统通知和 Sparkle 更新边界。
 - `GitStride/Store/`：共享的 `GitStrideModel`、远程快照 owner `ProjectStore` 与偏好 owner `MyWorkStore`。

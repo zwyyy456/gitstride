@@ -540,6 +540,7 @@ final class AutomationSetupModel {
                         guard Task.isCancelled == false else { return }
                         retryDelay = .seconds(1)
                         await self?.loadAutomations()
+                        guard !Task.isCancelled else { return }
                         if event.type != "automation_changed" {
                             self?.projectChangeContinuation.yield(event.revision)
                         }
