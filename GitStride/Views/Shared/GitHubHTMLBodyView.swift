@@ -1,30 +1,35 @@
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import SwiftUI
 import WebKit
 
-struct GitHubHTMLBodyView: NSViewRepresentable {
+@MainActor
+struct GitHubHTMLBodyView {
     let html: String
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeWebView(coordinator: Coordinator) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.navigationDelegate = context.coordinator
+        webView.navigationDelegate = coordinator
         webView.underPageBackgroundColor = .clear
+        #if os(macOS)
         webView.setAccessibilityLabel(String(localized: "GitHub Markdown description"))
-        context.coordinator.render(html, in: webView)
+        #else
+        webView.accessibilityLabel = String(localized: "GitHub Markdown description")
+        #endif
+        coordinator.render(html, in: webView)
         return webView
-    }
-
-    func updateNSView(_ webView: WKWebView, context: Context) {
-        context.coordinator.render(html, in: webView)
     }
 
     @MainActor
@@ -53,7 +58,11 @@ struct GitHubHTMLBodyView: NSViewRepresentable {
                 if Self.isSameDocumentAnchor(url, currentURL: webView.url) {
                     decisionHandler(.allow)
                 } else if ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                    #if os(macOS)
                     NSWorkspace.shared.open(url)
+                    #else
+                    UIApplication.shared.open(url)
+                    #endif
                     decisionHandler(.cancel)
                 } else {
                     decisionHandler(.cancel)
@@ -148,3 +157,15 @@ struct GitHubHTMLBodyView: NSViewRepresentable {
         }
     }
 }
+
+#if os(macOS)
+extension GitHubHTMLBodyView: NSViewRepresentable {
+    func makeNSView(context: Context) -> WKWebView { makeWebView(coordinator: context.coordinator) }
+    func updateNSView(_ webView: WKWebView, context: Context) { context.coordinator.render(html, in: webView) }
+}
+#else
+extension GitHubHTMLBodyView: UIViewRepresentable {
+    func makeUIView(context: Context) -> WKWebView { makeWebView(coordinator: context.coordinator) }
+    func updateUIView(_ webView: WKWebView, context: Context) { context.coordinator.render(html, in: webView) }
+}
+#endif

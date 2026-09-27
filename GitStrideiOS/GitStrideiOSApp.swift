@@ -6,9 +6,7 @@ struct GitStrideiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                MobileAccountView(model: model)
-            }
+            MobileRootView(model: model)
             .task { await model.start() }
         }
     }
