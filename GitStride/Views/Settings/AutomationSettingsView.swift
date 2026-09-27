@@ -1,8 +1,8 @@
-import AppKit
 import SwiftUI
 
 struct AutomationSettingsView: View {
     @Bindable var setup: AutomationSetupModel
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         Section {
@@ -45,7 +45,7 @@ struct AutomationSettingsView: View {
     private func startSetup() {
         Task {
             if let url = await setup.startSetup() {
-                NSWorkspace.shared.open(url)
+                openURL(url)
             }
         }
     }
@@ -79,9 +79,11 @@ private struct AutomationServiceSettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            serviceLayout {
                 Text("Automation service")
+                #if os(macOS)
                 Spacer(minLength: 12)
+                #endif
                 Picker("Automation service", selection: $mode) {
                     Text("Default service").tag(Mode.defaultService)
                     Text("Custom address").tag(Mode.custom)
@@ -133,6 +135,14 @@ private struct AutomationServiceSettingsView: View {
         .onChange(of: savedOrigin) { _, _ in loadDraft() }
     }
 
+    private var serviceLayout: AnyLayout {
+        #if os(macOS)
+        AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
+        #else
+        AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+        #endif
+    }
+
     private func loadDraft() {
         if let savedOrigin {
             mode = savedOrigin.isEmpty ? .disabled : .custom
@@ -146,6 +156,7 @@ private struct AutomationServiceSettingsView: View {
 
 struct AutomationSetupSheet: View {
     @Bindable var setup: AutomationSetupModel
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(spacing: 0) {
@@ -163,14 +174,14 @@ struct AutomationSetupSheet: View {
                 case .existingConnection:
                     Section {
                         Label("This GitHub account already has automation set up.", systemImage: "checkmark.circle")
-                        Text("Connect this Mac to manage it. Your existing status mapping and pause setting will be preserved.")
+                        Text("Connect this device to manage it. Your existing status mapping and pause setting will be preserved.")
                             .foregroundStyle(.secondary)
                     }
                 case .waitingForBrowser:
                     Section {
                         Text("Finish authorization in your browser, then return to GitStride.")
                         Button("Open Browser") {
-                            if let url = setup.browserURL() { NSWorkspace.shared.open(url) }
+                            if let url = setup.browserURL() { openURL(url) }
                         }
                     }
                 case .connectionStorageFailed:
@@ -209,7 +220,9 @@ struct AutomationSetupSheet: View {
             }
             .padding(16)
         }
+        #if os(macOS)
         .frame(width: 520, height: setup.phase == .configuring ? 580 : 320)
+        #endif
         .interactiveDismissDisabled()
     }
 }

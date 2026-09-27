@@ -33,6 +33,7 @@ final class GitStrideModel {
     private let notificationService = NotificationService.shared
     private var monitorTask: Task<Void, Never>?
     private var automationEventTask: Task<Void, Never>?
+    private var projectRefreshTask: Task<Void, Never>?
     private var mutedProjectIDs: Set<String>
     private var snoozedItems: [String: Date]
     private var didStart = false
@@ -159,6 +160,8 @@ final class GitStrideModel {
         defer { connectionProgress = nil }
         authenticationError = nil
         UserDefaults.standard.set(true, forKey: "githubSignedOut")
+        projectRefreshTask?.cancel()
+        projectRefreshTask = nil
         monitorTask?.cancel()
         monitorTask = nil
         await projectMonitor.stop()
@@ -171,6 +174,8 @@ final class GitStrideModel {
     }
 
     private func replaceConnection(method: GitHubAuthenticationMethod) async throws {
+        projectRefreshTask?.cancel()
+        projectRefreshTask = nil
         UserDefaults.standard.set(true, forKey: "githubSignedOut")
         monitorTask?.cancel()
         monitorTask = nil
@@ -192,16 +197,26 @@ final class GitStrideModel {
         automationEventTask = Task { [weak self] in
             for await _ in events {
                 guard Task.isCancelled == false, let self else { return }
-                let followedProjects = self.myWorkStore.followedProjects
-                if followedProjects.isEmpty == false {
-                    await self.projectStore.refreshFollowedProjects(followedProjects)
-                }
-                if let selectedProjectID = self.projectStore.selectedProjectId,
-                   followedProjects.contains(where: { $0.id == selectedProjectID }) == false {
-                    await self.projectStore.refresh()
-                }
+                await self.refreshVisibleProjects()
             }
         }
+    }
+
+    /// Foreground refresh and Worker events share one refresh while a request is in flight.
+    func refreshVisibleProjects() async {
+        guard !isConnecting, projectStore.currentAccount != nil else { return }
+        if let projectRefreshTask { await projectRefreshTask.value; return }
+        let store = projectStore
+        let followed = myWorkStore.followedProjects
+        let task = Task {
+            if !followed.isEmpty { await store.refreshFollowedProjects(followed) }
+            if let selectedID = store.selectedProjectId, !followed.contains(where: { $0.id == selectedID }) {
+                await store.refresh()
+            }
+        }
+        projectRefreshTask = task
+        await task.value
+        if projectStore === store { projectRefreshTask = nil }
     }
 
     func setMonitoringEnabled(_ enabled: Bool) async {

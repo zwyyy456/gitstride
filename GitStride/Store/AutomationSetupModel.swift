@@ -53,6 +53,17 @@ final class AutomationSetupModel {
     private var isRecoveringConnection = false
     private let projectChangeContinuation: AsyncStream<Int>.Continuation
     private var eventTask: Task<Void, Never>?
+    private var projectEventsActive = true
+
+    func setProjectEventsActive(_ active: Bool) {
+        projectEventsActive = active
+        if !active {
+            stopProjectChangeEvents()
+        } else if phase == .connected, let service {
+            do { startProjectChangeEvents(service: service, managementToken: try requireManagementToken()) }
+            catch { handleManagementFailure(error) }
+        }
+    }
 
     init(
         service: AutomationService? = AutomationService.configured(),
@@ -517,7 +528,7 @@ final class AutomationSetupModel {
         service: AutomationService,
         managementToken: String
     ) {
-        guard eventTask == nil else { return }
+        guard projectEventsActive, eventTask == nil else { return }
         eventTask = Task { [weak self] in
             var retryDelay = Duration.seconds(1)
             while Task.isCancelled == false {

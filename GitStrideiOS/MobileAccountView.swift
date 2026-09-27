@@ -53,7 +53,12 @@ struct MobileAccountView: View {
         )
       }
       .foregroundStyle(.secondary)
+      AutomationSettingsView(setup: model.automationSetup)
     }
+    .sheet(isPresented: Binding(get: { model.automationSetup.isPresentingSetup }, set: { _ in })) {
+      AutomationSetupSheet(setup: model.automationSetup)
+    }
+    .task(id: model.automationSetup.setupSessionID) { await model.automationSetup.observeSetup() }
     .navigationTitle("GitHub")
   }
 }
