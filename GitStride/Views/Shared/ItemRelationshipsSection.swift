@@ -83,7 +83,9 @@ struct ItemRelationshipsSection: View {
                             } label: {
                                 Label("Add relationship", systemImage: "plus").labelStyle(.iconOnly)
                             }
+                            #if os(macOS)
                             .menuStyle(.borderlessButton)
+                            #endif
                             .fixedSize()
                             .help("Add relationship")
                             .disabled(isWorking)

@@ -35,7 +35,9 @@ struct ItemPropertiesView: View {
             }
         }
         .formStyle(.grouped)
+        #if os(macOS)
         .controlSize(.small)
+        #endif
     }
 
     private func fieldSection(project: Project, item: ProjectItem) -> some View {

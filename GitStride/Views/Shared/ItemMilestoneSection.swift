@@ -78,7 +78,9 @@ struct ItemMilestoneSection: View {
                 Text(metadata.milestone?.title ?? String(localized: "No milestone"))
                     .fixedSize(horizontal: false, vertical: true)
             }
+            #if os(macOS)
             .menuStyle(.borderlessButton)
+            #endif
             .disabled(isWorking)
 
         case .failed(let message):
@@ -96,7 +98,7 @@ struct ItemMilestoneSection: View {
                         )
                     }
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.borderless)
             }
         }
     }

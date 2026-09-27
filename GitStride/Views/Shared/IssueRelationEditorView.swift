@@ -85,7 +85,9 @@ struct IssueRelationEditorView: View {
             }
         }
         .padding(20)
+        #if os(macOS)
         .frame(width: 460, height: 420)
+        #endif
     }
 
     private var trimmedQuery: String {

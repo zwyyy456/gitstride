@@ -103,7 +103,9 @@ struct ProjectFieldEditor: View {
                         .textFieldStyle(.roundedBorder)
                         .focused($textFocused)
                         .onSubmit(saveDraft)
+                        #if os(macOS)
                         .onExitCommand { if !isSaving { isEditing = false } }
+                        #endif
                         .disabled(isSaving)
                     if invalidNumber {
                         Text("Enter a valid number.").font(.caption).foregroundStyle(.red)
