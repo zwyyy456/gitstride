@@ -171,7 +171,7 @@ private struct ProjectState {
     var mutationRevision: UInt64 = 0
     var mutations: Set<UUID> = []
     var needsRefresh = false
-    var confirmedItemsAwaitingObservation: [String: ProjectItem] = [:]
+    var createdItemFieldsAwaitingObservation: [String: [String: ProjectFieldValue]] = [:]
     var confirmedContentAwaitingObservation: [String: ConfirmedContentVersion] = [:]
 
     var phase: ProjectContentPhase {
@@ -1309,7 +1309,13 @@ final class ProjectStore {
                 discardRead(ticket)
                 return nil
             }
-            snapshot = mergingConfirmedItems(into: snapshot, projectID: id)
+            snapshot = try await reconcilingCreatedItems(in: snapshot, projectID: id)
+            try Task.checkCancellation()
+            guard canCommit(ticket) else {
+                discardRead(ticket)
+                return nil
+            }
+            projectStates[id]?.createdItemFieldsAwaitingObservation = [:]
             snapshot = mergingConfirmedContent(into: snapshot, projectID: id)
             projectStates[id]?.snapshot = snapshot
             projectStates[id]?.source = .remote
@@ -1407,31 +1413,24 @@ final class ProjectStore {
         project.items.removeAll { $0.id == item.id || (item.contentId != nil && $0.contentId == item.contentId) }
         project.items.append(item)
         projectStates[projectID]?.snapshot = project
-        projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = item
+        projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = item.fieldValues
         lastUpdated = Date()
     }
 
-    private func mergingConfirmedItems(into snapshot: Project, projectID: String) -> Project {
-        guard let confirmed = projectStates[projectID]?.confirmedItemsAwaitingObservation,
-              confirmed.isEmpty == false else { return snapshot }
-        var merged = snapshot
-        for (id, item) in confirmed {
-            let observedIndex = snapshot.items.firstIndex {
-                $0.id == item.id || (item.contentId != nil && $0.contentId == item.contentId)
-            }
-            guard let observedIndex else {
-                merged.items.append(item)
-                continue
-            }
-            let observed = snapshot.items[observedIndex]
-            let fieldsMatch = item.fieldValues.allSatisfy { observed.fieldValues[$0.key] == $0.value }
-            if fieldsMatch {
-                projectStates[projectID]?.confirmedItemsAwaitingObservation[id] = nil
-            } else {
-                merged.items[observedIndex] = item
-            }
+    private func reconcilingCreatedItems(in snapshot: Project, projectID: String) async throws -> Project {
+        let confirmed = projectStates[projectID]?.createdItemFieldsAwaitingObservation ?? [:]
+        var reconciled = snapshot
+        for (id, fields) in confirmed.sorted(by: { $0.key < $1.key }) {
+            if let observed = snapshot.items.first(where: { $0.id == id }),
+               fields.allSatisfy({ observed.fieldValues[$0.key] == $0.value }) { continue }
+
+            // A list read can lag behind creation. Resolve this membership directly once;
+            // differing remote fields may be a later edit, not a stale response.
+            let current = try await gitHubService.fetchProjectItem(id: id)
+            reconciled.items.removeAll { $0.id == id }
+            if let current { reconciled.items.append(current) }
         }
-        return merged
+        return reconciled
     }
 
     private func mergingConfirmedContent(into snapshot: Project, projectID: String) -> Project {
@@ -1550,7 +1549,7 @@ final class ProjectStore {
             try await self.gitHubService.deleteItem(projectId: projectID, itemId: item.id)
         } apply: { _ in
             self.projectStates[projectID]?.snapshot?.items.removeAll { $0.id == item.id }
-            self.projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = nil
+            self.projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
         await persistCache()
@@ -1562,7 +1561,7 @@ final class ProjectStore {
             try await self.gitHubService.archiveItem(projectId: projectID, itemId: item.id)
         } apply: { _ in
             self.projectStates[projectID]?.snapshot?.items.removeAll { $0.id == item.id }
-            self.projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = nil
+            self.projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
         await persistCache()
@@ -2278,8 +2277,8 @@ final class ProjectStore {
                     projectStates[id]?.confirmedContentAwaitingObservation[contentID] =
                         ConfirmedContentVersion(title: item.title, updatedAt: updatedAt)
                 }
-                if projectStates[id]?.confirmedItemsAwaitingObservation[item.id] != nil {
-                    projectStates[id]?.confirmedItemsAwaitingObservation[item.id] = item
+                if projectStates[id]?.createdItemFieldsAwaitingObservation[item.id] != nil {
+                    projectStates[id]?.createdItemFieldsAwaitingObservation[item.id] = item.fieldValues
                 }
             }
             projectStates[project.id]?.snapshot = project
@@ -2295,8 +2294,8 @@ final class ProjectStore {
               let itemIndex = project.items.firstIndex(where: { $0.id == itemID }) else { return }
         transform(&project.items[itemIndex])
         let item = project.items[itemIndex]
-        if projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] != nil {
-            projectStates[projectID]?.confirmedItemsAwaitingObservation[item.id] = item
+        if projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] != nil {
+            projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = item.fieldValues
         }
         projectStates[project.id]?.snapshot = project
     }

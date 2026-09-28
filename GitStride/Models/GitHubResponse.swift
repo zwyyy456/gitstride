@@ -7,6 +7,7 @@ enum GitHubResponse {
 
     struct GraphQLIssue: Decodable {
         let message: String
+        let type: String?
     }
 
     struct EmptyPayload: Decodable {}
