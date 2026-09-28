@@ -29,7 +29,7 @@ struct ProjectStoreTests {
         store.selectedStatusFilter = "Todo"
 
         let reload = Task { await store.loadProjects() }
-        await runner.waitUntilSuspended("catalog")
+        try await runner.waitUntilSuspended("catalog")
         #expect(store.isLoading)
         #expect(store.selectedProject?.items == first.items)
         await runner.release("catalog")
@@ -160,7 +160,7 @@ struct ProjectStoreTests {
         defer { cleanup() }
         await store.loadProjects()
         let loading = Task { await store.loadProjects() }
-        await runner.waitUntilSuspended("catalog")
+        try await runner.waitUntilSuspended("catalog")
         try await store.deleteProject(id: "P1")
         await runner.release("catalog")
         await loading.value
@@ -225,7 +225,7 @@ struct ProjectStoreTests {
         defer { cleanup() }
 
         let initialLoad = Task { await store.loadProjects() }
-        await runner.waitUntilSuspended("first-project")
+        try await runner.waitUntilSuspended("first-project")
         let secondProject = try #require(store.projects.first { $0.id == "P2" })
 
         await store.selectProject(secondProject)
@@ -247,7 +247,7 @@ struct ProjectStoreTests {
         #expect(store.operationErrorMessage == nil)
     }
 
-    @Test func itemDetailLoadIsSharedWhileTheRequestIsInFlight() async {
+    @Test func itemDetailLoadIsSharedWhileTheRequestIsInFlight() async throws {
         let response = Self.itemDetailResponse(body: "Shared")
         let runner = SuspendingGitHubHTTPClient(steps: [
             .suspended("item-detail", response)
@@ -257,14 +257,12 @@ struct ProjectStoreTests {
         let item = Self.detailItem(updatedAt: "2026-08-01T00:00:00Z")
 
         let firstLoad = Task { await store.loadItemDetail(for: item) }
-        await runner.waitUntilSuspended("item-detail")
-        let secondLoad = Task { await store.loadItemDetail(for: item) }
-        await Task.yield()
-
+        try await runner.waitUntilSuspended("item-detail")
         #expect(store.itemDetailState(for: item) == .loading)
-        await runner.release("item-detail")
+        let release = Task { await runner.release("item-detail") }
+        await store.loadItemDetail(for: item)
+        await release.value
         await firstLoad.value
-        await secondLoad.value
 
         #expect(await runner.recordedCallCount() == 1)
         #expect(store.itemDetailState(for: item) == .loaded(
@@ -292,7 +290,7 @@ struct ProjectStoreTests {
         ))
     }
 
-    @Test func forcedItemDetailRefreshDiscardsTheOlderResponse() async {
+    @Test func forcedItemDetailRefreshDiscardsTheOlderResponse() async throws {
         let runner = SuspendingGitHubHTTPClient(steps: [
             .suspended("old-detail", Self.itemDetailResponse(body: "Old")),
             .response(Self.itemDetailResponse(body: "New"))
@@ -302,7 +300,7 @@ struct ProjectStoreTests {
         let item = Self.detailItem(updatedAt: "2026-08-01T00:00:00Z")
 
         let oldLoad = Task { await store.loadItemDetail(for: item) }
-        await runner.waitUntilSuspended("old-detail")
+        try await runner.waitUntilSuspended("old-detail")
         await store.loadItemDetail(for: item, forceRefresh: true)
         await runner.release("old-detail")
         await oldLoad.value
@@ -349,9 +347,9 @@ struct ProjectStoreTests {
         let first = try #require(project.items.first)
         let second = try #require(project.items.dropFirst().first)
         let firstTask = Task { try await store.deleteItem(first, from: project.id) }
-        await runner.waitUntilSuspended("first")
+        try await runner.waitUntilSuspended("first")
         let secondTask = Task { try await store.deleteItem(second, from: project.id) }
-        await runner.waitUntilSuspended("second")
+        try await runner.waitUntilSuspended("second")
         await runner.release("first")
         try await firstTask.value
         await runner.release("second")
@@ -372,11 +370,11 @@ struct ProjectStoreTests {
         let project = try #require(store.selectedProject)
         let item = try #require(project.items.first)
         let refresh = Task { await store.refresh() }
-        await runner.waitUntilSuspended("old-read")
+        try await runner.waitUntilSuspended("old-read")
         try await store.deleteItem(item, from: project.id)
         await runner.release("old-read")
         await refresh.value
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
         #expect(store.project(id: project.id)?.items.isEmpty == true)
         let release = Task { await runner.release("reconcile") }
         await store.refresh()
@@ -397,9 +395,9 @@ struct ProjectStoreTests {
         let references = [FollowedProject(project: project)]
         store.setFollowedProjects(references)
         let old = Task { try await store.refreshMonitoredProjects(references) }
-        await runner.waitUntilSuspended("old-read")
+        try await runner.waitUntilSuspended("old-read")
         let new = Task { await store.refresh() }
-        await runner.waitUntilSuspended("new-read")
+        try await runner.waitUntilSuspended("new-read")
         await runner.release("old-read")
         #expect(try await old.value == nil)
         guard case .content(_, let refreshing, _) = store.selectedProjectContentState else {
@@ -450,11 +448,11 @@ struct ProjectStoreTests {
         let reference = FollowedProject(project: second)
         store.setFollowedProjects([reference])
         let old = Task { try await store.refreshMonitoredProjects([reference]) }
-        await runner.waitUntilSuspended("old-membership")
+        try await runner.waitUntilSuspended("old-membership")
         store.setFollowedProjects([])
         store.setFollowedProjects([reference])
         let new = Task { await store.loadProjectDetails(id: "P2") }
-        await runner.waitUntilSuspended("new-membership")
+        try await runner.waitUntilSuspended("new-membership")
         await runner.release("old-membership")
         #expect(try await old.value == nil)
         #expect(store.project(id: "P2") == nil)

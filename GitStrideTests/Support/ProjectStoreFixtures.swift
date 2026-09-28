@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 @testable import GitStride
 
@@ -127,5 +128,42 @@ extension ProjectStoreTests {
 
     static func itemDetailResponse(body: String) -> String {
         #"{"data":{"node":{"__typename":"Issue","id":"CONTENT1","title":"Item","body":"\#(body)","bodyHTML":"\#(body)","createdAt":null,"updatedAt":"2026-08-01T00:00:00Z","author":null,"viewerCanUpdate":false,"viewerCanSetMilestone":false,"repository":{"nameWithOwner":"acme/repo"},"milestone":null,"parent":null,"subIssues":{"nodes":[]},"subIssuesSummary":{"completed":0,"total":0},"blockedBy":{"nodes":[]},"blocking":{"nodes":[]}}}}"#
+    }
+}
+
+@MainActor
+func waitForState(_ description: String, condition: @escaping @MainActor () -> Bool) async throws {
+    let observation = StateWait(condition: condition)
+    let timeout = Task {
+        try await Task.sleep(for: .seconds(10))
+        observation.finish(.failure(WaitTimeout(event: description)))
+    }
+    defer { timeout.cancel() }
+    try await withCheckedThrowingContinuation {
+        observation.continuation = $0
+        observation.observe()
+    }
+}
+
+@MainActor
+private final class StateWait {
+    let condition: @MainActor () -> Bool
+    var continuation: CheckedContinuation<Void, Error>?
+
+    init(condition: @escaping @MainActor () -> Bool) { self.condition = condition }
+
+    func observe() {
+        guard continuation != nil else { return }
+        let completed = withObservationTracking {
+            condition()
+        } onChange: {
+            Task { @MainActor in self.observe() }
+        }
+        if completed { finish(.success(())) }
+    }
+
+    func finish(_ result: Result<Void, Error>) {
+        continuation?.resume(with: result)
+        continuation = nil
     }
 }

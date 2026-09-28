@@ -62,8 +62,8 @@ actor SuspendingGitHubHTTPClient: GitHubHTTPClient {
     private var steps: [SuspendingHTTPStep]
     private var calls: [URLRequest] = []
     private var suspendedIDs: Set<String> = []
-    private var resultWaiters: [String: CheckedContinuation<Void, Never>] = [:]
-    private var suspensionWaiters: [String: [CheckedContinuation<Void, Never>]] = [:]
+    private var resultWaiters: [String: CheckedContinuation<Void, Error>] = [:]
+    private var suspensionWaiters: [String: [CheckedContinuation<Void, Error>]] = [:]
 
     init(steps: [SuspendingHTTPStep], headers: [String: String] = [:]) { self.steps = steps; self.headers = headers }
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -78,18 +78,35 @@ actor SuspendingGitHubHTTPClient: GitHubHTTPClient {
             body = response
             suspendedIDs.insert(id)
             suspensionWaiters.removeValue(forKey: id)?.forEach { $0.resume() }
-            await withCheckedContinuation { resultWaiters[id] = $0 }
+            let timeout = Task {
+                try await Task.sleep(for: .seconds(10))
+                resultWaiters.removeValue(forKey: id)?.resume(throwing: WaitTimeout(event: "release \(id)"))
+            }
+            defer { timeout.cancel() }
+            try await withCheckedThrowingContinuation { resultWaiters[id] = $0 }
         }
         return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: headers)!)
     }
     func cancel() {}
-    func waitUntilSuspended(_ id: String) async {
+    func waitUntilSuspended(_ id: String) async throws {
         if suspendedIDs.contains(id) { return }
-        await withCheckedContinuation { suspensionWaiters[id, default: []].append($0) }
+        let timeout = Task {
+            try await Task.sleep(for: .seconds(10))
+            suspensionWaiters.removeValue(forKey: id)?.forEach {
+                $0.resume(throwing: WaitTimeout(event: "request \(id)"))
+            }
+        }
+        defer { timeout.cancel() }
+        try await withCheckedThrowingContinuation { suspensionWaiters[id, default: []].append($0) }
     }
     func release(_ id: String) { resultWaiters.removeValue(forKey: id)?.resume() }
     func recordedRequests() -> [URLRequest] { calls }
     func recordedBodies() -> [Data?] { calls.map(\.httpBody) }
     func recordedCallCount() -> Int { calls.count }
     private enum FixtureError: Error { case missingResponse }
+}
+
+struct WaitTimeout: Error, CustomStringConvertible {
+    let event: String
+    var description: String { "Timed out waiting for \(event)" }
 }
