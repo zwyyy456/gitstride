@@ -10,7 +10,7 @@
 		034A1C5457534637AA06944F /* Services/ProjectCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE756C642FB4254A3DDD761 /* Services/ProjectCacheTests.swift */; };
 		0A268DFF1FB34EA2A03336F0 /* ExistingProjectItemPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906BAEE59D54492EB681F8B9; platformFilters = (macos,); };
 		1256B447FBC34D199F0B53D1 /* Support/ProjectStoreFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10606AD13FB545669AC004F6 /* Support/ProjectStoreFixtures.swift */; };
-		153AA0C9C2AD4AFDA2C82D5C /* NewProjectItemEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACB16D1BB734F30BF32C09A /* NewProjectItemEditor.swift */; };
+		153AA0C9C2AD4AFDA2C82D5C /* NewProjectItemEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACB16D1BB734F30BF32C09A /* NewProjectItemEditor.swift */; platformFilters = (macos,); };
 		1C5E5C020F46418DB08480DC /* Support/GitHubHTTPClients.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4AD93EE1FB04A9D9CF802E5 /* Support/GitHubHTTPClients.swift */; };
 		1C80C18DA5C64410A2039F07 /* GitHubProjectResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = C889CA74D9304C369C5760E8 /* GitHubProjectResponse.swift */; };
 		2AA6068167E44C96992DFA85 /* GitHubItemAddress.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FBBF38805B473FB1ACAEF5 /* GitHubItemAddress.swift */; };
@@ -33,7 +33,7 @@
 		367A94843064B9F300F2A402 /* ItemMilestoneSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6D407A095F41C7BAB85F69 /* ItemMilestoneSection.swift */; };
 		367A94853064B9F300F2A402 /* ItemLabelsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067616FE0D8F4BB582025D8E /* ItemLabelsSection.swift */; };
 		367A94863064B9F300F2A402 /* ItemAssigneesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200CCB2760E44DB596C60314 /* ItemAssigneesSection.swift */; };
-		367A94873064B9F300F2A402 /* NewProjectItemEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACB16D1BB734F30BF32C09A /* NewProjectItemEditor.swift */; };
+		367A94873064B9F300F2A402 /* NewProjectItemEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BACB16D1BB734F30BF32C09A /* NewProjectItemEditor.swift */; platformFilters = (macos,); };
 		367A94883064B9F300F2A402 /* ExistingProjectItemPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906BAEE59D54492EB681F8B9 /* ExistingProjectItemPicker.swift */; };
 		367A94893064B9F300F2A402 /* AddProjectItemFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53D98D3EDD74DB89F2C48D6 /* AddProjectItemFields.swift */; };
 		367A948A3064B9F300F2A402 /* GitHubItemAddress.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FBBF38805B473FB1ACAEF5 /* GitHubItemAddress.swift */; };
@@ -203,6 +203,8 @@
 		B4908FA1D34340A099EC3C83 = {isa = PBXBuildFile; fileRef = 6944EA08DAB94119A5F0964E; platformFilters = (ios,); };
 		608D6E061B014D6289A2D9F0 = {isa = PBXBuildFile; fileRef = 5B9DC0CF0C954F3986A496D5; platformFilters = (ios,); };
 		6DE0BD1554AB4B6087BAB8E6 = {isa = PBXBuildFile; fileRef = E9EDC64330AA4557BE7873EA; platformFilters = (ios,); };
+		C01000000000000000000002 /* NewProjectItemDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C01000000000000000000001; };
+		C01000000000000000000003 /* NewProjectItemDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C01000000000000000000001; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -335,6 +337,7 @@
 		6944EA08DAB94119A5F0964E = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileProjectManagement.swift; sourceTree = "<group>"; };
 		5B9DC0CF0C954F3986A496D5 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileDisplayFields.swift; sourceTree = "<group>"; };
 		E9EDC64330AA4557BE7873EA = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileLabelsPicker.swift; sourceTree = "<group>"; };
+		C01000000000000000000001 /* NewProjectItemDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProjectItemDraft.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -397,6 +400,7 @@
 		A3000002 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				C01000000000000000000001 /* NewProjectItemDraft.swift */,
 				D2FBBF38805B473FB1ACAEF5 /* GitHubItemAddress.swift */,
 				2DBCD291C4B440DEA92DDCC1 /* GitHubResponse.swift */,
 				C889CA74D9304C369C5760E8 /* GitHubProjectResponse.swift */,
@@ -761,6 +765,7 @@
 				367A94853064B9F300F2A402 /* ItemLabelsSection.swift in Sources */,
 				367A94863064B9F300F2A402 /* ItemAssigneesSection.swift in Sources */,
 				367A94873064B9F300F2A402 /* NewProjectItemEditor.swift in Sources */,
+				C01000000000000000000002 /* NewProjectItemDraft.swift in Sources */,
 				367A94883064B9F300F2A402 /* ExistingProjectItemPicker.swift in Sources */,
 				367A94893064B9F300F2A402 /* AddProjectItemFields.swift in Sources */,
 				367A948A3064B9F300F2A402 /* GitHubItemAddress.swift in Sources */,
@@ -874,6 +879,7 @@
 				95F40CC60C9D4E16A2EE8C4D,
 				481568AA2C0A41AEA9696AAF,
 				153AA0C9C2AD4AFDA2C82D5C,
+				C01000000000000000000003 /* NewProjectItemDraft.swift in Sources */,
 				0A268DFF1FB34EA2A03336F0,
 				B94760305D8740FB8B6A2C40,
 				2AA6068167E44C96992DFA85,

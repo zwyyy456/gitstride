@@ -90,7 +90,7 @@ struct AddProjectItemView: View {
             if draft.repository.isEmpty {
                 draft.repository = store.defaultIssueRepository
             }
-            updateStatusSelection()
+            draft.reconcileStatus(in: store.selectedProject)
             if draft.usesQuickEntry, !QuickCreateParser.parse(draft.quickEntry).title.isEmpty {
                 applyQuickEntry()
             }
@@ -100,11 +100,12 @@ struct AddProjectItemView: View {
             draft.targetDate = nil
             guard presentation == .window else { return }
             draft.repository = store.defaultIssueRepository
-            draft.status = defaultStatus
+            draft.status = ""
+            draft.reconcileStatus(in: store.selectedProject)
             draft.priority = ""
         }
         .onChange(of: statusOptions) { _, _ in
-            updateStatusSelection()
+            draft.reconcileStatus(in: store.selectedProject)
         }
         .onChange(of: store.defaultIssueRepository) { oldValue, newValue in
             guard draft.repository.isEmpty || draft.repository == oldValue else { return }
@@ -234,39 +235,11 @@ struct AddProjectItemView: View {
     }
 
     private var createActionIsDisabled: Bool {
-        return isWorking || draft.title.trimmed.isEmpty
-            || (draft.itemType == .issue && (draft.repository.trimmed.isEmpty || needsStatusSelection))
+        isWorking || !draft.canSubmit(in: store.selectedProject)
     }
 
-    private var statusOptions: [String] {
-        guard let project = store.selectedProject, project.statusField != nil else { return [] }
-        var options = project.statusOptions.map(\.name)
-        if options.contains(where: { $0.caseInsensitiveCompare("Backlog") == .orderedSame }) == false {
-            options.append("Backlog")
-        }
-        return options
-    }
-
-    private var defaultStatus: String {
-        statusOptions.first { $0.caseInsensitiveCompare("Todo") == .orderedSame } ?? ""
-    }
-
-    private var needsStatusSelection: Bool {
-        statusOptions.isEmpty == false && statusOptions.contains(draft.status) == false
-    }
-
-    private func updateStatusSelection() {
-        if statusOptions.contains(draft.status) == false {
-            draft.status = defaultStatus
-        }
-    }
-
-    private var priorityOptions: [String] {
-        guard let field = store.selectedProject?.fields.first(where: {
-            $0.kind == .singleSelect && $0.name.caseInsensitiveCompare("Priority") == .orderedSame
-        }) else { return [] }
-        return field.options.map(\.name)
-    }
+    private var statusOptions: [String] { NewProjectItemDraft.statusOptions(in: store.selectedProject) }
+    private var priorityOptions: [String] { NewProjectItemDraft.priorityOptions(in: store.selectedProject) }
 
     private func createItem() {
         guard createActionIsDisabled == false else { return }
@@ -276,15 +249,15 @@ struct AddProjectItemView: View {
         do {
             if draft.itemType == .issue {
                 let creation = try store.prepareIssueCreation(
-                    repository: draft.repository.trimmed, title: draft.title.trimmed, body: draft.bodyText,
+                    repository: draft.repository, title: draft.title, body: draft.bodyText,
                     labels: draft.labelNames,
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
-                    status: draft.status.trimmed.nilIfEmpty, priority: draft.priority.trimmed.nilIfEmpty,
+                    status: draft.status.nilIfEmpty, priority: draft.priority.nilIfEmpty,
                     startDate: draft.startDate, targetDate: draft.targetDate
                 )
                 try store.beginIssueCreation(creation)
             } else {
-                try store.beginDraftCreation(title: draft.title.trimmed, body: draft.bodyText)
+                try store.beginDraftCreation(title: draft.title, body: draft.bodyText)
             }
             close()
         } catch {

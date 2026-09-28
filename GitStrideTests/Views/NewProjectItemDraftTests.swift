@@ -3,6 +3,25 @@ import Testing
 @testable import GitStride
 
 struct NewProjectItemDraftTests {
+    @Test @MainActor func bothPlatformsRequireAValidStatusAndShareItsDefault() {
+        var project = ProjectStoreTests.kanbanProject()
+        var draft = NewProjectItemDraft(repository: "  acme/app  ", title: "New")
+        #expect(!draft.canSubmit(in: project))
+        draft.reconcileStatus(in: project)
+        #expect(draft.status == "Todo")
+        #expect(draft.canSubmit(in: project))
+        draft.repository = "  "
+        #expect(!draft.canSubmit(in: project))
+        draft.itemType = .draft
+        #expect(draft.canSubmit(in: project))
+        draft.title = " \n "
+        #expect(!draft.canSubmit(in: project))
+        project.statusField = StatusField(id: "STATUS", name: "Status", options: [])
+        #expect(NewProjectItemDraft.statusOptions(in: project) == ["Backlog"])
+        project.statusField = nil
+        #expect(NewProjectItemDraft.statusOptions(in: project).isEmpty)
+    }
+
     @Test func quickEntryResolvesProjectChoicesBeforeReturningToTheForm() {
         var draft = NewProjectItemDraft()
         draft.usesQuickEntry = true

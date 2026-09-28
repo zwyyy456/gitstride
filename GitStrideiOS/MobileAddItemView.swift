@@ -10,17 +10,8 @@ struct MobileAddItemView: View {
     @State private var isWorking = false
     @State private var errorMessage: String?
 
-    private var statuses: [String] {
-        guard let project = store.selectedProject, project.statusField != nil else { return [] }
-        let names = project.statusOptions.map(\.name)
-        return names.contains(where: { $0.caseInsensitiveCompare("Backlog") == .orderedSame })
-            ? names : names + ["Backlog"]
-    }
-    private var priorities: [String] {
-        store.selectedProject?.fields.first {
-            $0.kind == .singleSelect && $0.name.caseInsensitiveCompare("Priority") == .orderedSame
-        }?.options.map(\.name) ?? []
-    }
+    private var statuses: [String] { NewProjectItemDraft.statusOptions(in: store.selectedProject) }
+    private var priorities: [String] { NewProjectItemDraft.priorityOptions(in: store.selectedProject) }
 
     var body: some View {
         NavigationStack {
@@ -41,14 +32,15 @@ struct MobileAddItemView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     if !existing {
                         Button("Create", action: create)
-                            .disabled(
-                                draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                    || (draft.itemType == .issue && draft.repository.isEmpty)
-                                    || isWorking)
+                            .disabled(isWorking || !draft.canSubmit(in: store.selectedProject))
                     }
                 }
             }
-            .onAppear { draft.repository = store.defaultIssueRepository }
+            .onAppear {
+                draft.repository = store.defaultIssueRepository
+                draft.reconcileStatus(in: store.selectedProject)
+            }
+            .onChange(of: statuses) { _, _ in draft.reconcileStatus(in: store.selectedProject) }
         }
     }
 
@@ -74,9 +66,11 @@ struct MobileAddItemView: View {
             }
             if draft.itemType == .issue {
                 Section("Fields") {
-                    Picker("Status", selection: $draft.status) {
-                        Text("Not Set").tag("")
-                        ForEach(statuses, id: \.self) { Text($0).tag($0) }
+                    if !statuses.isEmpty {
+                        Picker("Status", selection: $draft.status) {
+                            if draft.status.isEmpty { Text("Choose Status").tag("").disabled(true) }
+                            ForEach(statuses, id: \.self) { Text($0).tag($0) }
+                        }
                     }
                     if !priorities.isEmpty {
                         Picker("Priority", selection: $draft.priority) {
@@ -156,13 +150,13 @@ struct MobileAddItemView: View {
     }
 
     private func create() {
+        guard draft.canSubmit(in: store.selectedProject) else { return }
         do {
-            let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
             if draft.itemType == .draft {
-                try store.beginDraftCreation(title: title, body: draft.bodyText)
+                try store.beginDraftCreation(title: draft.title, body: draft.bodyText)
             } else {
                 let creation = try store.prepareIssueCreation(
-                    repository: draft.repository, title: title,
+                    repository: draft.repository, title: draft.title,
                     body: draft.bodyText, labels: draft.labelNames,
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
                     status: draft.status.isEmpty ? nil : draft.status,

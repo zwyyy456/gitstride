@@ -1676,6 +1676,9 @@ final class ProjectStore {
         targetDate: Date? = nil
     ) throws -> IssueCreation {
         let project = try editableSelectedProject()
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
+        let repository = repository.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let requestedFields = [("Status", status), ("Priority", priority)].compactMap { name, value in
             value.map { (name, $0) }
@@ -1731,6 +1734,8 @@ final class ProjectStore {
 
     func beginDraftCreation(title: String, body: String) throws {
         let project = try editableSelectedProject()
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
         let operation = PendingItemCreation(id: UUID(), projectID: project.id,
                                             title: title, kind: .draft(title: title, body: body))
         pendingCreations[operation.id] = operation
