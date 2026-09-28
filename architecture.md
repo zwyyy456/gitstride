@@ -30,7 +30,7 @@
 - Views 只持有搜索文本、输入草稿、表单校验、焦点、局部展开状态等 surface-local presentation state；不得复制可写的项目集合、当前项目或远程 mutation 状态。
 - 工作区的已保存视图只持久化用户命名、筛选身份和显示偏好；筛选与交付统计从 `ProjectStore` 的完整项目投影派生。看板隐藏列只影响看板呈现，不缩小表格或交付统计的数据范围。
 - `ProjectDisplayPreferences` 集中拥有展示偏好的键集合、项目/保存视图命名空间和复制、删除逻辑；View 通过其键继续使用 `@AppStorage`，不另建可写的偏好快照。
-- `ProjectWorkPreferences` 通过 `@AppStorage` 集中管理已保存工作视图和项目布局的编码、更新及关联展示偏好的复制、删除；看板只持有当前筛选和选择，不维护第二份持久化视图集合。
+- `ProjectWorkPreferences` 通过 `@AppStorage` 集中管理已保存工作视图、项目布局与看板隐藏列的编码、整体更新及关联展示偏好的复制、删除；普通项目和已保存视图都至少保留一个有效状态列，默认优先显示活跃工作流状态；看板只持有当前筛选和选择，不维护第二份持久化视图集合。
 - 菜单栏和看板可以采用不同的局部展示状态，但共享项目选择和远程数据。一个 surface 的出现或消失不得重建全局 store。
 - `GitHubService`、`GitHubAuthentication`、`ProjectMonitor` 和 `ProjectCache` 以 actor 隔离外部副作用或后台任务，不发布第二套可观察业务状态。
 - `GitStrideModel` 持有设备授权任务、用户可见的授权进度和连接切换；`GitHubAuthentication` 拥有单次连接的凭据生命周期。关闭设置或菜单栏不会取消设备授权，用户取消或切换连接会使其失效。

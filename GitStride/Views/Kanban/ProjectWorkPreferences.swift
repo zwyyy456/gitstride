@@ -3,10 +3,12 @@ import SwiftUI
 struct ProjectWorkPreferences: DynamicProperty {
     @AppStorage private var layoutsData: Data
     @AppStorage private var viewsData: Data
+    @AppStorage private var hiddenStatusesData: Data
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        _hiddenStatusesData = AppStorage(wrappedValue: Data(), "hiddenKanbanStatusIDsByProject", store: defaults)
         _layoutsData = AppStorage(wrappedValue: Data(), "projectLayouts", store: defaults)
         _viewsData = AppStorage(wrappedValue: Data(), "savedProjectWorkViews", store: defaults)
     }
@@ -39,8 +41,41 @@ struct ProjectWorkPreferences: DynamicProperty {
         }
     }
 
-    func setHiddenStatuses(_ ids: Set<String>, viewID: String) throws {
-        try update(viewID) { $0.hiddenStatusIDs = ids }
+    private var hiddenStatusesByProject: [String: Set<String>] {
+        (try? JSONDecoder().decode([String: Set<String>].self, from: hiddenStatusesData)) ?? [:]
+    }
+
+    func visibleStatuses(in project: Project, viewID: String?) -> [StatusOption] {
+        let hidden = viewID.flatMap { id in views.first { $0.id == id }?.hiddenStatusIDs }
+            ?? hiddenStatusesByProject[project.id]
+        if let hidden {
+            let visible = project.statusOptions.filter { !hidden.contains($0.id) }
+            if !visible.isEmpty { return visible }
+        }
+        let names: Set<String> = ["backlog", "todo", "in progress", "in review"]
+        let active = project.statusOptions.filter {
+            names.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+        }
+        return active.isEmpty ? project.statusOptions : active
+    }
+
+    func setHiddenStatuses(_ ids: Set<String>, in project: Project, viewID: String?) throws {
+        let available = Set(project.statusOptions.map(\.id))
+        guard !available.subtracting(ids).isEmpty else { return }
+        let hidden = ids.intersection(available)
+        if let viewID {
+            try update(viewID) { $0.hiddenStatusIDs = hidden }
+        } else {
+            var values = hiddenStatusesByProject
+            values[project.id] = hidden
+            hiddenStatusesData = try JSONEncoder().encode(values.mapValues { $0.sorted() })
+        }
+    }
+
+    func removeHiddenStatuses(projectID: String) throws {
+        var values = hiddenStatusesByProject
+        values[projectID] = nil
+        hiddenStatusesData = try JSONEncoder().encode(values.mapValues { $0.sorted() })
     }
 
     func setFilter(_ filter: ProjectWorkFilter, viewID: String) throws {
