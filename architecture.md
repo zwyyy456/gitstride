@@ -100,11 +100,11 @@
 
 ## 目录边界
 
-- `GitStrideApp.swift`：app 入口、scene、composition 与必要的平台适配。
+- `GitStride/App/macOS/`、`GitStride/App/iOS/`：各平台 app 入口、scene、composition、Info.plist 与平台配置。
 - `GitStride/Models/`：稳定领域模型和外部响应的 typed decoding structures。
-- `GitStride/Services/`：GitHub、项目缓存、后台监控、通知和更新等外部副作用边界。
+- `GitStride/Services/`：GitHub、项目缓存、后台监控、通知和更新等外部副作用边界；`Services/Preferences/` 拥有双端共享的项目展示偏好。
 - `GitStride/Store/`：业务状态 owner 与 app 级跨功能编排。
-- `GitStride/Views/`：SwiftUI surface、局部 presentation state 和平台交互。
+- `GitStride/Views/macOS/`、`GitStride/Views/iOS/`：平台页面、局部 presentation state 和平台交互；`GitStride/Views/Shared/` 只放跨平台使用的组件。
 - 新代码放入拥有其职责的现有目录。只有出现多个真实消费者或明确外部边界时才新增共享模块；不创建无明确所有权的 `Utilities`、`Helpers` 或 pass-through wrapper 作为默认落点。
 
 ## 规范演进
