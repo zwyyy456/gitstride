@@ -384,14 +384,30 @@ extension ProjectStoreTests {
         #expect(await runner.recordedRequests().count == 3)
     }
 
-    @Test func createdIssueIsCommittedBeforeStaleReconciliation() async throws {
+    @Test(arguments: ["Todo", "Review", nil] as [String?])
+    func createdIssueReconcilesRemoteChangesWithoutLosingItsImmediateSnapshot(status: String?) async throws {
+        var response = try #require(JSONSerialization.jsonObject(with: Data(Self.mutationItemsResponse.utf8)) as? [String: Any])
+        let data = try #require(response["data"] as? [String: Any])
+        let project = try #require(data["node"] as? [String: Any])
+        let items = try #require(project["items"] as? [String: Any])
+        var node = try #require((items["nodes"] as? [[String: Any]])?.first)
+        node["id"] = "NEW_ITEM"
+        node["isArchived"] = false
+        response = ["data": ["node": node]]
+        let directItem = String(decoding: try JSONSerialization.data(withJSONObject: response), as: UTF8.self)
+            .replacingOccurrences(of: "Todo", with: status ?? "Todo")
+            .replacingOccurrences(of: "TODO", with: status == "Review" ? "REVIEW" : "TODO")
+        let directResponse = status == nil
+            ? #"{"data":{"node":null},"errors":[{"type":"NOT_FOUND","message":"Missing item"}]}"#
+            : directItem
         var initial = Self.mutationProjectResponses
         initial[4] = Self.emptyItemsResponse
         let runner = SuspendingGitHubHTTPClient(steps: initial.map { .response($0) } + [
             .response(Self.issueRepositoryResponse), .response(Self.createdIssueResponse),
             .response(Self.missingProjectMembershipResponse),
             .response(Self.addedIssueResponse), .response(Self.graphQLSuccessResponse),
-            .suspended("reconcile", Self.mutationFieldsResponse), .response(Self.emptyItemsResponse)
+            .suspended("reconcile", Self.mutationFieldsResponse), .response(Self.emptyItemsResponse),
+            .response(directResponse), .response(Self.mutationFieldsResponse), .response(Self.emptyItemsResponse)
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -410,8 +426,13 @@ extension ProjectStoreTests {
         let release = Task { await runner.release("reconcile") }
         await store.loadProjectDetails(id: "P1")
         await release.value
-        #expect(store.selectedProject?.items.first?.id == "NEW_ITEM")
-        #expect(store.selectedProject?.items.first?.status == "Todo")
+        #expect(store.selectedProject?.items.first?.status == status)
+        #expect(store.selectedProject?.items.count == (status == nil ? 0 : 1))
+        #expect(store.operationErrorMessage == nil)
+        await store.loadProjectDetails(id: "P1")
+        #expect(store.selectedProject?.items.isEmpty == true)
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItem }.count == 1)
     }
 
     @Test func createdIssueFinishesInOriginalProjectAndRetryDoesNotRecreateIt() async throws {

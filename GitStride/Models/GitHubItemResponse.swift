@@ -14,6 +14,22 @@ extension GitHubResponse {
         }
     }
 
+    struct ProjectItemPayload: Decodable {
+        let node: Node?
+
+        struct Node: Decodable {
+            let isArchived: Bool
+            let item: ItemNode
+
+            private enum CodingKeys: CodingKey { case isArchived }
+
+            init(from decoder: Decoder) throws {
+                isArchived = try decoder.container(keyedBy: CodingKeys.self).decode(Bool.self, forKey: .isArchived)
+                item = try ItemNode(from: decoder)
+            }
+        }
+    }
+
     struct ItemNode: Decodable {
         let id: String
         let content: ItemContent?

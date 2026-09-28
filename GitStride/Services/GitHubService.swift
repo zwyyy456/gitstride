@@ -968,6 +968,17 @@ actor GitHubService {
         )
     }
 
+    func fetchProjectItem(id: String) async throws -> ProjectItem? {
+        do {
+            let payload = try await request(GraphQLQueries.projectItem, variables: ["id": id],
+                                            as: GitHubResponse.ProjectItemPayload.self)
+            guard let node = payload.node, !node.isArchived else { return nil }
+            return makeProjectItem(from: node.item)
+        } catch GitHubError.itemUnavailable {
+            return nil
+        }
+    }
+
     private func fetchProjectItemNodes(projectID: String) async throws -> [GitHubResponse.ItemNode] {
         var after: String?
         var items: [GitHubResponse.ItemNode] = []
@@ -1175,6 +1186,7 @@ actor GitHubService {
     }
 
     private func classifyGraphQLErrors(_ errors: [GitHubResponse.GraphQLIssue]) -> GitHubError {
+        if errors.allSatisfy({ $0.type == "NOT_FOUND" }) { return .itemUnavailable }
         let message = errors.map(\.message).joined(separator: "\n")
         let lowercased = message.lowercased()
 

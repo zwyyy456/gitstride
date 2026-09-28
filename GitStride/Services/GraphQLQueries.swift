@@ -269,121 +269,7 @@ enum GraphQLQueries {
                 ... on ProjectV2 {
                     items(first: 100, after: $after) {
                         nodes {
-                            id
-                            content {
-                                ... on Issue {
-                                    __typename
-                                    id
-                                    title
-                                    number
-                                    url
-                                    state
-                                    updatedAt
-                                    assignees(first: 100) {
-                                        nodes {
-                                            login
-                                            avatarUrl
-                                            name
-                                        }
-                                    }
-                                    labels(first: 100) {
-                                        nodes { id name color }
-                                    }
-                                    closedByPullRequestsReferences(first: 1) {
-                                        nodes {
-                                            number
-                                            title
-                                            url
-                                            merged
-                                            closed
-                                        }
-                                    }
-                                    subIssuesSummary {
-                                        completed
-                                        total
-                                    }
-                                    milestone { id title }
-                                    parent { id title number repository { nameWithOwner } }
-                                    issueType { id name }
-                                    issueDependenciesSummary { blockedBy blocking }
-                                }
-                                ... on PullRequest {
-                                    __typename
-                                    id
-                                    title
-                                    number
-                                    url
-                                    state
-                                    updatedAt
-                                    isDraft
-                                    mergeable
-                                    reviewDecision
-                                    reviewRequests(first: 20) {
-                                        nodes {
-                                            requestedReviewer {
-                                                ... on User { login }
-                                            }
-                                        }
-                                    }
-                                    statusCheckRollup { state }
-                                    assignees(first: 100) {
-                                        nodes {
-                                            login
-                                            avatarUrl
-                                            name
-                                        }
-                                    }
-                                    labels(first: 100) {
-                                        nodes { id name color }
-                                    }
-                                }
-                                ... on DraftIssue {
-                                    __typename
-                                    id
-                                    title
-                                    updatedAt
-                                    assignees(first: 100) {
-                                        nodes {
-                                            login
-                                            avatarUrl
-                                            name
-                                        }
-                                    }
-                                }
-                            }
-                            fieldValueByName(name: "Status") {
-                                ... on ProjectV2ItemFieldSingleSelectValue {
-                                    name
-                                    optionId
-                                }
-                            }
-                            fieldValues(first: 100) {
-                                nodes {
-                                    __typename
-                                    ... on ProjectV2ItemFieldSingleSelectValue {
-                                        name
-                                        optionId
-                                        field { ... on ProjectV2SingleSelectField { id } }
-                                    }
-                                    ... on ProjectV2ItemFieldIterationValue {
-                                        title
-                                        iterationId
-                                        field { ... on ProjectV2IterationField { id } }
-                                    }
-                                    ... on ProjectV2ItemFieldDateValue {
-                                        date
-                                        field { ... on ProjectV2Field { id } }
-                                    }
-                                    ... on ProjectV2ItemFieldNumberValue {
-                                        number
-                                        field { ... on ProjectV2Field { id } }
-                                    }
-                                    ... on ProjectV2ItemFieldTextValue {
-                                        text
-                                        field { ... on ProjectV2Field { id } }
-                                    }
-                                }
-                            }
+                            \(projectItemFields)
                         }
                         pageInfo {
                             hasNextPage
@@ -393,6 +279,135 @@ enum GraphQLQueries {
                 }
             }
         }
+        """
+
+    static let projectItem = """
+        query($id: ID!) {
+            node(id: $id) {
+                ... on ProjectV2Item {
+                    isArchived
+                    \(projectItemFields)
+                }
+            }
+        }
+        """
+
+    private static let projectItemFields = """
+            id
+            content {
+                ... on Issue {
+                    __typename
+                    id
+                    title
+                    number
+                    url
+                    state
+                    updatedAt
+                    assignees(first: 100) {
+                        nodes {
+                            login
+                            avatarUrl
+                            name
+                        }
+                    }
+                    labels(first: 100) {
+                        nodes { id name color }
+                    }
+                    closedByPullRequestsReferences(first: 1) {
+                        nodes {
+                            number
+                            title
+                            url
+                            merged
+                            closed
+                        }
+                    }
+                    subIssuesSummary {
+                        completed
+                        total
+                    }
+                    milestone { id title }
+                    parent { id title number repository { nameWithOwner } }
+                    issueType { id name }
+                    issueDependenciesSummary { blockedBy blocking }
+                }
+                ... on PullRequest {
+                    __typename
+                    id
+                    title
+                    number
+                    url
+                    state
+                    updatedAt
+                    isDraft
+                    mergeable
+                    reviewDecision
+                    reviewRequests(first: 20) {
+                        nodes {
+                            requestedReviewer {
+                                ... on User { login }
+                            }
+                        }
+                    }
+                    statusCheckRollup { state }
+                    assignees(first: 100) {
+                        nodes {
+                            login
+                            avatarUrl
+                            name
+                        }
+                    }
+                    labels(first: 100) {
+                        nodes { id name color }
+                    }
+                }
+                ... on DraftIssue {
+                    __typename
+                    id
+                    title
+                    updatedAt
+                    assignees(first: 100) {
+                        nodes {
+                            login
+                            avatarUrl
+                            name
+                        }
+                    }
+                }
+            }
+            fieldValueByName(name: "Status") {
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                    name
+                    optionId
+                }
+            }
+            fieldValues(first: 100) {
+                nodes {
+                    __typename
+                    ... on ProjectV2ItemFieldSingleSelectValue {
+                        name
+                        optionId
+                        field { ... on ProjectV2SingleSelectField { id } }
+                    }
+                    ... on ProjectV2ItemFieldIterationValue {
+                        title
+                        iterationId
+                        field { ... on ProjectV2IterationField { id } }
+                    }
+                    ... on ProjectV2ItemFieldDateValue {
+                        date
+                        field { ... on ProjectV2Field { id } }
+                    }
+                    ... on ProjectV2ItemFieldNumberValue {
+                        number
+                        field { ... on ProjectV2Field { id } }
+                    }
+                    ... on ProjectV2ItemFieldTextValue {
+                        text
+                        field { ... on ProjectV2Field { id } }
+                    }
+                }
+            }
         """
 
     static let itemDetail = """
