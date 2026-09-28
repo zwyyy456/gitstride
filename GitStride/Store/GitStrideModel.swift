@@ -273,6 +273,7 @@ final class GitStrideModel {
         mutedProjectIDs.remove(project.id)
         UserDefaults.standard.set(Array(mutedProjectIDs), forKey: "mutedProjectIDs")
         if monitoringEnabled { await restartMonitoring() }
+        try ProjectWorkPreferences().removeHiddenStatuses(projectID: project.id)
     }
 
     func toggleFollowing(_ project: Project) async {

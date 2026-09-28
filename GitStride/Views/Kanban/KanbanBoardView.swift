@@ -323,24 +323,16 @@ struct KanbanBoardView: View {
     }
 
     private func visibleStatuses(in project: Project) -> [StatusOption] {
-        guard let view = selectedSavedView else { return store.visibleKanbanStatuses(in: project) }
-        return project.statusOptions.filter { !view.hiddenStatusIDs.contains($0.id) }
+        workPreferences.visibleStatuses(in: project, viewID: selectedViewID)
     }
 
     private func visibleStatusBinding(_ project: Project) -> Binding<Set<String>> {
         Binding(get: { Set(visibleStatuses(in: project).map(\.id)) }, set: { ids in
-            if let selectedViewID {
-                do {
-                    try workPreferences.setHiddenStatuses(
-                        Set(project.statusOptions.map(\.id)).subtracting(ids), viewID: selectedViewID
-                    )
-                } catch { report(error) }
-            } else {
-                store.showAllKanbanStatuses(in: project)
-                for status in project.statusOptions where !ids.contains(status.id) {
-                    store.setKanbanStatus(status, visible: false, in: project)
-                }
-            }
+            do {
+                try workPreferences.setHiddenStatuses(
+                    Set(project.statusOptions.map(\.id)).subtracting(ids), in: project, viewID: selectedViewID
+                )
+            } catch { report(error) }
         })
     }
 

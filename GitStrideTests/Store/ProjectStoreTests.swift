@@ -189,41 +189,6 @@ struct ProjectStoreTests {
         #expect(project.id == "P2")
     }
 
-    @Test func kanbanDefaultsToTheActiveWorkflowStatusesInPreferredOrder() {
-        let runner = FixtureGitHubHTTPClient(responses: [])
-        let (store, cleanup) = makeStore(runner: runner)
-        defer { cleanup() }
-        let project = Self.kanbanProject()
-
-        #expect(store.visibleKanbanStatuses(in: project).map(\.name) == [
-            "In Progress",
-            "In Review",
-            "Todo",
-            "Backlog"
-        ])
-        #expect(project.statusOptions.map(\.name) == [
-            "In Progress", "In Review", "Todo", "Backlog", "Done", "Canceled"
-        ])
-    }
-
-    @Test func kanbanVisibilityCanShowAllButCannotHideTheFinalColumn() throws {
-        let runner = FixtureGitHubHTTPClient(responses: [])
-        let (store, cleanup) = makeStore(runner: runner)
-        defer { cleanup() }
-        let project = Self.kanbanProject()
-
-        store.showAllKanbanStatuses(in: project)
-        #expect(store.visibleKanbanStatuses(in: project).count == project.statusOptions.count)
-
-        for status in project.statusOptions.dropLast() {
-            store.setKanbanStatus(status, visible: false, in: project)
-        }
-        let finalStatus = try #require(project.statusOptions.last)
-        store.setKanbanStatus(finalStatus, visible: false, in: project)
-
-        #expect(store.visibleKanbanStatuses(in: project) == [finalStatus])
-    }
-
     @Test func loadedEmptyProjectIsNotFetchedAgainWhenReselected() async throws {
         let runner = FixtureGitHubHTTPClient(responses: Self.emptyProjectResponses)
         let (store, cleanup) = makeStore(runner: runner)

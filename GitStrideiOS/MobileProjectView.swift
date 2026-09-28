@@ -34,10 +34,7 @@ struct MobileProjectView: View {
     }
     private var statuses: [StatusOption] {
         guard let project else { return [] }
-        if let savedView {
-            return project.statusOptions.filter { !savedView.hiddenStatusIDs.contains($0.id) }
-        }
-        return store.visibleKanbanStatuses(in: project)
+        return preferences.visibleStatuses(in: project, viewID: selectedViewID)
     }
 
     var body: some View {
@@ -117,20 +114,13 @@ struct MobileProjectView: View {
                                     isOn: Binding(
                                         get: { statuses.contains { $0.id == status.id } },
                                         set: { visible in
-                                            if let savedView {
-                                                var hidden = savedView.hiddenStatusIDs
-                                                if visible {
-                                                    hidden.remove(status.id)
-                                                } else {
-                                                    hidden.insert(status.id)
-                                                }
-                                                change {
-                                                    try preferences.setHiddenStatuses(
-                                                        hidden, viewID: savedView.id)
-                                                }
-                                            } else {
-                                                store.setKanbanStatus(
-                                                    status, visible: visible, in: project)
+                                            var ids = Set(statuses.map(\.id))
+                                            if visible { ids.insert(status.id) }
+                                            else { ids.remove(status.id) }
+                                            change {
+                                                try preferences.setHiddenStatuses(
+                                                    Set(project.statusOptions.map(\.id)).subtracting(ids),
+                                                    in: project, viewID: selectedViewID)
                                             }
                                         }
                                     ))
