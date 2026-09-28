@@ -108,7 +108,7 @@ struct GitHubAuthenticationTests {
         let http = SuspendingGitHubHTTPClient(steps: [.suspended("refresh", Self.refreshed), .response(Self.identity)], headers: Self.headers)
         let auth = GitHubAuthentication(method: .oauth, http: http, clientID: "public-client", keychain: keychain)
         let first = Task { try await auth.accessToken() }
-        await http.waitUntilSuspended("refresh")
+        try await http.waitUntilSuspended("refresh")
         let second = Task { try await auth.accessToken() }
         await http.release("refresh")
         #expect(try await first.value == "new-access")
@@ -126,7 +126,7 @@ struct GitHubAuthenticationTests {
         let http = SuspendingGitHubHTTPClient(steps: [.suspended("refresh", Self.refreshed)], headers: Self.headers)
         let auth = GitHubAuthentication(method: .oauth, http: http, clientID: "public-client", keychain: keychain)
         let request = Task { try await auth.accessToken() }
-        await http.waitUntilSuspended("refresh")
+        try await http.waitUntilSuspended("refresh")
         await auth.invalidate()
         try await auth.deleteCredential()
         await http.release("refresh")
@@ -155,7 +155,7 @@ struct GitHubAuthenticationTests {
         let http = SuspendingGitHubHTTPClient(steps: [.suspended("read", response)])
         let service = GitHubService(http: http)
         let request = Task { try await service.fetchRepositories(owner: ProjectOwner(id: "USER", login: "example", name: nil, kind: .user)) }
-        await http.waitUntilSuspended("read")
+        try await http.waitUntilSuspended("read")
         await service.invalidate()
         await http.release("read")
         await #expect(throws: CancellationError.self) { try await request.value }

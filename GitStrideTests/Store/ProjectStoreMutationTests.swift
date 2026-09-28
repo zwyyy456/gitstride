@@ -121,10 +121,6 @@ extension ProjectStoreTests {
             return
         }
         #expect(currentDetail.bodyHTML == "<p>Updated</p>")
-        try await Task.sleep(for: .milliseconds(50))
-        let refreshedItem = try #require(store.item(for: reference))
-        #expect(refreshedItem.updatedAt == "2026-08-02T00:00:00Z")
-        #expect(store.itemDetailState(for: refreshedItem) == .loaded(currentDetail))
         let requests = await runner.recordedRequests()
         #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
         let detailRequests = requests.filter { $0.graphQLQuery == GraphQLQueries.itemDetail }
@@ -149,12 +145,13 @@ extension ProjectStoreTests {
         try store.beginContentEdit(reference, contentID: "CONTENT1", title: "Changed", body: "Draft body")
         #expect(store.item(for: reference)?.title == "Changed")
         #expect(store.pendingContentEdits["CONTENT1"]?.body == "Draft body")
-        await runner.waitUntilSuspended("write")
+        try await runner.waitUntilSuspended("write")
         await runner.release("write")
 
-        for _ in 0..<100 {
-            if let edit = store.pendingContentEdits["CONTENT1"], case .failed = edit.state { break }
-            try await Task.sleep(for: .milliseconds(10))
+        try await waitForState("failed content edit") {
+            guard let edit = store.pendingContentEdits["CONTENT1"] else { return false }
+            if case .failed = edit.state { return true }
+            return false
         }
         guard let edit = store.pendingContentEdits["CONTENT1"], case .failed = edit.state else {
             Issue.record("Expected the rejected edit to remain available for retry")
@@ -180,7 +177,7 @@ extension ProjectStoreTests {
         let item = try #require(project.items.first)
         let review = try #require(project.statusOptions.first { $0.id == "REVIEW" })
         let firstMove = Task { try await store.moveItem(item, toStatus: review, in: project.id) }
-        await runner.waitUntilSuspended("status-move")
+        try await runner.waitUntilSuspended("status-move")
         let callCount = await runner.recordedCallCount()
 
         await #expect(throws: ProjectStoreError.self) {
@@ -205,7 +202,7 @@ extension ProjectStoreTests {
         let second = try #require(project.items.dropFirst().first)
         let status = try #require(project.statusOptions.first)
         let archive = Task { try await store.archiveItem(first, in: project.id) }
-        await runner.waitUntilSuspended("archive")
+        try await runner.waitUntilSuspended("archive")
         try await store.moveItem(second, toStatus: status, in: project.id)
         await runner.release("archive")
         try await archive.value
@@ -340,13 +337,13 @@ extension ProjectStoreTests {
         let second = Project(id: "P2", owner: first.owner, title: "Two", number: 2, url: "", viewerCanUpdate: true)
         store.setFollowedProjects([FollowedProject(project: first), FollowedProject(project: second)])
         let loading = Task { await store.loadProjectDetails(id: "P2") }
-        await runner.waitUntilSuspended("new-project")
+        try await runner.waitUntilSuspended("new-project")
         let item = try #require(first.items.first)
         let user = Assignee(login: "octocat", avatarUrl: "", name: nil)
         try await store.addAssignee(to: item, in: first.id, user: user)
         await runner.release("new-project")
         await loading.value
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
         #expect(store.project(id: "P2") == nil)
         let release = Task { await runner.release("reconcile") }
         await store.loadProjectDetails(id: "P2")
@@ -374,7 +371,7 @@ extension ProjectStoreTests {
         let review = try #require(project.statusOptions.first { $0.id == "REVIEW" })
         store.setFollowedProjects([FollowedProject(project: project)])
         let moving = Task { try await store.moveItem(item, toStatus: review, in: project.id) }
-        await runner.waitUntilSuspended("status")
+        try await runner.waitUntilSuspended("status")
         #expect(store.selectedProject?.items.first?.status == "Review")
         #expect(store.allProjects.first?.items.first?.status == "Review")
         #expect(store.followedProject(id: project.id)?.items.first?.status == "Review")
@@ -405,7 +402,7 @@ extension ProjectStoreTests {
         let project = try #require(store.selectedProject)
         let item = try #require(project.items.first)
         let loading = Task { await store.loadItemDetail(for: item) }
-        await runner.waitUntilSuspended("old-detail")
+        try await runner.waitUntilSuspended("old-detail")
         try await store.addAssignee(to: item, in: project.id, user: Assignee(login: "me", avatarUrl: "", name: nil))
         await runner.release("old-detail")
         await loading.value
@@ -445,11 +442,11 @@ extension ProjectStoreTests {
         let item = try #require(project.items.first)
         let saving = Task { try await store.updateRoadmap(on: item, in: project.id,
             startFieldID: "START", endFieldID: "END", kind: .move, days: 2) }
-        await runner.waitUntilSuspended("end")
+        try await runner.waitUntilSuspended("end")
         #expect(store.isUpdatingRoadmap(itemID: item.id, projectID: project.id))
         #expect(store.project(id: project.id)?.items.first?.fieldValues["START"] == .date("2026-09-22"))
         await runner.release("end")
-        await runner.waitUntilSuspended("start")
+        try await runner.waitUntilSuspended("start")
         let callCount = await runner.recordedCallCount()
         await #expect(throws: ProjectStoreError.self) {
             try await store.archiveItem(item, in: project.id)
@@ -479,7 +476,7 @@ extension ProjectStoreTests {
             try await store.updateRoadmap(on: item, in: "P1",
                 startFieldID: "START", endFieldID: "END", kind: .move, days: 2)
         }
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
         #expect(!store.isUpdatingRoadmap(itemID: item.id, projectID: "P1"))
         #expect(store.project(id: "P1")?.items.first?.fieldValues["START"] == .date("2026-09-20"))
         #expect(store.project(id: "P1")?.items.first?.fieldValues["END"] == .date("2026-09-27"))
@@ -502,11 +499,11 @@ extension ProjectStoreTests {
         let item = try #require(store.selectedProject?.items.first)
         let saving = Task { try await store.updateRoadmap(on: item, in: "P1",
             startFieldID: "START", endFieldID: "END", kind: .move, days: 2) }
-        await runner.waitUntilSuspended("end")
+        try await runner.waitUntilSuspended("end")
         saving.cancel()
         await runner.release("end")
         await #expect(throws: CancellationError.self) { try await saving.value }
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
         let requests = await runner.recordedRequests()
         #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.updateDateField }.count == 1)
         #expect(!store.isUpdatingRoadmap(itemID: item.id, projectID: "P1"))

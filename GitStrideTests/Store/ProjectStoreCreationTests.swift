@@ -245,12 +245,9 @@ extension ProjectStoreTests {
         try store.beginIssueCreation(creation)
         #expect(store.pendingCreationList.map(\.title) == ["New"])
         #expect(store.selectedProject?.items.contains { $0.id.hasPrefix("pending:") && $0.title == "New" } == true)
-        await runner.waitUntilSuspended("create")
+        try await runner.waitUntilSuspended("create")
         await runner.release("create")
-        for _ in 0..<100 {
-            if store.pendingCreationList.isEmpty { break }
-            try await Task.sleep(for: .milliseconds(10))
-        }
+        try await waitForState("completed creation") { store.pendingCreationList.isEmpty }
         #expect(store.pendingCreationList.isEmpty)
         #expect(store.selectedProject?.items.contains { $0.id.hasPrefix("pending:") } == false)
         #expect(store.selectedProject?.items.contains { $0.id == "NEW_ITEM" } == true)
@@ -416,7 +413,7 @@ extension ProjectStoreTests {
                                                        labels: [], assignees: [], status: "Todo")
 
         try await store.resumeIssueCreation(operation)
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
 
         #expect(operation.phase == .completed(issueURL: "https://github.com/acme/app/issues/1"))
         #expect(operation.errorMessage == nil)
@@ -452,7 +449,7 @@ extension ProjectStoreTests {
         let operation = try store.prepareIssueCreation(repository: "acme/app", title: "New", body: "",
                                                        labels: [], assignees: [], status: "Review")
         let creation = Task { try await store.resumeIssueCreation(operation) }
-        await runner.waitUntilSuspended("create")
+        try await runner.waitUntilSuspended("create")
         do {
             try await store.resumeIssueCreation(operation)
             Issue.record("Expected a concurrent submission to be rejected")
@@ -596,7 +593,7 @@ extension ProjectStoreTests {
             #expect(!operation.canResume)
             #expect(operation.errorMessage?.contains(GitHubError.issueCreationUnconfirmed.localizedDescription) == true)
         }
-        await runner.waitUntilSuspended("reconcile")
+        try await runner.waitUntilSuspended("reconcile")
         let release = Task { await runner.release("reconcile") }
         await store.loadProjectDetails(id: "P1")
         await release.value
