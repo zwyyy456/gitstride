@@ -11,9 +11,14 @@ struct ItemMilestoneSection: View {
         LabeledContent(String(localized: "Milestone")) {
             VStack(alignment: .trailing, spacing: 6) {
                 switch store.itemDetailState(for: item) {
-                case .idle, .loading:
-                    ProgressView()
-                        .controlSize(.small)
+                case .idle:
+                    Text(item.milestone?.title ?? String(localized: "No milestone"))
+
+                case .loading:
+                    HStack {
+                        Text(item.milestone?.title ?? String(localized: "No milestone"))
+                        ProgressView().controlSize(.small)
+                    }
 
                 case .loaded(let detail):
                     if let metadata = detail.issueMetadata {
@@ -48,9 +53,19 @@ struct ItemMilestoneSection: View {
     @ViewBuilder
     private func milestoneEditor(metadata: IssueMetadata, item: ProjectItem) -> some View {
         switch store.milestoneState(for: metadata.repository) {
-        case .idle, .loading:
-            ProgressView()
-                .controlSize(.small)
+        case .idle:
+            Button {
+                Task { await store.loadMilestones(repository: metadata.repository) }
+            } label: {
+                Text(metadata.milestone?.title ?? String(localized: "No milestone"))
+            }
+            .buttonStyle(.borderless)
+
+        case .loading:
+            HStack {
+                Text(metadata.milestone?.title ?? String(localized: "No milestone"))
+                ProgressView().controlSize(.small)
+            }
 
         case .loaded(let milestones):
             Menu {

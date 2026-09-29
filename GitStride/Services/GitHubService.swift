@@ -604,11 +604,11 @@ actor GitHubService {
     }
 
     func addAssignee(issueUrl: String, userLogin: String) async throws {
-        try await editIssue(url: issueUrl, suffix: "assignees", method: "POST", body: ["assignees": [userLogin]])
+        _ = try await editIssue(url: issueUrl, suffix: "assignees", method: "POST", body: ["assignees": [userLogin]])
     }
 
     func removeAssignee(issueUrl: String, userLogin: String) async throws {
-        try await editIssue(url: issueUrl, suffix: "assignees", method: "DELETE", body: ["assignees": [userLogin]])
+        _ = try await editIssue(url: issueUrl, suffix: "assignees", method: "DELETE", body: ["assignees": [userLogin]])
     }
 
     func repositoryLabels(issueURL: String) async throws -> [RepositoryLabel] {
@@ -632,16 +632,18 @@ actor GitHubService {
         return labels
     }
 
-    func addLabel(issueUrl: String, label: String) async throws {
-        try await editIssue(url: issueUrl, suffix: "labels", method: "POST", body: ["labels": [label]])
+    func addLabel(issueUrl: String, label: String) async throws -> [IssueLabel] {
+        let data = try await editIssue(url: issueUrl, suffix: "labels", method: "POST", body: ["labels": [label]])
+        return try decoder.decode([RESTIssueLabel].self, from: data).map { IssueLabel(id: $0.node_id, name: $0.name, color: $0.color) }
     }
 
-    func removeLabel(issueUrl: String, label: String) async throws {
-        try await editIssue(url: issueUrl, suffix: "labels", component: label, method: "DELETE")
+    func removeLabel(issueUrl: String, label: String) async throws -> [IssueLabel] {
+        let data = try await editIssue(url: issueUrl, suffix: "labels", component: label, method: "DELETE")
+        return try decoder.decode([RESTIssueLabel].self, from: data).map { IssueLabel(id: $0.node_id, name: $0.name, color: $0.color) }
     }
 
     private func editIssue(url: String, suffix: String, component: String? = nil,
-                           method: String, body: [String: [String]]? = nil) async throws {
+                           method: String, body: [String: [String]]? = nil) async throws -> Data {
         guard let address = GitHubItemAddress(url) else { throw GitHubError.invalidItemURL }
         var endpoint = URL(string: "https://api.github.com/repos")!
             .appendingPathComponent(address.owner).appendingPathComponent(address.repository)
@@ -652,7 +654,7 @@ actor GitHubService {
             endpoint = URL(string: endpoint.absoluteString + "/" + component.addingPercentEncoding(withAllowedCharacters: allowed)!)!
         }
         let data = try body.map { try JSONEncoder().encode($0) }
-        _ = try await send(url: endpoint, method: method, body: data, allowsAuthenticationRetry: false)
+        return try await send(url: endpoint, method: method, body: data, allowsAuthenticationRetry: false)
     }
 
     func createDraftIssue(projectId: String, title: String, body: String) async throws -> String {

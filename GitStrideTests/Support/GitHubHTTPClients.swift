@@ -52,6 +52,7 @@ actor FixtureGitHubHTTPClient: GitHubHTTPClient {
 
 enum SuspendingHTTPStep: Sendable {
     case response(String)
+    case httpFailure(Int)
     case suspended(String, String)
     case failure(URLError.Code)
     case cancelled
@@ -71,6 +72,8 @@ actor SuspendingGitHubHTTPClient: GitHubHTTPClient {
         calls.append(request)
         let body: String
         switch steps.removeFirst() {
+        case .httpFailure(let status):
+            return (Data(), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: headers)!)
         case .failure(let code): throw URLError(code)
         case .cancelled: throw CancellationError()
         case .response(let response): body = response
