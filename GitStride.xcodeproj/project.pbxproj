@@ -1282,6 +1282,7 @@
 				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
 				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
 				INFOPLIST_FILE = "GitStride/App/macOS/Info-AppStore.plist";
+				"INFOPLIST_KEY_CFBundleDisplayName[sdk=macosx*]" = GitStride;
 				"INFOPLIST_FILE[sdk=iphone*]" = GitStride/App/iOS/Info.plist;
 				"INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.developer-tools";
 				"INFOPLIST_KEY_NSHumanReadableCopyright[sdk=macosx*]" = "";
@@ -1330,6 +1331,7 @@
 				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
 				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
 				INFOPLIST_FILE = "GitStride/App/macOS/Info-AppStore.plist";
+				"INFOPLIST_KEY_CFBundleDisplayName[sdk=macosx*]" = GitStride;
 				"INFOPLIST_FILE[sdk=iphone*]" = GitStride/App/iOS/Info.plist;
 				"INFOPLIST_KEY_LSApplicationCategoryType[sdk=macosx*]" = "public.app-category.developer-tools";
 				"INFOPLIST_KEY_NSHumanReadableCopyright[sdk=macosx*]" = "";
