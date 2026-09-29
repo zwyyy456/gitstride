@@ -10,3 +10,6 @@ GitStride 迹程把 GitHub Projects 带到原生 Mac 工作区。你可以从菜
 需要 GitHub.com 账号。通过 GitHub 设备验证码登录。App Store 版本使用 OAuth，不需要 GitHub CLI。PR 自动化需要另行授权，可不启用。
 
 GitStride 是独立软件，与 GitHub, Inc. 无关联关系。
+
+隐私政策：https://gitstride.hyperseek.tech/zh-cn/privacy
+使用条款（EULA）：https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
