@@ -15,36 +15,31 @@ struct ItemAssigneesSection: View {
     @State private var showsAssigneePicker = false
 
     var body: some View {
-        LabeledContent(String(localized: "Assignees")) {
-            VStack(alignment: .trailing, spacing: 8) {
-                if item.assignees.isEmpty {
-                    if !canEdit || item.contentType == .draftIssue {
-                        Text("No assignees").foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Assignees")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if canEdit, item.contentType != .draftIssue {
+                    Button("Add Assignee…", action: showAssigneePicker)
+                    .buttonStyle(.borderless)
+                    .disabled(isSaving)
+                    .popover(isPresented: $showsAssigneePicker) {
+                        assigneePicker(item)
                     }
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                if item.assignees.isEmpty {
+                    Text("No assignees").foregroundStyle(.secondary)
                 } else {
-                    ForEach(item.assignees) { assignee in
-                        HStack {
-                            AsyncImage(url: URL(string: assignee.avatarUrl)) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Circle().fill(.secondary.opacity(0.2))
-                            }
-                            .frame(width: 20, height: 20)
-                            .clipShape(Circle())
-
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(assignee.name ?? assignee.login).fixedSize(horizontal: false, vertical: true)
-                                if assignee.name != nil {
-                                    Text("@\(assignee.login)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            if canEdit {
-                                Button {
+                    ItemPropertyTokenLayout {
+                        ForEach(item.assignees) { assignee in
+                            ItemPropertyToken(
+                                title: assignee.name ?? assignee.login,
+                                removeLabel: String(localized: "Remove assignee") + ": " + assignee.login,
+                                canRemove: canEdit,
+                                remove: {
                                     guard !isSaving else { return }
                                     localError = nil
                                     isSaving = true
@@ -60,33 +55,26 @@ struct ItemAssigneesSection: View {
                                             report(error)
                                         }
                                     }
-                                } label: {
-                                    Image(systemName: "xmark")
                                 }
-                                .buttonStyle(.borderless)
-                                .help("Remove assignee")
-                                .accessibilityLabel("Remove assignee")
-                                .disabled(isSaving)
+                            ) {
+                                AsyncImage(url: URL(string: assignee.avatarUrl)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    Circle().fill(.secondary.opacity(0.2))
+                                }
+                                .frame(width: 18, height: 18)
+                                .clipShape(Circle())
                             }
+                            .disabled(isSaving)
                         }
                     }
                 }
 
-                if canEdit, item.contentType != .draftIssue {
-                    Button(
-                        item.assignees.isEmpty ? String(localized: "Unassigned…") : String(localized: "Add Assignee…"),
-                        action: showAssigneePicker
-                    )
-                    .buttonStyle(.borderless)
-                    .disabled(isSaving)
-                    .popover(isPresented: $showsAssigneePicker) {
-                        assigneePicker(item)
-                    }
-                }
                 if isSaving { ProgressView().controlSize(.mini).accessibilityLabel("Saving field") }
                 if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func assigneePicker(_ item: ProjectItem) -> some View {
@@ -123,12 +111,14 @@ struct ItemAssigneesSection: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(userResults) { user in
-                            HStack {
+                            HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(user.name ?? user.login)
-                                    Text("@\(user.login)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    if let name = user.name, name != user.login {
+                                        Text("@\(user.login)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                                 Spacer()
                                 Button("Add") {
