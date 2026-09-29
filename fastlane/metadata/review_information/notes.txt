@@ -1,1 +1,28 @@
-GitStride requires a GitHub.com account with access to at least one Project. In Settings > GitHub, choose Log In to GitHub, copy the displayed device code, open GitHub's device activation page, and approve the requested permissions. The App Store build uses OAuth only; it does not invoke GitHub CLI or include Sparkle. PR automation is optional and has a separate authorization flow. If a reviewer account has no Projects, create a personal Project on GitHub before testing the workspace.
+GitStride for macOS is a native workspace for GitHub Projects. It requires macOS 14 or later and a GitHub.com account. Use the dedicated review account supplied in the App Review sign-in fields. No new account or Project needs to be created.
+
+SIGN IN
+1. Open GitStride, then Settings > GitHub > Account > Log In to GitHub.
+2. Copy the device code shown by the app and open GitHub's device activation page as prompted. Sign in with the supplied review account, enter the device code, and approve the requested GitHub permissions. If your browser is already signed into another GitHub account, use a separate browser profile for the review account.
+3. Return to GitStride and allow the project list to load. The App Store build uses OAuth Device Flow; GitHub CLI is not required.
+
+PREPARED TEST DATA
+Owner: zwyyy000
+Project: gitstride-acceptance
+Project URL: https://github.com/users/zwyyy000/projects/1
+Repository: zwyyy000/gitstride-acceptance
+Issue #1: issue 1 gitstride-acceptance
+Issue URL: https://github.com/zwyyy000/gitstride-acceptance/issues/1
+The review account owns the repository and Project. The Project is private and accessible with that account. Issue #1 is already in the Project. Its initial state is Closed, with Project Status Done, and it has a linked merged pull request (#2). This is existing sample data, not a loading error. Reviewers may edit the sample item.
+
+CORE REVIEW STEPS
+1. In the workspace sidebar, select the personal owner zwyyy000 and Project gitstride-acceptance. If using the menu bar popover, choose Open Kanban Board to open the workspace.
+2. Select Board and find Issue #1 in Done. Clear any active search or filters if needed. Switch to Table to view the same item as a row.
+3. Open the item's context menu and choose Show Details to inspect its title and linked GitHub issue. Choose Open in Browser to compare it with GitHub.
+4. In Board, use the item's context menu > Move To > In Progress. The item should move to that status. Reload the Project page in GitHub to confirm the Status change was saved. Move it back to Done after testing. Project Status is separate from the issue's Open/Closed state.
+5. Search for gitstride-acceptance in the project view to find the sample item, then clear the search.
+
+OPTIONAL SUPPORT PURCHASE
+Open the GitStride application menu > About GitStride. The Support GitStride button shows the localized StoreKit price. Product ID: tech.hyperseek.gitstride.support. This is an optional, repeatable consumable support purchase. All features remain free before and after purchase; it unlocks no content or functionality and is not a subscription.
+
+OPTIONAL PULL REQUEST AUTOMATION
+Settings includes Pull Request Automation and a Set Up Automation flow with separate GitHub authorization. It is not needed for the core review steps above. The sample issue has an already-merged PR #2 for inspecting its relationship; it will not generate a new PR event. Testing new automation events requires completing that separate setup and creating a new linked pull request in the sample repository.
