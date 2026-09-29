@@ -3,6 +3,67 @@ import Testing
 @testable import GitStride
 
 extension ProjectStoreTests {
+    @Test func relationshipReadMergesOnlyRelationshipFields() async throws {
+        let detail = Self.itemDetailResponse(body: "Keep this body")
+            .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
+        let related = #"{"id":"CONTENT2","number":2,"title":"Dependency","url":"https://github.com/acme/repo/issues/2","state":"OPEN","repository":{"nameWithOwner":"acme/repo"}}"#
+        let updated = Self.itemDetailResponse(body: "Unrelated remote body")
+            .replacingOccurrences(of: #""blockedBy":{"nodes":[]}"#, with: #""blockedBy":{"nodes":[\#(related)]}"#)
+        let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
+            detail, Self.graphQLSuccessResponse, updated,
+            Self.itemDetailResponse(body: "Dependency body").replacingOccurrences(of: "CONTENT1", with: "CONTENT2")
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let item = try #require(store.selectedProject?.items.first)
+        await store.loadItemDetail(for: item)
+        let target = GitHubItemCandidate(id: "CONTENT2", contentType: .issue, title: "Dependency",
+                                        number: 2, url: "https://github.com/acme/repo/issues/2", repository: "acme/repo")
+        try await store.addRelation(.blockedBy, target: target, on: item)
+        guard case .loaded(let current) = store.itemDetailState(for: item) else {
+            Issue.record("Relationship edits must keep details available")
+            return
+        }
+        #expect(current.bodyHTML == "Keep this body")
+        #expect(current.issueMetadata?.blockedBy.map(\.id) == ["CONTENT2"])
+        #expect(store.selectedProject?.items.first?.engineeringSignals?.blockedByCount == 1)
+        #expect(await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
+    }
+
+    @Test func pendingContentEditPreservesInspectorMetadataUntilConfirmation() async throws {
+        let detail = Self.itemDetailResponse(body: "Original")
+            .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
+        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","bodyHTML":"<p>Updated</p>","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(detail), .suspended("content-write", mutation)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let item = try #require(store.item(for: reference))
+        await store.loadItemDetail(for: item)
+        let initialState = store.itemDetailState(for: item)
+        try store.beginContentEdit(reference, contentID: "CONTENT1", title: "Changed", body: "Updated")
+        try await runner.waitUntilSuspended("content-write")
+        let pendingItem = try #require(store.item(for: reference))
+        #expect(store.itemDetailState(for: pendingItem) == initialState)
+
+        await runner.release("content-write")
+        try await waitForState("confirmed content edit") { store.pendingContentEdits["CONTENT1"] == nil }
+        let currentItem = try #require(store.item(for: reference))
+        guard case .loaded(let restored) = store.itemDetailState(for: currentItem) else {
+            Issue.record("Confirmed content edits must keep inspector details loaded")
+            return
+        }
+        #expect(restored.bodyHTML == "<p>Updated</p>")
+        let metadata = try #require(restored.issueMetadata)
+        #expect(metadata.milestone == nil)
+        #expect(metadata.parent == nil && metadata.subIssues.isEmpty && metadata.blockedBy.isEmpty && metadata.blocking.isEmpty)
+        #expect(await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.itemDetail }.count == 1)
+    }
+
     @Test func paletteStatusTargetRequiresTheOriginalMembershipAndCurrentOption() async throws {
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses)
         let (store, cleanup) = makeStore(runner: runner)
@@ -60,7 +121,7 @@ extension ProjectStoreTests {
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
         let updatedItems = Self.mutationItemsResponse.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
-            detail, Self.graphQLFailureResponse, detail,
+            detail, Self.graphQLFailureResponse,
             #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","bodyHTML":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#,
             Self.mutationFieldsResponse, updatedItems,
             detail.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
@@ -211,16 +272,11 @@ extension ProjectStoreTests {
 
     @Test func contentChangesReachEveryProjectAndKeepProjectStatusIndependent() async throws {
         let fields = Self.mutationFieldsResponse
-        let items = Self.mutationItemsResponse.replacingOccurrences(
-            of: "\"labels\":{\"nodes\":[]}",
-            with: "\"labels\":{\"nodes\":[{\"id\":\"L1\",\"name\":\"bug\",\"color\":\"ffffff\"}]}"
-        )
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
             fields, Self.mutationItemsResponse, fields,
             Self.mutationItemsResponse.replacingOccurrences(of: "Todo", with: "Review")
                 .replacingOccurrences(of: "TODO", with: "REVIEW"),
-            "", "", fields, items, fields, items.replacingOccurrences(of: "Todo", with: "Review")
-                .replacingOccurrences(of: "TODO", with: "REVIEW")
+            "", #"[{"node_id":"L1","name":"bug","color":"ffffff"}]"#
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -248,8 +304,6 @@ extension ProjectStoreTests {
     @Test(arguments: [true, false])
     func milestoneChangesUpdateDeliveryInEveryLoadedProject(_ clearsMilestone: Bool) async throws {
         let milestoneA = #"{"id":"M1","number":1,"title":"Milestone A","dueOn":null,"state":"OPEN","progressPercentage":100}"#
-        let milestoneB = #"{"id":"M2","number":2,"title":"Milestone B","dueOn":null,"state":"OPEN","progressPercentage":100}"#
-        let updatedMilestone = clearsMilestone ? "null" : milestoneB
         func itemsResponse(milestone: String, secondProject: Bool = false) -> String {
             let response = Self.mutationItemsResponse.replacingOccurrences(
                 of: #""state":"OPEN""#,
@@ -274,10 +328,7 @@ extension ProjectStoreTests {
             fields, itemsResponse(milestone: milestoneA),
             fields, itemsResponse(milestone: milestoneA, secondProject: true),
             detailResponse(milestone: milestoneA),
-            #"{"data":{"updateIssue":{"issue":{"id":"CONTENT1"}}}}"#,
-            fields, itemsResponse(milestone: updatedMilestone),
-            fields, itemsResponse(milestone: updatedMilestone, secondProject: true),
-            detailResponse(milestone: updatedMilestone)
+            #"{"data":{"updateIssue":{"issue":{"id":"CONTENT1"}}}}"#
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -391,10 +442,9 @@ extension ProjectStoreTests {
         #expect(store.selectedProject?.items.first?.assignees == [user])
     }
 
-    @Test func contentMutationInvalidatesAnInFlightDetailRead() async throws {
+    @Test func assigneeMutationDoesNotInvalidateAnUnrelatedDetailRead() async throws {
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
-            .suspended("old-detail", Self.itemDetailResponse(body: "Old")), .response(""),
-            .response(Self.itemDetailResponse(body: "Updated"))
+            .suspended("old-detail", Self.itemDetailResponse(body: "Original")), .response("")
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -406,13 +456,52 @@ extension ProjectStoreTests {
         try await store.addAssignee(to: item, in: project.id, user: Assignee(login: "me", avatarUrl: "", name: nil))
         await runner.release("old-detail")
         await loading.value
-        #expect(store.itemDetailState(for: item) == .idle)
-        await store.loadItemDetail(for: item)
         guard case .loaded(let detail) = store.itemDetailState(for: item) else {
-            Issue.record("Expected details to be fetched after content mutation")
+            Issue.record("Assignee changes must allow unrelated detail reads to complete")
             return
         }
-        #expect(detail.bodyHTML == "Updated")
+        #expect(detail.bodyHTML == "Original")
+        #expect(await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.itemDetail }.count == 1)
+    }
+
+    @Test(arguments: [true, false])
+    func assigneeChangesKeepOpenDetailsWithoutRefetching(succeeds: Bool) async throws {
+        let detail = Self.itemDetailResponse(body: "Description")
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(detail),
+            succeeds ? .response("") : .httpFailure(403),
+            .response("")
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let item = try #require(store.item(for: reference))
+        let user = Assignee(login: "me", avatarUrl: "", name: nil)
+        await store.loadItemDetail(for: item)
+
+        do {
+            try await store.addAssignee(to: item, in: "P1", user: user)
+            #expect(succeeds)
+        } catch {
+            #expect(!succeeds)
+        }
+        let current = try #require(store.item(for: reference))
+        #expect(current.assignees == (succeeds ? [user] : []))
+        guard case .loaded(let restored) = store.itemDetailState(for: current) else {
+            Issue.record("Assignee writes must not leave the open description and milestone idle")
+            return
+        }
+        #expect(restored.bodyHTML == "Description")
+        #expect(restored.issueMetadata != nil)
+
+        if succeeds {
+            try await store.removeAssignee(from: current, in: "P1", user: user)
+            #expect(store.item(for: reference)?.assignees.isEmpty == true)
+            #expect(store.itemDetailState(for: current) == .loaded(restored))
+        }
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.itemDetail }.count == 1)
     }
 }
 

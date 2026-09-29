@@ -2,14 +2,14 @@ import Foundation
 
 struct ProjectItemDetail: Identifiable, Hashable, Sendable {
     let id: String
-    let title: String
-    let body: String
-    let bodyHTML: String
+    var title: String
+    var body: String
+    var bodyHTML: String
     let viewerCanUpdate: Bool
     let author: ItemAuthor?
     let createdAt: String?
-    let updatedAt: String?
-    let issueMetadata: IssueMetadata?
+    var updatedAt: String?
+    var issueMetadata: IssueMetadata?
 }
 
 struct ItemAuthor: Hashable, Sendable {
@@ -19,12 +19,12 @@ struct ItemAuthor: Hashable, Sendable {
 
 struct IssueMetadata: Hashable, Sendable {
     let repository: String
-    let milestone: RepositoryMilestone?
-    let parent: IssueReference?
-    let subIssues: [IssueReference]
-    let subIssueProgress: SubIssueProgress?
-    let blockedBy: [IssueReference]
-    let blocking: [IssueReference]
+    var milestone: RepositoryMilestone?
+    var parent: IssueReference?
+    var subIssues: [IssueReference]
+    var subIssueProgress: SubIssueProgress?
+    var blockedBy: [IssueReference]
+    var blocking: [IssueReference]
     let viewerCanUpdate: Bool
     let viewerCanSetMilestone: Bool
 }
@@ -87,4 +87,10 @@ enum ItemDetailState: Equatable {
     case loading
     case loaded(ProjectItemDetail)
     case failed(String)
+}
+
+struct RESTIssueLabel: Decodable {
+    let node_id: String
+    let name: String
+    let color: String
 }

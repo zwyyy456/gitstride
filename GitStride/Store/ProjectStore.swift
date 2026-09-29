@@ -138,11 +138,6 @@ private struct ItemDetailEntry {
     let state: ItemDetailState
 }
 
-private enum ContentSynchronization {
-    case patch((inout ProjectItem) -> Void)
-    case reloadProjects
-}
-
 private struct ItemMutationKey: Hashable {
     let projectID: String
     let itemID: String
@@ -461,46 +456,28 @@ final class ProjectStore {
         try Task.checkCancellation()
         guard isActive else { throw CancellationError() }
         guard self.item(for: reference)?.contentId == contentID else { throw ProjectStoreError.itemUnavailable }
-        let previousDetail: ProjectItemDetail
         switch itemDetailState(for: item) {
-        case .loaded(let detail): previousDetail = detail
+        case .loaded: break
         case .failed(let message): throw ProjectStoreError.itemDetailsFailed(message)
         case .idle, .loading: throw ProjectStoreError.operationInProgress
         }
         guard canEditItemContent(reference) else { throw GitHubError.insufficientPermissions }
 
-        do {
-            var updatedContent: UpdatedItemContent?
-            try await performContentMutation([contentID], synchronization: .patch { item in
-                if let updatedContent {
-                    item.title = updatedContent.title
-                    item.updatedAt = updatedContent.updatedAt
-                }
-            }) {
-                updatedContent = try await self.gitHubService.updateItemContent(
-                    contentID: contentID, contentType: item.contentType, title: title, body: body
-                )
-            }
-            guard let updatedContent else { throw GitHubError.invalidResponse }
-            itemDetailTasks.removeValue(forKey: contentID)?.cancel()
-            itemDetailGenerations[contentID, default: 0] += 1
-            itemDetailEntries[contentID] = ItemDetailEntry(
-                sourceUpdatedAt: updatedContent.updatedAt,
-                state: .loaded(ProjectItemDetail(
-                    id: previousDetail.id, title: updatedContent.title,
-                    body: updatedContent.body, bodyHTML: updatedContent.bodyHTML,
-                    viewerCanUpdate: previousDetail.viewerCanUpdate,
-                    author: previousDetail.author, createdAt: previousDetail.createdAt,
-                    updatedAt: updatedContent.updatedAt,
-                    issueMetadata: previousDetail.issueMetadata
-                ))
+        try await performContentMutation([contentID], operation: {
+            try await self.gitHubService.updateItemContent(
+                contentID: contentID, contentType: item.contentType, title: title, body: body
             )
-        } catch {
-            // Restore the description and permissions after mutation invalidation, including on failure.
-            if isActive, let currentItem = self.item(for: reference) {
-                await loadItemDetail(for: currentItem, forceRefresh: true)
+        }) { updated in
+            self.updateContent(contentID: contentID) { item in
+                item.title = updated.title
+                item.updatedAt = updated.updatedAt
             }
-            throw error
+            self.updateDetail(contentID: contentID, sourceUpdatedAt: updated.updatedAt) { detail in
+                detail.title = updated.title
+                detail.body = updated.body
+                detail.bodyHTML = updated.bodyHTML
+                detail.updatedAt = updated.updatedAt
+            }
         }
     }
 
@@ -605,7 +582,7 @@ final class ProjectStore {
     }
 
     func loadItemDetail(for item: ProjectItem, forceRefresh: Bool = false) async {
-        guard let contentID = item.contentId else { return }
+        guard let contentID = item.contentId, pendingContentMutations[contentID] == nil else { return }
 
         if forceRefresh == false,
            let entry = itemDetailEntries[contentID],
@@ -672,10 +649,20 @@ final class ProjectStore {
     func setMilestone(_ milestone: RepositoryMilestone?, on item: ProjectItem) async throws {
         guard let contentID = item.contentId,
               case .loaded(let detail) = itemDetailState(for: item),
-              detail.issueMetadata?.viewerCanSetMilestone == true else { return }
+              let metadata = detail.issueMetadata, metadata.viewerCanSetMilestone else { return }
 
-        try await performContentMutation([contentID], synchronization: .reloadProjects, reloadingDetailFor: item) {
+        try await performContentMutation([contentID], operation: {
             try await self.gitHubService.updateIssueMilestone(issueID: contentID, milestoneID: milestone?.id)
+        }) {
+            self.updateContent(contentID: contentID) { item in
+                item.milestone = milestone.map {
+                    ProjectPlanningReference(id: $0.id, title: $0.title,
+                                             repository: metadata.repository, number: nil)
+                }
+            }
+            self.updateDetail(contentID: contentID) { detail in
+                detail.issueMetadata?.milestone = milestone
+            }
         }
     }
 
@@ -694,7 +681,7 @@ final class ProjectStore {
         if kind == .parent, let previousParent = detail.issueMetadata?.parent {
             affectedContentIDs.insert(previousParent.id)
         }
-        try await performContentMutation(affectedContentIDs, synchronization: .reloadProjects, reloadingDetailFor: item) {
+        try await performRelationshipMutation(affectedContentIDs) {
             switch kind {
             case .parent, .subIssue:
                 try await self.gitHubService.addSubIssue(
@@ -721,7 +708,7 @@ final class ProjectStore {
               detail.issueMetadata?.viewerCanUpdate == true else { return }
         let endpoints = kind.endpoints(issueID: issueID, relatedIssueID: relatedIssue.id)
 
-        try await performContentMutation([issueID, relatedIssue.id], synchronization: .reloadProjects, reloadingDetailFor: item) {
+        try await performRelationshipMutation([issueID, relatedIssue.id]) {
             switch kind {
             case .parent, .subIssue:
                 try await self.gitHubService.removeSubIssue(
@@ -1623,14 +1610,16 @@ final class ProjectStore {
     ) async throws {
         guard let contentID = item.contentId, let url = item.url,
               canEditProject(id: projectID) else { return }
-        try await performContentMutation([contentID], synchronization: .patch { item in
-            item.assignees.removeAll { $0.login.caseInsensitiveCompare(user.login) == .orderedSame }
-            if assigned { item.assignees.append(user) }
-        }) {
+        try await performContentMutation([contentID], operation: {
             if assigned {
                 try await self.gitHubService.addAssignee(issueUrl: url, userLogin: user.login)
             } else {
                 try await self.gitHubService.removeAssignee(issueUrl: url, userLogin: user.login)
+            }
+        }) {
+            self.updateContent(contentID: contentID) { item in
+                item.assignees.removeAll { $0.login.caseInsensitiveCompare(user.login) == .orderedSame }
+                if assigned { item.assignees.append(user) }
             }
         }
     }
@@ -1655,12 +1644,14 @@ final class ProjectStore {
     ) async throws {
         guard let contentID = item.contentId, let url = item.url,
               canEditProject(id: projectID) else { return }
-        try await performContentMutation([contentID], synchronization: .reloadProjects) {
+        try await performContentMutation([contentID], operation: {
             if assigned {
-                try await self.gitHubService.addLabel(issueUrl: url, label: name)
+                return try await self.gitHubService.addLabel(issueUrl: url, label: name)
             } else {
-                try await self.gitHubService.removeLabel(issueUrl: url, label: name)
+                return try await self.gitHubService.removeLabel(issueUrl: url, label: name)
             }
+        }) { labels in
+            self.updateContent(contentID: contentID) { $0.labels = labels }
         }
     }
 
@@ -2069,64 +2060,91 @@ final class ProjectStore {
         }
     }
 
-    private func performContentMutation(
-        _ contentIDs: Set<String>,
-        synchronization: ContentSynchronization,
-        reloadingDetailFor item: ProjectItem? = nil,
-        operation: () async throws -> Void
+    private func performRelationshipMutation(
+        _ contentIDs: Set<String>, operation: () async throws -> Void
     ) async throws {
-        try await withContentMutation(contentIDs, operation: operation) {
-            if case .patch(let transform) = synchronization {
-                for contentID in contentIDs { updateContent(contentID: contentID, transform: transform) }
+        try await performContentMutation(contentIDs, operation: {
+            try await operation()
+            var details: [String: ProjectItemDetail] = [:]
+            for id in contentIDs.sorted() {
+                let detail = try await self.gitHubService.fetchItemDetail(contentID: id)
+                guard detail.issueMetadata != nil else { throw GitHubError.invalidResponse }
+                details[id] = detail
             }
-        }
-        // Reads must start after the mutation releases its conflict markers.
-        switch synchronization {
-        case .patch:
-            await persistCache()
-        case .reloadProjects:
-            try await refreshContentProjects(contentIDs)
-        }
-        if let item {
-            let currentItem = projectStates.values.compactMap(\.snapshot)
-                .flatMap(\.items).first { $0.contentId == item.contentId } ?? item
-            await loadItemDetail(for: currentItem, forceRefresh: true)
+            return details
+        }) { details in
+            for (id, fetched) in details {
+                guard let value = fetched.issueMetadata else { continue }
+                if let entry = self.itemDetailEntries[id], case .loading = entry.state {
+                    self.itemDetailEntries[id] = ItemDetailEntry(sourceUpdatedAt: entry.sourceUpdatedAt, state: .loaded(fetched))
+                }
+                self.updateDetail(contentID: id) { detail in
+                    detail.issueMetadata?.parent = value.parent
+                    detail.issueMetadata?.subIssues = value.subIssues
+                    detail.issueMetadata?.subIssueProgress = value.subIssueProgress
+                    detail.issueMetadata?.blockedBy = value.blockedBy
+                    detail.issueMetadata?.blocking = value.blocking
+                }
+                self.updateContent(contentID: id) { item in
+                    item.parentIssue = value.parent.map {
+                        ProjectPlanningReference(id: $0.id, title: $0.title, repository: $0.repository, number: $0.number)
+                    }
+                    var signals = item.engineeringSignals ?? EngineeringSignals()
+                    signals.subIssueProgress = value.subIssueProgress
+                    signals.blockedByCount = value.blockedBy.count
+                    signals.blockingCount = value.blocking.count
+                    item.engineeringSignals = signals
+                }
+            }
         }
     }
 
-    private func withContentMutation(
+    private func updateDetail(contentID: String, sourceUpdatedAt: String? = nil,
+                              transform: (inout ProjectItemDetail) -> Void) {
+        // Reject an older read only when this write actually changes detail fields.
+        itemDetailTasks.removeValue(forKey: contentID)?.cancel()
+        itemDetailGenerations[contentID, default: 0] += 1
+        guard let entry = itemDetailEntries[contentID], case .loaded(var detail) = entry.state else { return }
+        transform(&detail)
+        itemDetailEntries[contentID] = ItemDetailEntry(
+            sourceUpdatedAt: sourceUpdatedAt ?? entry.sourceUpdatedAt, state: .loaded(detail)
+        )
+    }
+
+    private func performContentMutation<Result>(
         _ contentIDs: Set<String>,
-        operation: () async throws -> Void,
-        apply: () -> Void
+        operation: () async throws -> Result,
+        apply: (Result) -> Void
     ) async throws {
-        guard contentIDs.allSatisfy({ pendingContentMutations[$0] == nil }) else {
-            throw ProjectStoreError.operationInProgress
-        }
-        let operationID = UUID()
-        for id in contentIDs { pendingContentMutations[id] = operationID }
-        contentRevision += 1
-        invalidateContentDetails(Array(contentIDs))
-        defer {
-            let ownedIDs = contentIDs.filter { pendingContentMutations[$0] == operationID }
-            for id in ownedIDs { pendingContentMutations[id] = nil }
-            if !ownedIDs.isEmpty {
-                contentRevision += 1
-                invalidateContentDetails(Array(ownedIDs))
-            }
-            scheduleReconciliation()
-        }
         do {
-            try await operation()
-            guard contentIDs.allSatisfy({ pendingContentMutations[$0] == operationID }) else { throw CancellationError() }
-            apply()
-            lastUpdated = Date()
-        } catch {
-            if contentIDs.allSatisfy({ pendingContentMutations[$0] == operationID }),
-               requiresReconciliation(error) {
-                for id in projectStates.keys { projectStates[id]?.needsRefresh = true }
+            guard contentIDs.allSatisfy({ pendingContentMutations[$0] == nil }) else {
+                throw ProjectStoreError.operationInProgress
             }
-            throw error
+            let operationID = UUID()
+            for id in contentIDs { pendingContentMutations[id] = operationID }
+            contentRevision += 1
+            defer {
+                let ownedIDs = contentIDs.filter { pendingContentMutations[$0] == operationID }
+                for id in ownedIDs { pendingContentMutations[id] = nil }
+                if !ownedIDs.isEmpty {
+                    contentRevision += 1
+                }
+                scheduleReconciliation()
+            }
+            do {
+                let result = try await operation()
+                guard contentIDs.allSatisfy({ pendingContentMutations[$0] == operationID }) else { throw CancellationError() }
+                apply(result)
+                lastUpdated = Date()
+            } catch {
+                if contentIDs.allSatisfy({ pendingContentMutations[$0] == operationID }),
+                   requiresReconciliation(error) {
+                    for id in projectStates.keys { projectStates[id]?.needsRefresh = true }
+                }
+                throw error
+            }
         }
+        await persistCache()
     }
 
     private func requiresReconciliation(_ error: Error) -> Bool {
@@ -2142,21 +2160,6 @@ final class ProjectStore {
         if case GitHubError.httpError(let status) = error { return status >= 500 }
         if case GitHubError.connectionError = error { return true }
         return false
-    }
-
-    private func refreshContentProjects(_ contentIDs: Set<String>) async throws {
-        let ids = Set(contentIDs.flatMap { projectsContaining(contentID: $0) })
-        var failure: Error?
-        for id in ids.sorted() {
-            do {
-                try await refreshProjectSnapshot(id: id)
-            }
-            catch is CancellationError { throw CancellationError() }
-            catch {
-                failure = error
-            }
-        }
-        if let failure { throw failure }
     }
 
     private func invalidateContentDetails(_ contentIDs: [String]) {

@@ -108,10 +108,10 @@ struct ProjectItem: Identifiable, Codable, Hashable {
     var status: String?
     var statusOptionId: String?
     var assignees: [Assignee]
-    let labels: [IssueLabel]
+    var labels: [IssueLabel]
     var fieldValues: [String: ProjectFieldValue]
     let linkedPR: LinkedPR?
-    let engineeringSignals: EngineeringSignals?
+    var engineeringSignals: EngineeringSignals?
     var milestone: ProjectPlanningReference?
     var parentIssue: ProjectPlanningReference?
     var issueType: ProjectIssueType?

@@ -169,12 +169,14 @@ struct GitHubAuthenticationTests {
     }
 
     @Test func restLabelEditsPreserveNamesAndEncodePathSeparators() async throws {
-        let http = FixtureGitHubHTTPClient(responses: ["{}", "{}"])
+        let http = FixtureGitHubHTTPClient(responses: [#"[{"node_id":"L1","name":"bug","color":"ffffff"}]"#, "[]"])
         let service = GitHubService(http: http)
         let name = "a/b # + 中文"
         let url = "https://github.com/example/repo/pull/42"
-        try await service.addLabel(issueUrl: url, label: name)
-        try await service.removeLabel(issueUrl: url, label: name)
+        let added = try await service.addLabel(issueUrl: url, label: name)
+        #expect(added == [IssueLabel(id: "L1", name: "bug", color: "ffffff")])
+        let removed = try await service.removeLabel(issueUrl: url, label: name)
+        #expect(removed.isEmpty)
         let requests = await http.recordedRequests()
         let body = try JSONDecoder().decode([String: [String]].self, from: #require(requests[0].httpBody))
         #expect(body["labels"] == [name])
