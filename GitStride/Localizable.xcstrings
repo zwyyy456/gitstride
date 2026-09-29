@@ -6648,6 +6648,7 @@
       }
     },
     "No Labels…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -11575,6 +11576,7 @@
       }
     },
     "Unassigned…" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

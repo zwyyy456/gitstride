@@ -11,20 +11,35 @@ struct ItemLabelsSection: View {
     @State private var showsLabelPicker = false
 
     var body: some View {
-        LabeledContent(String(localized: "Labels")) {
-            VStack(alignment: .trailing, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Labels")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if canEdit {
+                    Button("Add Label…", action: showLabelPicker)
+                    .buttonStyle(.borderless)
+                    .disabled(isSaving)
+                    .popover(isPresented: $showsLabelPicker) {
+                        #if os(iOS)
+                        MobileLabelsPicker(store: store, reference: ItemInspectorReference(projectID: projectID, itemID: item.id))
+                        #else
+                        labelPicker(item)
+                        #endif
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
                 if item.labels.isEmpty {
-                    if !canEdit { Text("No labels").foregroundStyle(.secondary) }
+                    Text("No labels").foregroundStyle(.secondary)
                 } else {
-                    ForEach(item.labels) { label in
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: label.color))
-                                .frame(width: 9, height: 9)
-                            Text(label.name).fixedSize(horizontal: false, vertical: true)
-                            Spacer()
-                            if canEdit {
-                                Button {
+                    ItemPropertyTokenLayout {
+                        ForEach(item.labels) { label in
+                            ItemPropertyToken(
+                                title: label.name,
+                                removeLabel: String(localized: "Remove label") + ": " + label.name,
+                                canRemove: canEdit,
+                                remove: {
                                     guard !isSaving else { return }
                                     localError = nil
                                     isSaving = true
@@ -40,37 +55,22 @@ struct ItemLabelsSection: View {
                                             report(error)
                                         }
                                     }
-                                } label: {
-                                    Image(systemName: "xmark")
                                 }
-                                .buttonStyle(.borderless)
-                                .help("Remove label")
-                                .accessibilityLabel("Remove label")
-                                .disabled(isSaving)
+                            ) {
+                                Circle()
+                                    .fill(Color(hex: label.color))
+                                    .frame(width: 8, height: 8)
                             }
+                            .disabled(isSaving)
                         }
                     }
                 }
 
-                if canEdit {
-                    Button(
-                        item.labels.isEmpty ? String(localized: "No Labels…") : String(localized: "Add Label…"),
-                        action: showLabelPicker
-                    )
-                    .buttonStyle(.borderless)
-                    .disabled(isSaving)
-                    .popover(isPresented: $showsLabelPicker) {
-                        #if os(iOS)
-                        MobileLabelsPicker(store: store, reference: ItemInspectorReference(projectID: projectID, itemID: item.id))
-                        #else
-                        labelPicker(item)
-                        #endif
-                    }
-                }
                 if isSaving { ProgressView().controlSize(.mini).accessibilityLabel("Saving field") }
                 if let localError { Text(localError).font(.caption).foregroundStyle(.red) }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func labelPicker(_ item: ProjectItem) -> some View {
