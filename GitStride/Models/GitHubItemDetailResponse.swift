@@ -9,7 +9,6 @@ extension GitHubResponse {
             let id: String?
             let title: String?
             let body: String?
-            let bodyHTML: String?
             let createdAt: String?
             let updatedAt: String?
             let author: Actor?
@@ -29,7 +28,6 @@ extension GitHubResponse {
                 case id
                 case title
                 case body
-                case bodyHTML
                 case createdAt
                 case updatedAt
                 case author
@@ -94,7 +92,6 @@ extension GitHubResponse {
             let id: String
             let title: String
             let body: String
-            let bodyHTML: String
             let updatedAt: String
         }
     }

@@ -22,6 +22,7 @@ struct GitStrideApp: App {
     @State private var requestsCommandPalette = false
     @State private var requestedMyWorkFilter: MyWorkFilter?
     @State private var requestedItemReference: ItemInspectorReference?
+    @State private var requestedContentEdit: ItemContentEditRequest?
 
     init() {
         #if !APP_STORE && canImport(Sparkle)
@@ -37,6 +38,7 @@ struct GitStrideApp: App {
             MainWorkspaceView(
                 model: model,
                 requestedItemReference: $requestedItemReference,
+                requestedContentEdit: $requestedContentEdit,
                 requestsProjectBoard: $requestsProjectBoard,
                 requestsCommandPalette: $requestsCommandPalette,
                 requestedMyWorkFilter: $requestedMyWorkFilter
@@ -108,11 +110,7 @@ struct GitStrideApp: App {
         WindowGroup("Item Details", id: "item-detail", for: ItemInspectorReference.self) { $reference in
             NavigationStack {
                 if let reference {
-                    ItemDetailView(
-                        store: model.projectStore,
-                        reference: reference,
-                        allowsOpeningNewWindow: false
-                    )
+                    ItemDetailWindowView(store: model.projectStore, reference: reference)
                 } else {
                     ContentUnavailableView("Item Unavailable", systemImage: "archivebox")
                 }
@@ -130,6 +128,9 @@ struct GitStrideApp: App {
                 },
                 openMyWork: { filter in
                     requestedMyWorkFilter = filter
+                },
+                editItem: { reference, detail in
+                    requestedContentEdit = ItemContentEditRequest(reference: reference, detail: detail)
                 }
             ))
             .id(model.connectionID)

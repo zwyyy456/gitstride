@@ -2630,6 +2630,22 @@
         }
       }
     },
+    "Continue Editing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue Editing"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续编辑"
+          }
+        }
+      }
+    },
     "Copy Code and Open GitHub" : {
       "localizations" : {
         "en" : {
@@ -3172,6 +3188,22 @@
         }
       }
     },
+    "Description mode" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Description mode"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正文模式"
+          }
+        }
+      }
+    },
     "Description Unavailable" : {
       "localizations" : {
         "en" : {
@@ -3254,6 +3286,22 @@
     },
     "Discard" : {
 
+    },
+    "Discard Changes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Discard Changes"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放弃更改"
+          }
+        }
+      }
     },
     "Discard this pending edit?" : {
 
@@ -3947,6 +3995,22 @@
         }
       }
     },
+    "Finish syncing this item before editing it again." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish syncing this item before editing it again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先处理此条目的同步，再次编辑。"
+          }
+        }
+      }
+    },
     "General" : {
       "localizations" : {
         "en" : {
@@ -4194,6 +4258,7 @@
       }
     },
     "GitHub Markdown description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5763,6 +5828,7 @@
       }
     },
     "More Actions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -7104,6 +7170,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "按回车键搜索。"
+          }
+        }
+      }
+    },
+    "Preview" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预览"
           }
         }
       }
@@ -8576,6 +8658,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "保存并重启 GitStride 后，服务设置才会生效。"
+          }
+        }
+      }
+    },
+    "Save changes to this item?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save changes to this item?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要保存对此条目的更改吗？"
           }
         }
       }
@@ -10433,6 +10531,7 @@
       }
     },
     "This item does not have a description." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11280,6 +11379,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "年"
+          }
+        }
+      }
+    },
+    "Your changes haven’t been submitted to GitHub." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your changes haven’t been submitted to GitHub."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的更改尚未提交到 GitHub。"
           }
         }
       }

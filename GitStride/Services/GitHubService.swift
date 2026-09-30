@@ -103,7 +103,6 @@ struct CreatedIssue {
 struct UpdatedItemContent: Sendable {
     let title: String
     let body: String
-    let bodyHTML: String
     let updatedAt: String
 }
 
@@ -372,7 +371,6 @@ actor GitHubService {
             id: id,
             title: title,
             body: body,
-            bodyHTML: node.bodyHTML ?? "",
             viewerCanUpdate: node.viewerCanUpdate ?? false,
             author: author.map { ItemAuthor(login: $0.login, avatarURL: $0.avatarUrl) },
             createdAt: node.createdAt,
@@ -396,7 +394,7 @@ actor GitHubService {
         )
         guard let content = payload.update?.content, content.id == contentID else { throw GitHubError.invalidResponse }
         return UpdatedItemContent(title: content.title, body: content.body,
-                                  bodyHTML: content.bodyHTML, updatedAt: content.updatedAt)
+                                  updatedAt: content.updatedAt)
     }
 
     private func makeIssueReference(_ node: GitHubResponse.ItemDetailPayload.IssueNode) -> IssueReference? {

@@ -3,14 +3,7 @@ import SwiftUI
 struct ItemDescriptionView: View {
     @Bindable var store: ProjectStore
     let reference: ItemInspectorReference
-    @State private var presentedEdit: PresentedEdit?
-
-    private struct PresentedEdit {
-        let contentID: String
-        let title: String
-        let body: String
-    }
-
+    @State private var showsDiscardConfirmation = false
     private var item: ProjectItem? { store.item(for: reference) }
     private var pendingEdit: PendingContentEdit? {
         item?.contentId.flatMap { store.pendingContentEdits[$0] }
@@ -25,18 +18,6 @@ struct ItemDescriptionView: View {
             } else {
                 unavailable
             }
-        }
-        .onChange(of: pendingEdit?.id, initial: true) { _, _ in
-            guard let pendingEdit else { return }
-            presentedEdit = PresentedEdit(
-                contentID: pendingEdit.id, title: pendingEdit.title, body: pendingEdit.body
-            )
-        }
-        .onChange(of: reference) { _, _ in
-            if pendingEdit == nil { presentedEdit = nil }
-        }
-        .onChange(of: store.isRefreshingItem(reference)) { _, isRefreshing in
-            if isRefreshing && pendingEdit == nil { presentedEdit = nil }
         }
     }
 
@@ -87,13 +68,23 @@ struct ItemDescriptionView: View {
 
     @ViewBuilder
     private func descriptionContent(for item: ProjectItem) -> some View {
-        if let body = locallyPresentedBody(for: item) {
-            ScrollView {
-                Text(body.isEmpty ? String(localized: "No Description") : body)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: 760, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(24)
+        if let edit = pendingEdit {
+            VStack(spacing: 0) {
+                if case .failed(let message) = edit.state {
+                    HStack {
+                        Text(message).font(.callout).textSelection(.enabled)
+                        Spacer()
+                        Button("Retry") { store.retryPendingEdit(edit.id) }
+                        Button("Discard Changes") { showsDiscardConfirmation = true }
+                    }
+                    .padding(12)
+                    .background(.orange.opacity(0.12))
+                }
+                ItemMarkdownBodyView(markdown: edit.body)
+            }
+            .confirmationDialog("Discard this pending edit?", isPresented: $showsDiscardConfirmation) {
+                Button("Discard Changes", role: .destructive) { store.dismissPendingEdit(edit.id) }
+                Button("Cancel", role: .cancel) {}
             }
         } else {
             switch store.itemDetailState(for: item) {
@@ -102,16 +93,7 @@ struct ItemDescriptionView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             case .loaded(let detail):
-                if detail.bodyHTML.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    ContentUnavailableView(
-                        "No Description",
-                        systemImage: "text.alignleft",
-                        description: Text("This item does not have a description.")
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    GitHubHTMLBodyView(html: detail.bodyHTML)
-                }
+                ItemMarkdownBodyView(markdown: detail.body)
 
             case .failed(let message):
                 VStack(spacing: 12) {
@@ -129,18 +111,6 @@ struct ItemDescriptionView: View {
                 .padding()
             }
         }
-    }
-
-    private func locallyPresentedBody(for item: ProjectItem) -> String? {
-        if let contentID = item.contentId, let edit = store.pendingContentEdits[contentID] {
-            return edit.body
-        }
-        // A confirmed write only removes the sync label; it must not rebuild the visible body.
-        guard let presentedEdit, presentedEdit.contentID == item.contentId,
-              item.title == presentedEdit.title,
-              case .loaded(let detail) = store.itemDetailState(for: item),
-              detail.body == presentedEdit.body else { return nil }
-        return presentedEdit.body
     }
 
     private func syncStatusText(for state: PendingSyncState) -> String {

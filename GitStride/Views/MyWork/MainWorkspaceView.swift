@@ -4,9 +4,11 @@ struct MainWorkspaceView: View {
     @Bindable var model: GitStrideModel
     @Environment(\.openSettings) private var openSettings
     @Binding var requestedItemReference: ItemInspectorReference?
+    @Binding var requestedContentEdit: ItemContentEditRequest?
     @Binding var requestsProjectBoard: Bool
     @Binding var requestsCommandPalette: Bool
     @Binding var requestedMyWorkFilter: MyWorkFilter?
+    @State private var editingSession = ItemEditingSession()
     @State private var destination: Destination = .project
     @State private var detailPath = NavigationPath()
     @State private var projectSearchText = ""
@@ -33,16 +35,18 @@ struct MainWorkspaceView: View {
                 }
             },
             set: { selection in
-                switch selection {
-                case .project(let id):
-                    guard let project = model.projectStore.project(id: id) else { return }
-                    destination = .project
-                    detailPath = NavigationPath()
-                    Task { await model.projectStore.selectProject(project) }
-                case .myWork(let filter):
-                    destination = .myWork(filter)
-                case nil:
-                    break
+                navigate {
+                    switch selection {
+                    case .project(let id):
+                        guard let project = model.projectStore.project(id: id) else { return }
+                        destination = .project
+                        detailPath = NavigationPath()
+                        Task { await model.projectStore.selectProject(project) }
+                    case .myWork(let filter):
+                        destination = .myWork(filter)
+                    case nil:
+                        break
+                    }
                 }
             }
         )
@@ -56,9 +60,11 @@ struct MainWorkspaceView: View {
                         get: { model.projectStore.selectedOwnerId },
                         set: { id in
                             guard let owner = model.projectStore.owners.first(where: { $0.id == id }) else { return }
-                            destination = .project
-                            detailPath = NavigationPath()
-                            Task { await model.projectStore.selectOwner(owner) }
+                            navigate {
+                                destination = .project
+                                detailPath = NavigationPath()
+                                Task { await model.projectStore.selectOwner(owner) }
+                            }
                         }
                     )) {
                         if model.projectStore.selectedOwnerId == nil {
@@ -184,7 +190,10 @@ struct MainWorkspaceView: View {
             .modifier(SidebarKeyboardNavigation())
             .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 320)
         } detail: {
-            NavigationStack(path: $detailPath) {
+            NavigationStack(path: Binding(
+                get: { detailPath },
+                set: { path in navigate { detailPath = path } }
+            )) {
                 Group {
                     switch destination {
                     case .project:
@@ -210,7 +219,8 @@ struct MainWorkspaceView: View {
                     ItemDetailView(
                         store: model.projectStore,
                         reference: reference,
-                        allowsOpeningNewWindow: true
+                        allowsOpeningNewWindow: true,
+                        editingSession: editingSession
                     )
                 }
             }
@@ -220,16 +230,25 @@ struct MainWorkspaceView: View {
         .commandPalette(store: model.projectStore, navigation: CommandPaletteNavigation(
             openProject: { id in
                 guard let project = model.projectStore.project(id: id) else { return }
-                destination = .project
-                detailPath = NavigationPath()
-                Task { await model.openProject(project) }
+                navigate {
+                    destination = .project
+                    detailPath = NavigationPath()
+                    Task { await model.openProject(project) }
+                }
             },
             openItem: showItemDetail,
-            openMyWork: { destination = .myWork($0) }
+            openMyWork: { filter in navigate { destination = .myWork(filter) } },
+            editItem: { reference, detail in
+                navigate {
+                    detailPath = NavigationPath([reference])
+                    editingSession.begin(reference, detail: detail)
+                }
+            }
         ), requested: $requestsCommandPalette)
+        .background(ItemEditWindowCloseGuard(session: editingSession, store: model.projectStore))
         .onChange(of: requestedMyWorkFilter, initial: true) { _, filter in
             guard let filter else { return }
-            destination = .myWork(filter)
+            navigate { destination = .myWork(filter) }
             requestedMyWorkFilter = nil
         }
         .task {
@@ -243,7 +262,7 @@ struct MainWorkspaceView: View {
         }
         .onChange(of: model.projectStore.selectedProjectId) { _, _ in
             if destination == .project {
-                detailPath = NavigationPath()
+                navigate { detailPath = NavigationPath() }
             }
         }
         .onChange(of: model.projectStore.currentUserLogin) { _, login in
@@ -257,9 +276,19 @@ struct MainWorkspaceView: View {
         }
         .onChange(of: requestsProjectBoard, initial: true) { _, requested in
             guard requested else { return }
-            destination = .project
-            detailPath = NavigationPath()
+            navigate {
+                destination = .project
+                detailPath = NavigationPath()
+            }
             requestsProjectBoard = false
+        }
+        .onChange(of: requestedContentEdit, initial: true) { _, request in
+            guard let request else { return }
+            navigate {
+                detailPath = NavigationPath([request.reference])
+                editingSession.begin(request.reference, detail: request.detail)
+            }
+            requestedContentEdit = nil
         }
         .onChange(of: requestedItemReference, initial: true) { _, reference in
             guard let reference else { return }
@@ -297,12 +326,18 @@ struct MainWorkspaceView: View {
         setFilterVisible(filter, visible: false)
     }
 
+    private func navigate(_ action: () -> Void) {
+        guard editingSession.finishBeforeLeaving(in: model.projectStore) else { return }
+        action()
+    }
+
     private func showItemDetail(_ reference: ItemInspectorReference) {
-        detailPath = NavigationPath()
-        detailPath.append(reference)
+        navigate { detailPath = NavigationPath([reference]) }
     }
 
     private func setFilterVisible(_ filter: MyWorkFilter, visible: Bool) {
+        if !visible, destination == .myWork(filter),
+           !editingSession.finishBeforeLeaving(in: model.projectStore) { return }
         model.myWorkStore.setFilterVisible(filter, visible: visible)
         if visible == false,
            model.myWorkStore.filters.contains(filter) == false,

@@ -418,7 +418,6 @@ enum GraphQLQueries {
                     id
                     title
                     body
-                    bodyHTML
                     createdAt
                     updatedAt
                     author { login avatarUrl }
@@ -478,7 +477,6 @@ enum GraphQLQueries {
                     id
                     title
                     body
-                    bodyHTML
                     createdAt
                     updatedAt
                     author { login avatarUrl }
@@ -487,7 +485,6 @@ enum GraphQLQueries {
                     id
                     title
                     body
-                    bodyHTML
                     createdAt
                     updatedAt
                     creator { login avatarUrl }
@@ -499,7 +496,7 @@ enum GraphQLQueries {
     static let updateIssueContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updateIssue(input: { id: $id, title: $title, body: $body }) {
-                content: issue { id title body bodyHTML updatedAt }
+                content: issue { id title body updatedAt }
             }
         }
         """
@@ -507,7 +504,7 @@ enum GraphQLQueries {
     static let updatePullRequestContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updatePullRequest(input: { pullRequestId: $id, title: $title, body: $body }) {
-                content: pullRequest { id title body bodyHTML updatedAt }
+                content: pullRequest { id title body updatedAt }
             }
         }
         """
@@ -515,7 +512,7 @@ enum GraphQLQueries {
     static let updateDraftIssueContent = """
         mutation($id: ID!, $title: String!, $body: String!) {
             update: updateProjectV2DraftIssue(input: { draftIssueId: $id, title: $title, body: $body }) {
-                content: draftIssue { id title body bodyHTML updatedAt }
+                content: draftIssue { id title body updatedAt }
             }
         }
         """

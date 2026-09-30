@@ -4,7 +4,6 @@ struct ProjectItemDetail: Identifiable, Hashable, Sendable {
     let id: String
     var title: String
     var body: String
-    var bodyHTML: String
     let viewerCanUpdate: Bool
     let author: ItemAuthor?
     let createdAt: String?

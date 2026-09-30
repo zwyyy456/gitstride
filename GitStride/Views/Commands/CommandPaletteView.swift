@@ -1,15 +1,15 @@
 import SwiftUI
 
+struct ItemContentEditRequest: Equatable {
+    let reference: ItemInspectorReference
+    let detail: ProjectItemDetail
+}
+
 struct CommandPaletteNavigation {
     let openProject: (String) -> Void
     let openItem: (ItemInspectorReference) -> Void
     let openMyWork: (MyWorkFilter) -> Void
-}
-
-private struct PaletteEditor: Identifiable {
-    let reference: ItemInspectorReference
-    let detail: ProjectItemDetail
-    var id: ItemInspectorReference { reference }
+    let editItem: (ItemInspectorReference, ProjectItemDetail) -> Void
 }
 
 private struct PaletteSession: Identifiable {
@@ -35,14 +35,13 @@ struct CommandPaletteHost: ViewModifier {
     @State private var pendingAction: (() -> Void)?
     @State private var errorMessage: String?
     @State private var editRequest: ItemInspectorReference?
-    @State private var editor: PaletteEditor?
     @State private var propertyEditor: ItemPropertyRequest?
 
     func body(content: Content) -> some View {
         content
             .background(MenuBarWindowFinder(window: $window))
             .background(WorkspaceKeyHandler { event in
-                guard itemCommandScope == true, session == nil, editor == nil, propertyEditor == nil, editRequest == nil else { return false }
+                guard itemCommandScope == true, session == nil, propertyEditor == nil, editRequest == nil else { return false }
                 let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
                 guard let action = keyboardActions.first(where: { action in
                     guard let shortcut = action.shortcut else { return false }
@@ -91,7 +90,8 @@ struct CommandPaletteHost: ViewModifier {
                         openMyWork: { filter in
                             openWorkspace()
                             navigation.openMyWork(filter)
-                        }
+                        },
+                        editItem: navigation.editItem
                     ), initiallyShowsShortcuts: session.shortcuts,
                     initialStatusTarget: session.statusTarget,
                     reportError: { errorMessage = $0 },
@@ -100,14 +100,11 @@ struct CommandPaletteHost: ViewModifier {
                         self.session = nil
                     },
                     changeStatus: changeStatus,
-                    editItem: { editRequest = $0 },
+                    editItem: requestEdit,
                     close: { self.session = nil })
             }
             .sheet(item: $propertyEditor) { request in
                 ItemPropertyCommandView(store: store, request: request, close: { propertyEditor = nil }).id(request.id)
-            }
-            .sheet(item: $editor) { editor in
-                ItemContentEditorView(store: store, reference: editor.reference, detail: editor.detail)
             }
             .task(id: editRequest) {
                 guard let reference = editRequest else { return }
@@ -124,11 +121,12 @@ struct CommandPaletteHost: ViewModifier {
                     errorMessage = String(localized: "Couldn’t load the item editor. Refresh the item and try again.")
                     return
                 }
-                guard store.canEditItemContent(reference) else {
-                    errorMessage = String(localized: "This item is read-only.")
+                if let reason = store.itemCommandUnavailableReason(.edit, reference: reference) {
+                    errorMessage = reason
                     return
                 }
-                editor = PaletteEditor(reference: reference, detail: detail)
+                openWorkspace()
+                navigation.editItem(reference, detail)
             }
             .onChange(of: requested, initial: true) { _, value in
                 guard value else { return }
@@ -153,15 +151,24 @@ struct CommandPaletteHost: ViewModifier {
     private var itemActions: [WorkspaceCommandContext.Action] {
         guard let reference = context?.itemReference, store.item(for: reference) != nil else { return [] }
         return [WorkspaceShortcut.status, .assignees, .labels, .priority, .edit, .copyLink].map { shortcut in
-            itemCommand(shortcut, store: store, reference: reference) {
+            if shortcut == .edit, let action = context?.editItem { return action }
+            return itemCommand(shortcut, store: store, reference: reference) {
                 guard store.itemCommandUnavailableReason(shortcut, reference: reference) == nil else { return }
                 switch shortcut {
                 case .status: show(shortcuts: false, statusTarget: reference)
-                case .edit: editRequest = reference
+                case .edit: requestEdit(reference)
                 case .copyLink: copyItemLink(store: store, reference: reference)
                 default: propertyEditor = ItemPropertyRequest(reference: reference, shortcut: shortcut)
                 }
             }
+        }
+    }
+
+    private func requestEdit(_ reference: ItemInspectorReference) {
+        if context?.itemReference == reference, let action = context?.editItem {
+            if action.isEnabled { action.perform() }
+        } else {
+            editRequest = reference
         }
     }
 
@@ -1012,6 +1019,9 @@ private extension ProjectStore {
         if shortcut == .copyLink { return item.url == nil ? String(localized: "This item has no link.") : nil }
         if shortcut == .status { return statusChangeUnavailableReason(reference) }
         if shortcut == .edit {
+            if item.contentId.flatMap({ pendingContentEdits[$0] }) != nil {
+                return String(localized: "Finish syncing this item before editing it again.")
+            }
             guard item.contentId != nil, pendingCreationState(for: item.id) == nil else {
                 return String(localized: "This item is read-only.")
             }

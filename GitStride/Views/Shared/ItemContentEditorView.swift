@@ -1,93 +1,40 @@
 import SwiftUI
 
 struct ItemContentEditorView: View {
-    let store: ProjectStore
-    let reference: ItemInspectorReference
-    let detail: ProjectItemDetail
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var title: String
-    @State private var description: String
-    @State private var errorMessage: String?
+    @Bindable var session: ItemEditingSession
+    @Binding var showsPreview: Bool
     @FocusState private var isTitleFocused: Bool
 
-    init(store: ProjectStore, reference: ItemInspectorReference, detail: ProjectItemDetail) {
-        self.store = store
-        self.reference = reference
-        self.detail = detail
-        _title = State(initialValue: detail.title)
-        _description = State(initialValue: detail.body)
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Edit title and description")
-                .font(.title3.weight(.semibold))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Title")
-                    .font(.callout.weight(.medium))
-                TextField("Title", text: $title)
-                    .textFieldStyle(.roundedBorder)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                TextField("Title", text: $session.title, axis: .vertical)
+                    .font(.title2.bold())
+                    .lineLimit(1...3)
+                    .textFieldStyle(.plain)
                     .focused($isTitleFocused)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Description")
-                        .font(.callout.weight(.medium))
-                    Spacer()
-                    Text("Markdown supported")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .accessibilityLabel("Title")
+                if let error = session.errorMessage {
+                    Text(error).font(.callout).foregroundStyle(.red).textSelection(.enabled)
                 }
-                TextEditor(text: $description)
-                    .font(.body)
-                    .scrollContentBackground(.hidden)
-                    .padding(4)
-                    .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
-                    .frame(minHeight: 160)
-                    .accessibilityLabel("Description")
             }
+            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
 
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+            ZStack {
+                // Keep the editor mounted so preview doesn't reset selection, undo, or scrolling.
+                MarkdownSourceEditor(text: $session.text, isActive: !showsPreview)
+                    .opacity(showsPreview ? 0 : 1)
+                    .allowsHitTesting(!showsPreview)
+                    .accessibilityHidden(showsPreview)
+                if showsPreview {
+                    ItemMarkdownBodyView(markdown: session.text)
+                }
             }
-
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.return, modifiers: .command)
-                    .disabled(trimmedTitle.isEmpty || !hasChanges)
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(20)
-        .frame(minWidth: 520, idealWidth: 640, minHeight: 360, idealHeight: 440)
-        .interactiveDismissDisabled(hasChanges)
         .onAppear { isTitleFocused = true }
-    }
-
-    private var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var hasChanges: Bool { trimmedTitle != detail.title || description != detail.body }
-
-    private func save() {
-        guard !trimmedTitle.isEmpty, hasChanges else { return }
-        errorMessage = nil
-        let title = trimmedTitle
-        let description = description
-        do {
-            try store.beginContentEdit(reference, contentID: detail.id, title: title, body: description)
-            dismiss()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 }

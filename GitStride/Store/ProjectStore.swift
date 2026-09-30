@@ -475,7 +475,6 @@ final class ProjectStore {
             self.updateDetail(contentID: contentID, sourceUpdatedAt: updated.updatedAt) { detail in
                 detail.title = updated.title
                 detail.body = updated.body
-                detail.bodyHTML = updated.bodyHTML
                 detail.updatedAt = updated.updatedAt
             }
         }

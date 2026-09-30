@@ -270,7 +270,6 @@ struct ProjectStoreTests {
                 id: "CONTENT1",
                 title: "Item",
                 body: "Shared",
-                bodyHTML: "Shared",
                 viewerCanUpdate: false,
                 author: nil,
                 createdAt: nil,
@@ -309,7 +308,7 @@ struct ProjectStoreTests {
             Issue.record("Expected the forced refresh result to remain loaded.")
             return
         }
-        #expect(detail.bodyHTML == "New")
+        #expect(detail.body == "New")
         #expect(await runner.recordedCallCount() == 2)
     }
 
@@ -332,7 +331,7 @@ struct ProjectStoreTests {
             Issue.record("Expected the changed updatedAt value to reload details.")
             return
         }
-        #expect(detail.bodyHTML == "Updated")
+        #expect(detail.body == "Updated")
     }
 
     @Test func concurrentDeletesKeepBothItemsRemoved() async throws {

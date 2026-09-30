@@ -4,14 +4,15 @@ struct ItemDetailView: View {
     @Bindable var store: ProjectStore
     let reference: ItemInspectorReference
     let allowsOpeningNewWindow: Bool
+    @Bindable var editingSession: ItemEditingSession
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @State private var showsPreview = false
     @State private var isInspectorPresented = true
     @State private var inspectorWidth: CGFloat = 300
     @State private var pendingInspectorWidthUpdate: Task<Void, Never>?
     @State private var isArchiving = false
     @State private var operationErrorMessage: String?
-    @State private var editingDetail: ProjectItemDetail?
 
     private static let inspectorMinimumWidth: CGFloat = 260
     private static let inspectorMaximumWidth: CGFloat = 360
@@ -19,7 +20,7 @@ struct ItemDetailView: View {
     private var item: ProjectItem? { store.item(for: reference) }
     private var isRefreshing: Bool { store.isRefreshingItem(reference) }
     private var canEdit: Bool {
-        store.canEditItemContent(reference) && !isRefreshing && !isArchiving && editingDetail == nil
+        store.canEditItemContent(reference) && !isRefreshing && !isArchiving && !editingSession.isEditing
             && item?.contentId.flatMap { store.pendingContentEdits[$0] } == nil
     }
     private var canArchive: Bool {
@@ -49,7 +50,11 @@ struct ItemDetailView: View {
 
             Group {
                 if item != nil, store.project(id: reference.projectID) != nil {
-                    ItemDescriptionView(store: store, reference: reference)
+                    if editingSession.reference == reference {
+                        ItemContentEditorView(session: editingSession, showsPreview: $showsPreview).id(reference)
+                    } else {
+                        ItemDescriptionView(store: store, reference: reference)
+                    }
                 } else {
                     ContentUnavailableView("Item Unavailable", systemImage: "archivebox")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -62,60 +67,84 @@ struct ItemDetailView: View {
         )
         .navigationTitle(item?.displayTitle ?? String(localized: "Item"))
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Edit", systemImage: "pencil", action: editItem)
+            if editingSession.reference == reference {
+                ToolbarItem(placement: .principal) {
+                    Picker("Description mode", selection: $showsPreview) {
+                        Text("Edit").tag(false)
+                        Text("Preview").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                }
+            }
+
+            ToolbarItemGroup(placement: .secondaryAction) {
+                Button("Refresh Item", systemImage: "arrow.clockwise", action: refreshItem)
                     .labelStyle(.iconOnly)
-                    .disabled(!canEdit)
-                    .help("Edit title and description")
+                    .help("Refresh Item")
+                    .disabled(isRefreshing || isArchiving || editingSession.isEditing)
 
-                Menu {
-                    Button("Refresh Item", systemImage: "arrow.clockwise", action: refreshItem)
-                        .disabled(isRefreshing || isArchiving)
-                    if itemURL != nil {
-                        Button(action: openInGitHub) {
-                            Label(openInGitHubTitle, systemImage: "arrow.up.right.square")
-                        }
+                if itemURL != nil {
+                    Button(action: openInGitHub) {
+                        Label(openInGitHubTitle, systemImage: "arrow.up.right.square")
                     }
-                    if allowsOpeningNewWindow {
-                        Button("Open in New Window", systemImage: "macwindow", action: openInNewWindow)
-                    }
-                    if canArchive {
-                        Divider()
-                        Button(role: .destructive, action: archiveItem) {
-                            Label("Archive from Project", systemImage: "archivebox")
-                        }
-                        .disabled(isRefreshing || isArchiving)
-                    }
-                } label: {
-                    Label("More Actions", systemImage: "ellipsis.circle")
+                    .labelStyle(.iconOnly)
+                    .help(openInGitHubTitle)
                 }
-                .help("More Actions")
-
-                if isRefreshing || isArchiving {
+                if allowsOpeningNewWindow {
+                    Button("Open in New Window", systemImage: "macwindow", action: openInNewWindow)
+                        .labelStyle(.iconOnly)
+                        .help("Open in New Window")
+                }
+                if isRefreshing {
                     ProgressView().controlSize(.small)
-                        .accessibilityLabel(isArchiving ? String(localized: "Archiving item") : String(localized: "Refreshing item"))
+                        .accessibilityLabel("Refreshing item")
                 }
             }
 
-            if #available(macOS 26.0, *) {
-                ToolbarSpacer(.flexible, placement: .primaryAction)
+            if canArchive {
+                ToolbarGroupBoundary(placement: .secondaryAction)
+                ToolbarItemGroup(placement: .secondaryAction) {
+                    Button(role: .destructive, action: archiveItem) {
+                        Label("Archive from Project", systemImage: "archivebox")
+                    }
+                    .labelStyle(.iconOnly)
+                    .help("Archive from Project")
+                    .disabled(isRefreshing || isArchiving || editingSession.isEditing)
+
+                    if isArchiving {
+                        ProgressView().controlSize(.small)
+                            .accessibilityLabel("Archiving item")
+                    }
+                }
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                Button(
-                    isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"),
-                    systemImage: "sidebar.right", action: toggleInspector
-                )
-                .labelStyle(.iconOnly)
-                .help(isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"))
-            }
-        }
-        .sheet(item: $editingDetail) { detail in
-            let editor = ItemContentEditorView(store: store, reference: reference, detail: detail)
-            if #available(macOS 15.0, *) {
-                editor.presentationSizing(.fitted)
+            if editingSession.reference == reference {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Cancel") { _ = editingSession.finishBeforeLeaving(in: store) }
+                }
+                ToolbarGroupBoundary(placement: .primaryAction)
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Save") { editingSession.save(in: store) }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut("s", modifiers: .command)
+                        .disabled(!editingSession.canSave)
+                }
             } else {
-                editor
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Edit", systemImage: "pencil", action: editItem)
+                        .labelStyle(.iconOnly)
+                        .disabled(!canEdit)
+                        .help("Edit title and description")
+                }
+            }
+
+            if !isInspectorPresented {
+                ToolbarGroupBoundary(placement: .primaryAction)
+                ToolbarItem(placement: .primaryAction) {
+                    inspectorToggle
+                }
             }
         }
         .inspector(isPresented: $isInspectorPresented) {
@@ -124,6 +153,11 @@ struct ItemDetailView: View {
                 reference: reference
             )
             .id(reference)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    inspectorToggle
+                }
+            }
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.width
             } action: { width in
@@ -142,9 +176,21 @@ struct ItemDetailView: View {
                   item.contentId.flatMap({ store.pendingContentEdits[$0] }) == nil else { return }
             await store.loadItemDetail(for: item)
         }
+        .onChange(of: editingSession.reference) { _, _ in
+            showsPreview = false
+        }
         .onDisappear {
             pendingInspectorWidthUpdate?.cancel()
         }
+    }
+
+    private var inspectorToggle: some View {
+        Button(
+            isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"),
+            systemImage: "sidebar.right", action: toggleInspector
+        )
+        .labelStyle(.iconOnly)
+        .help(isInspectorPresented ? String(localized: "Hide Inspector") : String(localized: "Show Inspector"))
     }
 
     private var itemURL: URL? {
@@ -166,7 +212,7 @@ struct ItemDetailView: View {
             refresh: .init(
                 id: "refresh-item",
                 title: String(localized: "Refresh Item"),
-                isEnabled: isRefreshing == false && isArchiving == false,
+                isEnabled: isRefreshing == false && isArchiving == false && !editingSession.isEditing,
                 keywords: "r refresh reload 刷新", shortcut: .refresh, symbol: "arrow.clockwise", group: .itemActions, perform: refreshItem
             ),
             editItem: .init(
@@ -202,10 +248,11 @@ struct ItemDetailView: View {
     private func editItem() {
         guard canEdit, let item,
               case .loaded(let detail) = store.itemDetailState(for: item) else { return }
-        editingDetail = detail
+        editingSession.begin(reference, detail: detail)
     }
 
     private func refreshItem() {
+        guard !editingSession.isEditing else { return }
         operationErrorMessage = nil
         Task {
             do {
@@ -253,5 +300,18 @@ struct ItemDetailView: View {
             }
             isArchiving = false
         }
+    }
+}
+
+/// Each detached detail window keeps its own unsaved draft.
+struct ItemDetailWindowView: View {
+    let store: ProjectStore
+    let reference: ItemInspectorReference
+    @State private var editingSession = ItemEditingSession()
+
+    var body: some View {
+        ItemDetailView(store: store, reference: reference, allowsOpeningNewWindow: false,
+                       editingSession: editingSession)
+            .background(ItemEditWindowCloseGuard(session: editingSession, store: store))
     }
 }

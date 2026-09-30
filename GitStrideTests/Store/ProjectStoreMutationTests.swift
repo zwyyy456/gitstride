@@ -25,7 +25,7 @@ extension ProjectStoreTests {
             Issue.record("Relationship edits must keep details available")
             return
         }
-        #expect(current.bodyHTML == "Keep this body")
+        #expect(current.body == "Keep this body")
         #expect(current.issueMetadata?.blockedBy.map(\.id) == ["CONTENT2"])
         #expect(store.selectedProject?.items.first?.engineeringSignals?.blockedByCount == 1)
         #expect(await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
@@ -34,7 +34,7 @@ extension ProjectStoreTests {
     @Test func pendingContentEditPreservesInspectorMetadataUntilConfirmation() async throws {
         let detail = Self.itemDetailResponse(body: "Original")
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
-        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","bodyHTML":"<p>Updated</p>","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
         let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
             .response(detail), .suspended("content-write", mutation)
         ])
@@ -45,7 +45,17 @@ extension ProjectStoreTests {
         let item = try #require(store.item(for: reference))
         await store.loadItemDetail(for: item)
         let initialState = store.itemDetailState(for: item)
-        try store.beginContentEdit(reference, contentID: "CONTENT1", title: "Changed", body: "Updated")
+        guard case .loaded(let original) = initialState else {
+            Issue.record("Expected an editable detail")
+            return
+        }
+        let session = ItemEditingSession()
+        session.begin(reference, detail: original)
+        session.title = "Changed"
+        session.text = "Updated"
+        #expect(session.save(in: store))
+        #expect(!session.isEditing)
+        #expect(store.pendingContentEdits["CONTENT1"]?.body == "Updated")
         try await runner.waitUntilSuspended("content-write")
         let pendingItem = try #require(store.item(for: reference))
         #expect(store.itemDetailState(for: pendingItem) == initialState)
@@ -57,7 +67,7 @@ extension ProjectStoreTests {
             Issue.record("Confirmed content edits must keep inspector details loaded")
             return
         }
-        #expect(restored.bodyHTML == "<p>Updated</p>")
+        #expect(restored.body == "Updated")
         let metadata = try #require(restored.issueMetadata)
         #expect(metadata.milestone == nil)
         #expect(metadata.parent == nil && metadata.subIssues.isEmpty && metadata.blockedBy.isEmpty && metadata.blocking.isEmpty)
@@ -122,7 +132,7 @@ extension ProjectStoreTests {
         let updatedItems = Self.mutationItemsResponse.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
             detail, Self.graphQLFailureResponse,
-            #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","bodyHTML":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#,
+            #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#,
             Self.mutationFieldsResponse, updatedItems,
             detail.replacingOccurrences(of: #""title":"Item""#, with: #""title":"Changed""#)
         ])
@@ -145,7 +155,7 @@ extension ProjectStoreTests {
         let detail = Self.itemDetailResponse(body: "Original")
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [
-            detail, #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","bodyHTML":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+            detail, #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Original","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -164,7 +174,7 @@ extension ProjectStoreTests {
     @Test func confirmedContentSaveKeepsTheEditedDescriptionVisible() async throws {
         let detail = Self.itemDetailResponse(body: "Original")
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
-        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","bodyHTML":"<p>Updated</p>","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
         let runner = FixtureGitHubHTTPClient(responses: Self.mutationProjectResponses + [detail, mutation])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
@@ -181,7 +191,7 @@ extension ProjectStoreTests {
             Issue.record("The edited description should stay loaded after GitHub confirms the write")
             return
         }
-        #expect(currentDetail.bodyHTML == "<p>Updated</p>")
+        #expect(currentDetail.body == "Updated")
         let requests = await runner.recordedRequests()
         #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
         let detailRequests = requests.filter { $0.graphQLQuery == GraphQLQueries.itemDetail }
@@ -460,7 +470,7 @@ extension ProjectStoreTests {
             Issue.record("Assignee changes must allow unrelated detail reads to complete")
             return
         }
-        #expect(detail.bodyHTML == "Original")
+        #expect(detail.body == "Original")
         #expect(await runner.recordedRequests().filter { $0.graphQLQuery == GraphQLQueries.itemDetail }.count == 1)
     }
 
@@ -492,7 +502,7 @@ extension ProjectStoreTests {
             Issue.record("Assignee writes must not leave the open description and milestone idle")
             return
         }
-        #expect(restored.bodyHTML == "Description")
+        #expect(restored.body == "Description")
         #expect(restored.issueMetadata != nil)
 
         if succeeds {
