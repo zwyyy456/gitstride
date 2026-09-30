@@ -14,7 +14,7 @@ final class ItemEditingSession {
         guard let original else { return false }
         return title.trimmingCharacters(in: .whitespacesAndNewlines) != original.title || text != original.body
     }
-    var canSave: Bool { hasChanges && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var canSave: Bool { isEditing && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     func begin(_ reference: ItemInspectorReference, detail: ProjectItemDetail) {
         self.reference = reference
@@ -35,6 +35,10 @@ final class ItemEditingSession {
     @discardableResult
     func save(in store: ProjectStore) -> Bool {
         guard let reference, let original, canSave else { return false }
+        guard hasChanges else {
+            end()
+            return true
+        }
         do {
             try store.beginContentEdit(reference, contentID: original.id, title: title, body: text)
             end()

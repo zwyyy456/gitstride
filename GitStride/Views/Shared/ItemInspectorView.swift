@@ -123,6 +123,7 @@ struct ItemDetailView: View {
             if editingSession.reference == reference {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Cancel") { _ = editingSession.finishBeforeLeaving(in: store) }
+                        .keyboardShortcut(.cancelAction)
                 }
                 ToolbarGroupBoundary(placement: .primaryAction)
                 ToolbarItem(placement: .primaryAction) {
@@ -134,6 +135,7 @@ struct ItemDetailView: View {
             } else {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Edit", systemImage: "pencil", action: editItem)
+                        .keyboardShortcut("e", modifiers: .command)
                         .labelStyle(.iconOnly)
                         .disabled(!canEdit)
                         .help("Edit title and description")

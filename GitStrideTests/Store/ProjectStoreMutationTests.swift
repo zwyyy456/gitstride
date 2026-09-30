@@ -51,6 +51,20 @@ extension ProjectStoreTests {
         }
         let session = ItemEditingSession()
         session.begin(reference, detail: original)
+        #expect(session.canSave)
+        #expect(session.save(in: store))
+        #expect(!session.isEditing)
+        #expect(!session.canSave)
+        #expect(store.pendingContentEdits.isEmpty)
+        #expect(store.itemDetailState(for: item) == initialState)
+
+        session.begin(reference, detail: original)
+        session.title = "   "
+        #expect(!session.canSave)
+        #expect(!session.save(in: store))
+        #expect(session.isEditing)
+        #expect(store.pendingContentEdits.isEmpty)
+
         session.title = "Changed"
         session.text = "Updated"
         #expect(session.save(in: store))
