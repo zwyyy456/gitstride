@@ -27,6 +27,7 @@
 - `GitStrideModel` 负责 app 级组合与跨功能编排，包括 My Work 刷新、监控生命周期、通知动作和静音/稍后提醒偏好。它不复制 `ProjectStore` 的远程实体状态。
 - `AutomationSetupModel` 负责自动化的 setup session、配置草稿、连接健康和管理操作；它由 `GitStrideModel` 持有，设置窗口不得创建竞争实例。
 - `ProjectStore` 保持 `@MainActor` 隔离。所有会改变可观察 UI 状态的结果必须回到该 owner 应用。
+- `NewProjectItemDraft` 是创建表单模型，集中推导可选状态、优先级、默认状态与提交条件；View 只装配控件，Store 仍验证当前权限、连接和字段身份。
 - Views 只持有搜索文本、输入草稿、表单校验、焦点、局部展开状态等 surface-local presentation state；不得复制可写的项目集合、当前项目或远程 mutation 状态。
 - 工作区的已保存视图只持久化用户命名、筛选身份和显示偏好；筛选与交付统计从 `ProjectStore` 的完整项目投影派生。看板隐藏列只影响看板呈现，不缩小表格或交付统计的数据范围。
 - `ProjectDisplayPreferences` 集中拥有展示偏好的键集合、项目/保存视图命名空间和复制、删除逻辑；View 通过其键继续使用 `@AppStorage`，不另建可写的偏好快照。

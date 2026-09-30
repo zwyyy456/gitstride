@@ -192,6 +192,8 @@
 		E96EC83E08924E37AA7DFEFE /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
 		7A5D20464FC24702BFE2BCB6 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */; };
 		243C62428F2544BC8746A097 /* Views/CommandSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */; };
+		C01000000000000000000002 /* NewProjectItemDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C01000000000000000000001; };
+		C01000000000000000000003 /* NewProjectItemDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = C01000000000000000000001; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -313,6 +315,7 @@
 		BF633661D36B4334AACA20F0 /* CommandSearchField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandSearchField.swift; sourceTree = "<group>"; };
 		6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Commands/CommandPaletteView.swift; sourceTree = "<group>"; };
 		99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/CommandSearchTests.swift; sourceTree = "<group>"; };
+		C01000000000000000000001 /* NewProjectItemDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProjectItemDraft.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -374,6 +377,7 @@
 		A3000002 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				C01000000000000000000001 /* NewProjectItemDraft.swift */,
 				D2FBBF38805B473FB1ACAEF5 /* GitHubItemAddress.swift */,
 				2DBCD291C4B440DEA92DDCC1 /* GitHubResponse.swift */,
 				C889CA74D9304C369C5760E8 /* GitHubProjectResponse.swift */,
@@ -719,6 +723,7 @@
 				367A94843064B9F300F2A402 /* ItemMilestoneSection.swift in Sources */,
 				367A94853064B9F300F2A402 /* ItemLabelsSection.swift in Sources */,
 				367A94863064B9F300F2A402 /* ItemAssigneesSection.swift in Sources */,
+				C01000000000000000000002 /* NewProjectItemDraft.swift in Sources */,
 				367A94873064B9F300F2A402 /* NewProjectItemEditor.swift in Sources */,
 				367A94883064B9F300F2A402 /* ExistingProjectItemPicker.swift in Sources */,
 				367A94893064B9F300F2A402 /* AddProjectItemFields.swift in Sources */,
@@ -832,6 +837,7 @@
 				96213ACF191740819FF81303 /* ItemMilestoneSection.swift in Sources */,
 				95F40CC60C9D4E16A2EE8C4D /* ItemLabelsSection.swift in Sources */,
 				481568AA2C0A41AEA9696AAF /* ItemAssigneesSection.swift in Sources */,
+				C01000000000000000000003 /* NewProjectItemDraft.swift in Sources */,
 				153AA0C9C2AD4AFDA2C82D5C /* NewProjectItemEditor.swift in Sources */,
 				0A268DFF1FB34EA2A03336F0 /* ExistingProjectItemPicker.swift in Sources */,
 				B94760305D8740FB8B6A2C40 /* AddProjectItemFields.swift in Sources */,
