@@ -1,17 +1,17 @@
 import type { DeliveryMessage } from "./index";
 import type { AutomationChangeNotifier } from "./automation-events";
-import type { OAuthCredentialError } from "./oauth-credential-provider";
+import { OAuthCredentialError } from "./oauth-credential-provider";
 import type {
     IssueStatusAssignment,
     PersonalProjectConfiguration,
-    PersonalProjectError,
 } from "./personal-project-gateway";
-import type { RepositoryTruthError } from "./repository-truth-reader";
+import { RepositoryTruthError } from "./repository-truth-reader";
 import type {
     InstallationContext,
     IssueWorkflowTruth,
     SourcePullRequest,
 } from "./workflow-models";
+import { PersonalProjectError } from "./personal-project-gateway";
 import { WorkflowReducer } from "./workflow-reducer";
 
 export type AutomationErrorCode =
@@ -96,11 +96,14 @@ export class AutomationRunner {
         ).bind(new Date().toISOString(), message.deliveryID).run();
         if (started.meta.changes !== 1) return { action: "ack" };
 
-        let didApply = false;
+        let confirmedStatusWriteCount = 0;
+        let assignmentCount = 0;
+        let stage = "LOAD_INSTALLATION_REPOSITORIES";
         try {
             const repositoryNodeIDs = await this.loadInstallationRepositoryNodeIDs(
                 automation.installation_id
             );
+            stage = "LOAD_WORKFLOW_TRUTH";
             const truths = await this.truthReader.loadWorkflowTruth(
                 { id: automation.installation_id, repositoryNodeIDs },
                 {
@@ -108,6 +111,7 @@ export class AutomationRunner {
                     number: automation.pull_request_number,
                 }
             );
+            stage = "EVALUATE_WORKFLOW";
             const assignments = truths.flatMap<IssueStatusAssignment>((truth) => {
                 const desiredStatus = WorkflowReducer.reduce(truth);
                 return desiredStatus ? [{
@@ -116,23 +120,61 @@ export class AutomationRunner {
                     desiredStatus,
                 }] : [];
             });
+            assignmentCount = assignments.length;
+            console.info("automation_workflow_evaluated", {
+                attempt,
+                deliveryID: message.deliveryID,
+                automationID: automation.automation_id,
+                closingIssueCount: truths.length,
+                issuesWithoutClosingPRsCount: truths.filter(
+                    (truth) => truth.closingPullRequests.length === 0
+                ).length,
+                issueDecisions: truths.map((truth) => ({
+                    issueState: truth.issueState,
+                    closingPRCount: truth.closingPullRequests.length,
+                    openDraftPRCount: truth.closingPullRequests.filter(
+                        (pr) => pr.state === "OPEN" && pr.isDraft
+                    ).length,
+                    openReadyPRCount: truth.closingPullRequests.filter(
+                        (pr) => pr.state === "OPEN" && !pr.isDraft
+                    ).length,
+                    mergedPRCount: truth.closingPullRequests.filter(
+                        (pr) => pr.state === "MERGED"
+                    ).length,
+                    closedUnmergedPRCount: truth.closingPullRequests.filter(
+                        (pr) => pr.state === "CLOSED"
+                    ).length,
+                    desiredStatus: WorkflowReducer.reduce(truth),
+                })),
+                assignmentCount: assignments.length,
+                reviewStatusPolicy: automation.review_status_policy,
+            });
+            stage = "APPLY_PROJECT_STATUSES";
             const outcomes = assignments.length > 0
-                ? await this.projectGateway.applyStatuses(configuration(automation), assignments, () => { didApply = true; })
+                ? await this.projectGateway.applyStatuses(configuration(automation), assignments, () => { confirmedStatusWriteCount += 1; })
                 : {};
             const hasMissingItem = Object.values(outcomes).includes("NOT_IN_PROJECT");
-            if (didApply) {
+            if (confirmedStatusWriteCount > 0) {
+                stage = "UPDATE_AUTOMATION_HEALTH";
                 await this.database.prepare(
                     `UPDATE project_automations
                      SET health_state = 'ACTIVE', updated_at = ?
                      WHERE id = ? AND health_state = 'CONTENT_VISIBILITY_UNVERIFIED'`
                 ).bind(new Date().toISOString(), automation.automation_id).run();
             }
+            stage = "COMPLETE_DELIVERY";
             await this.finishDelivery(
                 message.deliveryID,
                 "COMPLETED",
                 hasMissingItem ? "NOT_IN_PROJECT" : null
             );
             console.info("automation_delivery_completed", {
+                attempt,
+                recoveredAfterRetry: attempt > 1,
+                assignmentCount,
+                confirmedStatusWriteCount,
+                appliedIssueCount: Object.values(outcomes).filter((outcome) => outcome === "APPLIED").length,
+                missingIssueCount: Object.values(outcomes).filter((outcome) => outcome === "NOT_IN_PROJECT").length,
                 deliveryID: message.deliveryID,
                 automationID: automation.automation_id,
                 outcome: assignments.length === 0
@@ -141,9 +183,11 @@ export class AutomationRunner {
             });
             return { action: "ack" };
         } catch (error) {
-            return await this.handleFailure(message.deliveryID, automation, error, attempt);
+            return await this.handleFailure(message.deliveryID, automation, error, attempt, {
+                stage, assignmentCount, confirmedStatusWriteCount,
+            });
         } finally {
-            if (didApply) {
+            if (confirmedStatusWriteCount > 0) {
                 await this.publishChange(
                     message.deliveryID,
                     automation.automation_id,
@@ -196,9 +240,22 @@ export class AutomationRunner {
         deliveryID: string,
         automation: AutomationRecord,
         error: unknown,
-        attempt: number
+        attempt: number,
+        progress: { stage: string; assignmentCount: number; confirmedStatusWriteCount: number }
     ): Promise<RunnerDecision> {
         const code = classifyError(error);
+        const diagnostics = {
+            ...progress,
+            attempt,
+            errorSource: error instanceof PersonalProjectError ? "PERSONAL_PROJECT"
+                : error instanceof OAuthCredentialError ? "OAUTH_CREDENTIAL"
+                : error instanceof RepositoryTruthError ? "REPOSITORY_TRUTH"
+                : "UNCLASSIFIED",
+            sourceErrorCode: error instanceof PersonalProjectError
+                || error instanceof OAuthCredentialError
+                || error instanceof RepositoryTruthError ? error.code : null,
+            httpStatus: error instanceof PersonalProjectError ? error.status ?? null : null,
+        };
         if (code === "TRANSIENT_GITHUB_FAILURE") {
             await this.database.prepare(
                 `UPDATE webhook_deliveries
@@ -207,10 +264,11 @@ export class AutomationRunner {
                    AND processing_state NOT IN ('COMPLETED', 'FAILED', 'IGNORED')`
             ).bind(code, new Date().toISOString(), deliveryID).run();
             console.info("automation_delivery_retrying", {
+                ...diagnostics,
+                retryDelaySeconds: retryDelay(attempt),
                 deliveryID,
                 automationID: automation.automation_id,
                 errorCode: code,
-                attempt,
             });
             return { action: "retry", delaySeconds: retryDelay(attempt) };
         }
@@ -234,6 +292,7 @@ export class AutomationRunner {
         }
         await this.publishChange(deliveryID, automation.automation_id, "automation_changed");
         console.info("automation_delivery_failed", {
+            ...diagnostics,
             deliveryID,
             automationID: automation.automation_id,
             errorCode: code,

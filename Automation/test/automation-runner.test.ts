@@ -4,7 +4,10 @@ import type { DeliveryMessage } from "../src/index";
 import { PersonalProjectError, PersonalProjectGateway } from "../src/personal-project-gateway";
 import type { IssueWorkflowTruth } from "../src/workflow-models";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+});
 
 describe("AutomationRunner", () => {
     test.each([
@@ -106,8 +109,9 @@ describe("AutomationRunner", () => {
     });
 
     test("retries only a transient classified failure", async () => {
+        const log = vi.spyOn(console, "info").mockImplementation(() => {});
         const database = new RunnerDatabase();
-        const gateway = new StubGateway({});
+        const gateway = new StubGateway({ ISSUE: "APPLIED" });
         gateway.error = new PersonalProjectError("TRANSIENT_GITHUB_FAILURE", 503);
         const runner = new AutomationRunner(
             database.binding,
@@ -122,6 +126,38 @@ describe("AutomationRunner", () => {
         });
         expect(database.deliveryState).toBe("RETRYING");
         expect(database.errorCode).toBe("TRANSIENT_GITHUB_FAILURE");
+        expect(log).toHaveBeenCalledWith("automation_delivery_retrying", expect.objectContaining({
+            stage: "APPLY_PROJECT_STATUSES",
+            errorSource: "PERSONAL_PROJECT",
+            httpStatus: 503,
+            attempt: 3,
+            retryDelaySeconds: 240,
+            assignmentCount: 1,
+            confirmedStatusWriteCount: 0,
+        }));
+
+        gateway.error = null;
+        await expect(runner.run(message, 4)).resolves.toEqual({ action: "ack" });
+        expect(log).toHaveBeenCalledWith("automation_delivery_completed", expect.objectContaining({
+            attempt: 4,
+            recoveredAfterRetry: true,
+            confirmedStatusWriteCount: 1,
+            appliedIssueCount: 1,
+        }));
+    });
+
+    test("logs unclassified failures without exposing exception content", async () => {
+        const log = vi.spyOn(console, "info").mockImplementation(() => {});
+        const gateway = new StubGateway({});
+        gateway.error = new Error("private payload and credential must not be logged");
+        const runner = new AutomationRunner(new RunnerDatabase().binding,
+            new StubTruthReader([issueTruth()]), gateway, new StubNotifier());
+
+        await expect(runner.run(message, 1)).resolves.toEqual({ action: "retry", delaySeconds: 60 });
+        expect(log).toHaveBeenCalledWith("automation_delivery_retrying", expect.objectContaining({
+            errorSource: "UNCLASSIFIED", httpStatus: null,
+        }));
+        expect(JSON.stringify(log.mock.calls)).not.toContain(gateway.error.message);
     });
 
     test("publishes after a terminal OAuth failure changes connection health", async () => {

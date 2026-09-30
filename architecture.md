@@ -94,7 +94,7 @@
 - 已存在的账户级 automation 通过完成 OAuth 与 installation 归属验证的 setup session 恢复本机管理权限；恢复保留原映射和启停状态，不创建重复 automation。管理 token 在本机 Keychain 保存后才提交，服务端只保存其哈希，重复提交不得重复授予凭据。
 - 桌面 OAuth 和 CLI 凭据只服务交互式浏览与编辑；后台 automation 不读取或复制这两种本机凭据，桌面退出登录不停止后台 automation。
 - Worker 为完成自动化会瞬时接收 GitHub Project Item 响应，但应用层只传播必要 identity 字段，不持久化或记录私人 Issue 内容，也不保存 Issue 到 Project Item 的映射。
-- Webhook 与运行日志只能包含 delivery ID、automation ID、处理阶段、状态码和稳定错误码，不得包含完整 payload、Issue 标题/正文或凭据。
+- Webhook 与运行日志只能包含 delivery ID、automation ID、处理阶段、状态码、稳定错误码，尝试次数、重试延迟、已确认写入数量和错误来源分类，以及工作流诊断所需的关联数量、匿名 Issue/PR 状态分类和目标状态、Ready PR 策略；不得包含完整 payload、Issue 标题/正文或凭据。
 
 ## 目录边界
 
