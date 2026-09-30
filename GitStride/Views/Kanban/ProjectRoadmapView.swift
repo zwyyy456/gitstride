@@ -142,9 +142,13 @@ struct ProjectRoadmapView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup {
+            ToolbarGroupBoundary(placement: .secondaryAction)
+            ToolbarItem(placement: .secondaryAction) {
                 Button("Today", action: goToToday)
                     .disabled(!isConfigured || items.isEmpty)
+            }
+            ToolbarGroupBoundary(placement: .secondaryAction)
+            ToolbarItemGroup(placement: .secondaryAction) {
                 Picker("Timeline Zoom", selection: $zoom) {
                     ForEach(RoadmapZoom.allCases, id: \.self) { Text($0.title).tag($0) }
                 }

@@ -171,7 +171,7 @@ struct KanbanBoardView: View {
 
     @ToolbarContentBuilder
     private var kanbanToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .automatic) {
+        ToolbarItemGroup(placement: .secondaryAction) {
             Button(action: refresh) {
                 Label {
                     Text("Refresh Project")
@@ -205,28 +205,22 @@ struct KanbanBoardView: View {
                        action: toggleFollowingProject)
                     .labelStyle(.iconOnly)
                     .help(myWorkStore.isFollowing(project.id) ? String(localized: "Remove from My Work") : String(localized: "Add to My Work"))
-                Menu("Saved Views", systemImage: "ellipsis") {
-                    workControls(project).savedViewMenuContents
-                }.help("Saved Views")
-            }
-        }
-
-        if isSelecting || showsProjectEditingActions {
-            if #available(macOS 26.0, *) {
-                ToolbarSpacer(.fixed)
             }
         }
 
         if isSelecting {
-            ToolbarItemGroup(placement: .automatic) {
+            ToolbarItem(placement: .status) {
                 Text("\(selectedItemIDs.count) Selected")
                     .foregroundStyle(.secondary)
-
-                Menu("Move To") {
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
+                Menu("Move To", systemImage: "arrow.right") {
                     ForEach(store.selectedProject?.statusOptions ?? []) { status in
                         Button(status.name) { moveSelection(to: status) }
                     }
                 }
+                .labelStyle(.iconOnly)
+                .help("Move To")
                 .disabled(selectedItemIDs.isEmpty || isBulkWorking || !canEditSelectedProject)
 
                 Button(role: .destructive) {
@@ -234,26 +228,26 @@ struct KanbanBoardView: View {
                 } label: {
                     Label("Archive", systemImage: "archivebox")
                 }
+                .labelStyle(.iconOnly)
+                .help("Archive")
                 .disabled(selectedItemIDs.isEmpty || isBulkWorking || !canEditSelectedProject)
-
-                Button("Done", action: toggleSelectionMode)
-                    .keyboardShortcut(.cancelAction)
             }
         } else if showsProjectEditingActions {
-            ToolbarItemGroup(placement: .automatic) {
-                Button("Add Item", systemImage: "plus", action: showAddItem)
-                    .labelStyle(.iconOnly)
-                    .disabled(canEditSelectedProject == false)
-                    .help("Add Item")
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button("Select Multiple Items", systemImage: "checkmark.circle", action: toggleSelectionMode)
                     .labelStyle(.iconOnly)
                     .disabled(!canEditSelectedProject)
                     .help("Select Multiple Items")
+                Button("Add Item", systemImage: "plus", action: showAddItem)
+                    .labelStyle(.iconOnly)
+                    .disabled(canEditSelectedProject == false)
+                    .help("Add Item")
             }
         }
 
         if store.selectedProject != nil {
-            ToolbarItem(placement: .automatic) {
+            ToolbarGroupBoundary(placement: .secondaryAction)
+            ToolbarItem(placement: .secondaryAction) {
                 Picker("Project Layout", selection: layoutSelection) {
                     ForEach(ProjectLayout.allCases, id: \.self) { layout in
                         Text(layout.title).tag(layout)
@@ -267,7 +261,7 @@ struct KanbanBoardView: View {
             }
         }
         if let project = store.selectedProject {
-            ToolbarItem(placement: .automatic) {
+            ToolbarItem(placement: .secondaryAction) {
                 Menu {
                     workControls(project).filterMenuContents
                 } label: {
@@ -279,8 +273,8 @@ struct KanbanBoardView: View {
                 .accessibilityValue(workFilter.isActive ? String(localized: "Filters active") : String(localized: "No filters"))
             }
         }
-        if let project = store.selectedProject {
-            ToolbarItem(placement: .automatic) {
+        if let project = store.selectedProject, layout != .roadmap {
+            ToolbarItem(placement: .secondaryAction) {
                 Group {
                     if layout == .table {
                         TableDisplayOptions(project: project, preferenceID: tablePreferenceID,
@@ -291,6 +285,21 @@ struct KanbanBoardView: View {
                     }
                 }
                 .id(tablePreferenceID)
+            }
+        }
+        if let project = store.selectedProject {
+            ToolbarItem(placement: .secondaryAction) {
+                Menu("Saved Views", systemImage: "ellipsis") {
+                    workControls(project).savedViewMenuContents
+                }
+                .help("Saved Views")
+            }
+        }
+        if isSelecting {
+            ToolbarGroupBoundary(placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
+                Button("Done", action: toggleSelectionMode)
+                    .keyboardShortcut(.cancelAction)
             }
         }
         if #available(macOS 26.0, *), !isSelecting {

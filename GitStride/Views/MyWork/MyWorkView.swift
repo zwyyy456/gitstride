@@ -120,20 +120,28 @@ struct MyWorkView: View {
                 .help("\(items.count) items in \(filter.title)")
             }
 
-            ToolbarItemGroup(placement: .primaryAction) {
-                if isSelecting {
+            if isSelecting {
+                ToolbarItemGroup(placement: .automatic) {
                     Text("\(selectedIDs.count) Selected")
-                    Menu("Move To") {
+                    Menu("Move To", systemImage: "arrow.right") {
                         ForEach(commandContext.moveSelection) { action in
                             Button(action.title, action: action.perform).disabled(!action.isEnabled)
                         }
-                    }.disabled(!canWork || commonStatuses.isEmpty)
-                    Button("Archive Selected Items", role: .destructive) { performBulk(status: nil) }
-                        .disabled(!canWork)
-                    Button("Done Selecting") { isSelecting = false; selectedIDs = [] }
-                        .disabled(isBulkWorking)
+                    }
+                    .labelStyle(.iconOnly)
+                    .help("Move To")
+                    .disabled(!canWork || commonStatuses.isEmpty)
+                    Button(role: .destructive) { performBulk(status: nil) } label: {
+                        Label("Archive Selected Items", systemImage: "archivebox")
+                    }
+                    .labelStyle(.iconOnly)
+                    .help("Archive Selected Items")
+                    .disabled(!canWork)
                 }
+                ToolbarGroupBoundary()
+            }
 
+            ToolbarItemGroup(placement: .automatic) {
                 Menu {
                     ForEach(model.myWorkStore.followedProjects) { reference in
                         let title = followedProjectTitle(reference)
@@ -147,6 +155,7 @@ struct MyWorkView: View {
                         systemImage: "briefcase"
                     )
                 }
+                .labelStyle(.iconOnly)
                 .disabled(model.myWorkStore.followedProjects.isEmpty)
                 .help("Manage My Work Projects")
 
@@ -158,6 +167,14 @@ struct MyWorkView: View {
                     Button("Refresh My Work", systemImage: "arrow.clockwise", action: refresh)
                         .labelStyle(.iconOnly)
                         .help("Refresh My Work")
+                }
+            }
+            if isSelecting {
+                ToolbarGroupBoundary(placement: .primaryAction)
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Done Selecting") { isSelecting = false; selectedIDs = [] }
+                        .keyboardShortcut(.cancelAction)
+                        .disabled(isBulkWorking)
                 }
             }
         }
