@@ -332,8 +332,12 @@ final class ProjectStore {
     }
 
     var selectedProjectContentState: SelectedProjectContentState {
-        guard let project = selectedProject else { return .none }
+        guard let id = selectedProjectId else { return .none }
+        return projectContentState(id: id)
+    }
 
+    func projectContentState(id: String) -> SelectedProjectContentState {
+        guard let project = project(id: id) else { return .none }
         switch projectStates[project.id]?.phase ?? .summary {
         case .summary, .loading:
             return .loading(project)
@@ -857,8 +861,12 @@ final class ProjectStore {
 
     var defaultIssueRepository: String {
         guard let project = selectedProject else { return "" }
+        return defaultIssueRepository(in: project)
+    }
+
+    func defaultIssueRepository(in project: Project) -> String {
         if project.linkedRepositories.count == 1 { return project.linkedRepositories[0] }
-        let suggestions = repositorySuggestions
+        let suggestions = Set(project.items.compactMap(\.repositoryName)).sorted()
         return project.linkedRepositories.isEmpty && suggestions.count == 1 ? suggestions[0] : ""
     }
 
@@ -1199,13 +1207,13 @@ final class ProjectStore {
         if operationErrorMessage == nil { operationErrorMessage = catalogError }
     }
 
-    func selectProject(_ project: Project) async {
+    func selectProject(_ project: Project, refresh: Bool = false) async {
         let phase = projectStates[project.id]?.phase ?? .summary
-        guard project.id != selectedProjectId || phase != .loaded else { return }
+        guard refresh || project.id != selectedProjectId || phase != .loaded else { return }
         selectedProjectId = project.id
         selectedStatusFilter = nil
         operationErrorMessage = nil
-        guard phase != .loading, phase != .refreshing else { return }
+        guard refresh || (phase != .loading && phase != .refreshing) else { return }
         await loadProjectDetails(id: project.id)
     }
 
@@ -1795,9 +1803,10 @@ final class ProjectStore {
         status: String? = nil,
         priority: String? = nil,
         startDate: Date? = nil,
-        targetDate: Date? = nil
+        targetDate: Date? = nil,
+        projectID: String? = nil
     ) throws -> IssueCreation {
-        let project = try editableSelectedProject()
+        let project = try projectID.map { try editableProject(id: $0) } ?? editableSelectedProject()
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
         let repository = repository.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1854,8 +1863,8 @@ final class ProjectStore {
         startPendingCreation(operation.id)
     }
 
-    func beginDraftCreation(title: String, body: String) throws {
-        let project = try editableSelectedProject()
+    func beginDraftCreation(title: String, body: String, projectID: String? = nil) throws {
+        let project = try projectID.map { try editableProject(id: $0) } ?? editableSelectedProject()
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
         let operation = PendingItemCreation(id: UUID(), projectID: project.id,
@@ -2116,8 +2125,8 @@ final class ProjectStore {
         try await gitHubService.resolveItem(url: url)
     }
 
-    func addExistingItem(_ candidate: GitHubItemCandidate) async throws {
-        let project = try editableSelectedProject()
+    func addExistingItem(_ candidate: GitHubItemCandidate, projectID: String? = nil) async throws {
+        let project = try projectID.map { try editableProject(id: $0) } ?? editableSelectedProject()
         let itemID = try await performProjectMutation(projectID: project.id) {
             try await self.gitHubService.addExistingItem(projectId: project.id, candidate: candidate)
         }

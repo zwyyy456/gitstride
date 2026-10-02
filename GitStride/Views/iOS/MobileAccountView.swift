@@ -57,37 +57,83 @@ struct MobileAccountView: View {
                 )
             }
             .foregroundStyle(.secondary)
-            AutomationSettingsView(setup: model.automationSetup)
-            Section("About") {
-                LabeledContent(
-                    "GitStride",
-                    value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
-                        as? String
-                        ?? "")
-                NavigationLink("License") {
-                    ScrollView {
-                        Text(licenseText).textSelection(.enabled).frame(
-                            maxWidth: .infinity, alignment: .leading
-                        ).padding()
-                    }.navigationTitle("License")
-                }
-            }
-        }
-        .sheet(
-            isPresented: Binding(get: { model.automationSetup.isPresentingSetup }, set: { _ in })
-        ) {
-            AutomationSetupSheet(setup: model.automationSetup)
-        }
-        .task(id: model.automationSetup.setupSessionID) {
-            await model.automationSetup.observeSetup()
         }
         .navigationTitle("GitHub")
     }
-    private var licenseText: String {
-        guard let url = Bundle.main.url(forResource: "LICENSE", withExtension: nil) else {
-            return ""
+}
+
+struct MobileSettingsView: View {
+    @Bindable var model: GitStrideModel
+
+    var body: some View {
+        Form {
+            Section {
+                NavigationLink {
+                    MobileAccountView(model: model)
+                } label: {
+                    LabeledContent("GitHub Account", value: model.projectStore.currentUserLogin.map { "@" + $0 } ?? String(localized: "Not connected"))
+                }
+                NavigationLink {
+                    MobileAutomationView(model: model)
+                } label: {
+                    LabeledContent("Automation", value: automationStatus)
+                }
+            }
+            Section {
+                NavigationLink {
+                    MobileAboutView()
+                } label: {
+                    LabeledContent("About", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
+                }
+            }
         }
-        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        .navigationTitle("Settings")
     }
 
+    private var automationStatus: String {
+        let setup = model.automationSetup
+        if setup.phase == .loadingConnection { return String(localized: "Loading…") }
+        if setup.errorMessage != nil || setup.phase == .connectionLoadFailed {
+            return String(localized: "Needs attention")
+        }
+        if setup.automations.isEmpty { return String(localized: "Not configured") }
+        if setup.automations.contains(where: { !["ACTIVE", "CONTENT_VISIBILITY_UNVERIFIED"].contains($0.healthState) }) {
+            return String(localized: "Needs attention")
+        }
+        return setup.automations.contains(where: \.enabled) ? String(localized: "Enabled") : String(localized: "Paused")
+    }
+}
+
+private struct MobileAutomationView: View {
+    @Bindable var model: GitStrideModel
+
+    var body: some View {
+        Form { AutomationSettingsView(setup: model.automationSetup) }
+            .navigationTitle("Automation")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: Binding(get: { model.automationSetup.isPresentingSetup }, set: { _ in })) {
+                AutomationSetupSheet(setup: model.automationSetup)
+            }
+            .task(id: model.automationSetup.setupSessionID) { await model.automationSetup.observeSetup() }
+    }
+}
+
+private struct MobileAboutView: View {
+    var body: some View {
+        Form {
+            LabeledContent("GitStride", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
+            NavigationLink("License") {
+                ScrollView {
+                    Text(licenseText).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding()
+                }.navigationTitle("License")
+            }
+        }
+        .navigationTitle("About")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var licenseText: String {
+        guard let url = Bundle.main.url(forResource: "LICENSE", withExtension: nil) else { return "" }
+        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
 }

@@ -4,11 +4,14 @@ struct MobileProjectView: View {
     @Bindable var model: GitStrideModel
     let projectID: String
     @State private var search = ""
+    @State private var supportsBoard = false
+    @State private var groupByStatus = true
+    @State private var changingStatusItem: ProjectItem?
     @State private var filter = ProjectWorkFilter()
     @State private var showingFilters = false
     @State private var showingAdd = false
-    @State private var managingProject = false
     @State private var showingDisplay = false
+    @State private var showingManagement = false
     @State private var savingView = false
     @State private var viewName = ""
     @State private var selectedViewID: String?
@@ -25,7 +28,7 @@ struct MobileProjectView: View {
         ProjectDisplayPreferences(projectID: projectID, viewID: selectedViewID)
     }
     private var layout: ProjectLayout {
-        savedView?.layout ?? preferences.layout(projectID: projectID, defaultLayout: .table)
+        supportsBoard ? (savedView?.layout ?? preferences.layout(projectID: projectID, defaultLayout: .table)) : .table
     }
     private var items: [ProjectItem] {
         filter.apply(to: project?.items ?? [], currentUserLogin: store.currentUserLogin)
@@ -47,6 +50,7 @@ struct MobileProjectView: View {
             if let message = errorMessage ?? store.operationErrorMessage {
                 Text(message).font(.callout).foregroundStyle(.red).padding(8)
             }
+            activeViewSummary
             if filter.isDelivery, let project { deliverySummary(project) }
             if store.pendingCreationList.contains(where: { $0.projectID == projectID })
                 || store.pendingEditList.contains(where: { $0.reference?.projectID == projectID })
@@ -57,17 +61,14 @@ struct MobileProjectView: View {
                             maxHeight: 180)
                 }.padding()
             }
-            if store.isLoading && items.isEmpty {
-                ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if layout == .board && !selecting {
-                board
-            } else {
-                itemList
-            }
+            projectContent
         }
-        .navigationTitle(savedView?.name ?? project?.title ?? String(localized: "Project"))
+        .onGeometryChange(for: Bool.self) { geometry in
+            geometry.size.width >= 680
+        } action: { supportsBoard = $0 && UIDevice.current.userInterfaceIdiom == .pad }
+        .navigationTitle(project?.title ?? String(localized: "Project"))
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $search)
+        .mobileSearch(text: $search)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
@@ -76,15 +77,6 @@ struct MobileProjectView: View {
                     Label("Add to Project", systemImage: "plus")
                 }
                 .disabled(!store.canEditProject(id: projectID))
-                Button {
-                    showingFilters = true
-                } label: {
-                    Label(
-                        "Filter",
-                        systemImage: filter.isActive
-                            ? "line.3.horizontal.decrease.circle.fill"
-                            : "line.3.horizontal.decrease.circle")
-                }
                 workspaceMenu
             }
         }
@@ -95,10 +87,10 @@ struct MobileProjectView: View {
                     selection: $selection)
             }
         }
-        .sheet(isPresented: $managingProject) {
+        .navigationDestination(isPresented: $showingManagement) {
             if let project { MobileProjectManagement(model: model, project: project) }
         }
-        .sheet(isPresented: $showingAdd) { MobileAddItemView(store: store) }
+        .sheet(isPresented: $showingAdd) { MobileAddItemView(store: store, projectID: projectID) }
         .sheet(isPresented: $showingFilters) {
             if let project { MobileFilterView(project: project, filter: $filter) }
         }
@@ -107,23 +99,25 @@ struct MobileProjectView: View {
                 NavigationStack {
                     Form {
                         MobileDisplayFields(project: project, preferenceID: display.id)
-                        Section("Board Columns") {
-                            ForEach(project.statusOptions) { status in
-                                Toggle(
-                                    status.name,
-                                    isOn: Binding(
-                                        get: { statuses.contains { $0.id == status.id } },
-                                        set: { visible in
-                                            var ids = Set(statuses.map(\.id))
-                                            if visible { ids.insert(status.id) }
-                                            else { ids.remove(status.id) }
-                                            change {
-                                                try preferences.setHiddenStatuses(
-                                                    Set(project.statusOptions.map(\.id)).subtracting(ids),
-                                                    in: project, viewID: selectedViewID)
+                        if supportsBoard && layout == .board {
+                            Section("Board Columns") {
+                                ForEach(project.statusOptions) { status in
+                                    Toggle(
+                                        status.name,
+                                        isOn: Binding(
+                                            get: { statuses.contains { $0.id == status.id } },
+                                            set: { visible in
+                                                var ids = Set(statuses.map(\.id))
+                                                if visible { ids.insert(status.id) }
+                                                else { ids.remove(status.id) }
+                                                change {
+                                                    try preferences.setHiddenStatuses(
+                                                        Set(project.statusOptions.map(\.id)).subtracting(ids),
+                                                        in: project, viewID: selectedViewID)
+                                                }
                                             }
-                                        }
-                                    ))
+                                        ))
+                                }
                             }
                         }
                     }
@@ -141,36 +135,131 @@ struct MobileProjectView: View {
         .onChange(of: items.map(\.id)) { _, ids in
             selection = selection.filter { ids.contains($0.itemID) }
         }
-        .task(id: projectID) { if let project { await model.openProject(project) } }
+        .task(id: projectID) {
+            if let project { await store.selectProject(project, refresh: true) }
+        }
+        .sheet(item: $changingStatusItem) { item in
+            NavigationStack {
+                List {
+                    ForEach(project?.statusOptions ?? []) { status in
+                        Button {
+                            changingStatusItem = nil
+                            Task {
+                                do {
+                                    guard let field = project?.statusField else { return }
+                                    try await store.moveItemToStatus(projectID: projectID, itemID: item.id,
+                                                                     fieldID: field.id, optionID: status.id)
+                                } catch { errorMessage = error.localizedDescription }
+                            }
+                        } label: {
+                            HStack {
+                                Circle().fill(status.swiftUIColor).frame(width: 10, height: 10)
+                                Text(status.name).foregroundStyle(.primary)
+                                Spacer()
+                                if item.statusOptionId == status.id { Image(systemName: "checkmark") }
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Change Status")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { Button("Cancel") { changingStatusItem = nil } }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectContent: some View {
+        switch store.projectContentState(id: projectID) {
+        case .none:
+            ContentUnavailableView("Project unavailable", systemImage: "rectangle.stack")
+        case .loading:
+            ProgressView("Loading…").frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .failed(_, let message):
+            ContentUnavailableView {
+                Label("Couldn’t Load Project", systemImage: "exclamationmark.triangle")
+            } description: { Text(message) } actions: {
+                Button("Retry") { Task { await store.loadProjectDetails(id: projectID) } }
+            }
+        case .content(_, let refreshing, _), .empty(_, let refreshing, _):
+            if refreshing { ProgressView("Refreshing…").font(.caption) }
+            if layout == .board && !selecting && !items.isEmpty {
+                board
+            } else {
+                itemList
+            }
+        }
     }
 
     private var itemList: some View {
         List {
-            ForEach(items) { item in
-                if selecting {
-                    Button {
-                        let reference = ItemInspectorReference(
-                            projectID: projectID, itemID: item.id)
-                        if !selection.insert(reference).inserted { selection.remove(reference) }
-                    } label: {
-                        HStack {
-                            Image(
-                                systemName: selection.contains(
-                                    ItemInspectorReference(projectID: projectID, itemID: item.id))
-                                    ? "checkmark.circle.fill" : "circle")
-                            row(item)
-                        }
+            if groupByStatus {
+                ForEach(project?.statusOptions ?? []) { status in statusSection(status) }
+                statusSection(nil)
+            } else {
+                ForEach(items) { item in selectableRow(item) }
+            }
+            if items.isEmpty {
+                if filter.isActive || !search.isEmpty {
+                    ContentUnavailableView {
+                        Label("No matching items", systemImage: "line.3.horizontal.decrease.circle")
+                    } description: { Text("No items match the current filters.") } actions: {
+                        Button("Clear Filters") { filter = ProjectWorkFilter(); search = "" }
                     }
+                } else if case .empty(_, true, _) = store.projectContentState(id: projectID) {
+                    EmptyView()
                 } else {
-                    itemLink(item)
+                    ContentUnavailableView("This project has no items", systemImage: "tray")
                 }
             }
-            if store.isLoading { ProgressView() }
-            if items.isEmpty && !store.isLoading {
-                ContentUnavailableView("No Items", systemImage: "tray")
-            }
         }
+        .listStyle(.plain)
+        .listSectionSpacing(.compact)
         .refreshable { await store.loadProjectDetails(id: projectID) }
+    }
+
+    @ViewBuilder
+    private func statusSection(_ status: StatusOption?) -> some View {
+        let members = items.filter { item in
+            if let status { return item.statusOptionId == status.id }
+            return !(project?.statusOptions.contains { $0.id == item.statusOptionId } ?? false)
+        }
+        if !members.isEmpty {
+            Section {
+                ForEach(members) { item in selectableRow(item) }
+            } header: {
+                HStack(spacing: 6) {
+                    Circle().fill(status?.swiftUIColor ?? .secondary).frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(status?.name ?? String(localized: "No Status"))
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .textCase(nil)
+        }
+    }
+
+    @ViewBuilder
+    private func selectableRow(_ item: ProjectItem) -> some View {
+        if selecting {
+            Button {
+                let reference = ItemInspectorReference(projectID: projectID, itemID: item.id)
+                if !selection.insert(reference).inserted { selection.remove(reference) }
+            } label: {
+                HStack {
+                    Image(systemName: selection.contains(ItemInspectorReference(projectID: projectID, itemID: item.id))
+                          ? "checkmark.circle.fill" : "circle")
+                    row(item)
+                }
+            }
+        } else {
+            itemLink(item)
+                .swipeActions(allowsFullSwipe: false) {
+                    Button("Change Status", systemImage: "arrow.right.circle") { changingStatusItem = item }
+                        .tint(.blue)
+                        .disabled(store.statusChangeUnavailableReason(ItemInspectorReference(projectID: projectID, itemID: item.id)) != nil)
+                }
+        }
     }
 
     private var board: some View {
@@ -217,7 +306,9 @@ struct MobileProjectView: View {
     }
 
     private func row(_ item: ProjectItem) -> some View {
-        MobileConfiguredItemRow(item: item, fields: project?.fields ?? [], preferenceID: display.id)
+        MobileConfiguredItemRow(item: item, fields: project?.fields ?? [], preferenceID: display.id,
+                                showsStatus: !groupByStatus || layout == .board,
+                                statusOption: project?.statusOptions.first { $0.id == item.statusOptionId })
     }
 
     private func itemLink(_ item: ProjectItem) -> some View {
@@ -252,74 +343,89 @@ struct MobileProjectView: View {
         }
     }
 
-    private var workspaceMenu: some View {
-        Menu {
-            Picker(
-                "Layout",
-                selection: Binding(
-                    get: { layout },
-                    set: { value in
-                        change {
-                            try preferences.setLayout(
-                                value, projectID: projectID, viewID: selectedViewID)
-                        }
-                    })
-            ) {
-                Text("List").tag(ProjectLayout.table)
-                Text("Board").tag(ProjectLayout.board)
-            }
-            Button("Display Options") { showingDisplay = true }
-            Button(selecting ? String(localized: "Done") : String(localized: "Select")) {
-                selecting.toggle()
-                selection.removeAll()
-            }
-            Button("Refresh") { Task { await store.loadProjectDetails(id: projectID) } }
-            Menu("Saved Views") {
-                Button("All Items") {
+    @ViewBuilder
+    private var activeViewSummary: some View {
+        if savedView != nil || filter.isActive || !search.isEmpty {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let savedView { Text(savedView.name) }
+                    if filter.isActive || !search.isEmpty { Text("Filters applied") }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Clear") {
                     selectedViewID = nil
                     filter = ProjectWorkFilter()
-                }
-                ForEach(preferences.views.filter { $0.projectID == projectID }) { view in
-                    Button(view.name) {
-                        selectedViewID = view.id
-                        filter = view.filter
-                        search = ""
-                    }
-                }
-                Button("Save Current View") {
-                    viewName = ""
-                    savingView = true
-                }
-                if let savedView {
-                    Button("Update Saved Filters") {
-                        change { try preferences.setFilter(filter, viewID: savedView.id) }
-                    }
-                    .disabled(savedView.filter == filter)
-                    Button("Delete Saved View", role: .destructive) {
-                        change {
-                            try preferences.delete(viewID: savedView.id)
-                            selectedViewID = nil
-                        }
-                    }
-                }
-            }
-            if filter.isActive || !search.isEmpty {
-                Button("Clear Filters") {
-                    filter = ProjectWorkFilter()
                     search = ""
+                }.font(.caption)
+            }
+            .padding(.horizontal).padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var savedViewActions: some View {
+        Button("All Items") { selectedViewID = nil; filter = ProjectWorkFilter(); search = "" }
+        ForEach(preferences.views.filter { $0.projectID == projectID }) { view in
+            Button(view.name) {
+                selectedViewID = view.id
+                filter = view.filter
+                search = ""
+            }
+        }
+        Divider()
+        Button("Save Current View") { viewName = ""; savingView = true }
+        if let savedView {
+            Button("Update Saved Filters") {
+                change { try preferences.setFilter(filter, viewID: savedView.id) }
+            }
+            .disabled(savedView.filter == filter)
+            Button("Delete Saved View", role: .destructive) {
+                change { try preferences.delete(viewID: savedView.id); selectedViewID = nil }
+            }
+        }
+    }
+
+    private var workspaceMenu: some View {
+        Menu {
+            Section("Views") { savedViewActions }
+            Section("Filter") {
+                Button("Filter") { showingFilters = true }
+                if filter.isActive || !search.isEmpty {
+                    Button("Clear Filters") { filter = ProjectWorkFilter(); search = "" }
                 }
             }
-            if let project {
-                Button(
-                    model.myWorkStore.isFollowing(projectID)
-                        ? String(localized: "Unfollow") : String(localized: "Follow")
-                ) {
-                    Task { await model.toggleFollowing(project) }
+            Section("Display Options") {
+                Toggle("Group by Status", isOn: $groupByStatus)
+                if supportsBoard {
+                    Picker("Layout", selection: Binding(
+                        get: { layout },
+                        set: { value in change { try preferences.setLayout(value, projectID: projectID, viewID: selectedViewID) } }
+                    )) {
+                        Text("List").tag(ProjectLayout.table)
+                        Text("Board").tag(ProjectLayout.board)
+                    }
                 }
-                if let url = URL(string: project.url) { Link("Open in GitHub", destination: url) }
+                Button("Show Fields") { showingDisplay = true }
             }
-            Button("Manage Project") { managingProject = true }.disabled(
-                !store.canManageProject(id: projectID))
+            Section("Project Actions") {
+                Button(selecting ? String(localized: "Done") : String(localized: "Select")) {
+                    selecting.toggle()
+                    selection.removeAll()
+                }
+                Button("Refresh") { Task { await store.loadProjectDetails(id: projectID) } }
+                if let project {
+                    Button(
+                        model.myWorkStore.isFollowing(projectID)
+                            ? String(localized: "Unfollow") : String(localized: "Follow")
+                    ) {
+                        Task { await model.toggleFollowing(project) }
+                    }
+                    if let url = URL(string: project.url) { Link("Open in GitHub", destination: url) }
+                }
+                Button("Manage Project") { showingManagement = true }
+                    .disabled(!store.canManageProject(id: projectID))
+            }
         } label: {
             Label("More Actions", systemImage: "ellipsis.circle")
         }

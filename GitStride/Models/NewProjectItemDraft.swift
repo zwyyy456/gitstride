@@ -1,6 +1,6 @@
 import Foundation
 
-struct NewProjectItemDraft {
+struct NewProjectItemDraft: Equatable {
     enum ItemType: String, CaseIterable, Identifiable {
         case issue = "Issue"
         case draft = "Draft"

@@ -2,16 +2,32 @@ import SwiftUI
 
 struct MobileAddItemView: View {
     @Bindable var store: ProjectStore
+    let projectID: String
+    private var project: Project? { store.project(id: projectID) }
     @Environment(\.dismiss) private var dismiss
-    @State private var draft = NewProjectItemDraft()
+    @State private var draft: NewProjectItemDraft
+    @State private var initialDraft: NewProjectItemDraft
+    @State private var confirmingDiscard = false
     @State private var existing = false
     @State private var query = ""
     @State private var results: [GitHubItemCandidate] = []
     @State private var isWorking = false
     @State private var errorMessage: String?
 
-    private var statuses: [String] { NewProjectItemDraft.statusOptions(in: store.selectedProject) }
-    private var priorities: [String] { NewProjectItemDraft.priorityOptions(in: store.selectedProject) }
+    init(store: ProjectStore, projectID: String) {
+        self.store = store
+        self.projectID = projectID
+        let project = store.project(id: projectID)
+        var draft = NewProjectItemDraft()
+        draft.repository = project.map { store.defaultIssueRepository(in: $0) } ?? ""
+        draft.reconcileStatus(in: project)
+        _draft = State(initialValue: draft)
+        _initialDraft = State(initialValue: draft)
+    }
+
+    private var hasChanges: Bool { draft != initialDraft }
+    private var statuses: [String] { NewProjectItemDraft.statusOptions(in: project) }
+    private var priorities: [String] { NewProjectItemDraft.priorityOptions(in: project) }
 
     var body: some View {
         NavigationStack {
@@ -28,19 +44,29 @@ struct MobileAddItemView: View {
             .disabled(isWorking)
             .navigationTitle("Add to Project")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        if hasChanges { confirmingDiscard = true }
+                        else { dismiss() }
+                    }
+                    .disabled(isWorking)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if !existing {
                         Button("Create", action: create)
-                            .disabled(isWorking || !draft.canSubmit(in: store.selectedProject))
+                            .disabled(isWorking || !draft.canSubmit(in: project))
                     }
                 }
             }
-            .onAppear {
-                draft.repository = store.defaultIssueRepository
-                draft.reconcileStatus(in: store.selectedProject)
+            .onChange(of: statuses) { _, _ in
+                draft.reconcileStatus(in: project)
+                initialDraft.reconcileStatus(in: project)
             }
-            .onChange(of: statuses) { _, _ in draft.reconcileStatus(in: store.selectedProject) }
+        }
+        .interactiveDismissDisabled(hasChanges || isWorking)
+        .confirmationDialog("Discard Changes?", isPresented: $confirmingDiscard, titleVisibility: .visible) {
+            Button("Discard Changes", role: .destructive) { dismiss() }
+            Button("Continue Editing", role: .cancel) {}
         }
     }
 
@@ -52,7 +78,7 @@ struct MobileAddItemView: View {
                 }
                 if draft.itemType == .issue {
                     NavigationLink {
-                        MobileRepositoryPicker(store: store, selection: $draft.repository)
+                        MobileRepositoryPicker(store: store, owner: project?.owner, selection: $draft.repository)
                     } label: {
                         LabeledContent(
                             "Repository",
@@ -116,7 +142,7 @@ struct MobileAddItemView: View {
                     Task {
                         defer { isWorking = false }
                         do {
-                            try await store.addExistingItem(candidate)
+                            try await store.addExistingItem(candidate, projectID: projectID)
                             dismiss()
                         } catch { errorMessage = error.localizedDescription }
                     }
@@ -150,10 +176,10 @@ struct MobileAddItemView: View {
     }
 
     private func create() {
-        guard draft.canSubmit(in: store.selectedProject) else { return }
+        guard draft.canSubmit(in: project) else { return }
         do {
             if draft.itemType == .draft {
-                try store.beginDraftCreation(title: draft.title, body: draft.bodyText)
+                try store.beginDraftCreation(title: draft.title, body: draft.bodyText, projectID: projectID)
             } else {
                 let creation = try store.prepareIssueCreation(
                     repository: draft.repository, title: draft.title,
@@ -161,7 +187,7 @@ struct MobileAddItemView: View {
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
                     status: draft.status.isEmpty ? nil : draft.status,
                     priority: draft.priority.isEmpty ? nil : draft.priority,
-                    startDate: draft.startDate, targetDate: draft.targetDate)
+                    startDate: draft.startDate, targetDate: draft.targetDate, projectID: projectID)
                 try store.beginIssueCreation(creation)
             }
             dismiss()
@@ -182,13 +208,14 @@ struct MobileAddItemView: View {
 
 struct MobileRepositoryPicker: View {
     let store: ProjectStore
+    let owner: ProjectOwner?
     @Binding var selection: String
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
 
     var body: some View {
         List {
-            if let owner = store.selectedOwner {
+            if let owner {
                 switch store.repositoryListState(ownerID: owner.id) {
                 case .idle, .loading: ProgressView()
                 case .failed(let message):
@@ -220,6 +247,6 @@ struct MobileRepositoryPicker: View {
         }
         .searchable(text: $query)
         .navigationTitle("Repository")
-        .task { if let owner = store.selectedOwner { await store.loadRepositories(owner: owner) } }
+        .task { if let owner { await store.loadRepositories(owner: owner) } }
     }
 }

@@ -615,4 +615,82 @@ extension ProjectStoreTests {
         #expect(store.personalItemDetailState(item.id) == .idle)
     }
 
+    @Test func creationUsesExplicitProjectAfterSelectionChanges() async throws {
+        let runner = FixtureGitHubHTTPClient(responses: [
+            Self.sessionResponse, Self.ownersResponse, Self.projectsResponse,
+            Self.firstProjectFieldsResponse, Self.emptyItemsResponse
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        store.selectedProjectId = "P2"
+        let creation = try store.prepareIssueCreation(
+            repository: "acme/app", title: "Example", body: "", labels: [], assignees: [], projectID: "P1"
+        )
+        #expect(creation.projectID == "P1")
+        #expect(store.selectedProjectId == "P2")
+        #expect(throws: (any Error).self) {
+            try store.prepareIssueCreation(
+                repository: "acme/app", title: "Example", body: "", labels: [], assignees: [], projectID: "MISSING"
+            )
+        }
+    }
+}
+
+extension ProjectStoreTests {
+    @Test func projectRouteReportsLoadingAndFailureIndependentlyOfCatalog() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.sessionResponse), .response(Self.ownersResponse), .response(Self.projectsResponse),
+            .response(Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse),
+            .suspended("second-project-failure", Self.graphQLFailureResponse),
+            .response(Self.secondProjectFieldsResponse), .response(Self.emptyItemsResponse)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let project = try #require(store.project(id: "P2"))
+        let loading = Task { await store.selectProject(project, refresh: true) }
+        try await runner.waitUntilSuspended("second-project-failure")
+        #expect(!store.isLoading)
+        guard case .loading(let pending) = store.projectContentState(id: "P2") else {
+            Issue.record("A project summary must not appear as an empty loaded project")
+            await runner.release("second-project-failure")
+            await loading.value
+            return
+        }
+        #expect(pending.id == "P2")
+        await runner.release("second-project-failure")
+        await loading.value
+        guard case .failed = store.projectContentState(id: "P2") else {
+            Issue.record("A failed initial request must offer retry rather than show no items")
+            return
+        }
+        await store.selectProject(project, refresh: true)
+        guard case .empty(let loaded, false, false) = store.projectContentState(id: "P2") else {
+            Issue.record("Only a successful response can establish an empty project")
+            return
+        }
+        #expect(loaded.id == "P2")
+    }
+
+    @Test func reopeningProjectReplacesAnInterruptedInitialRequest() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.sessionResponse), .response(Self.ownersResponse), .response(Self.projectsResponse),
+            .suspended("old-project-request", Self.firstProjectFieldsResponse),
+            .response(Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        let firstLoad = Task { await store.loadProjects() }
+        try await runner.waitUntilSuspended("old-project-request")
+        let project = try #require(store.project(id: "P1"))
+        await store.selectProject(project, refresh: true)
+        await runner.release("old-project-request")
+        await firstLoad.value
+        guard case .empty(let loaded, false, false) = store.projectContentState(id: "P1") else {
+            Issue.record("The new route must complete even while the old request is suspended")
+            return
+        }
+        #expect(loaded.id == "P1")
+    }
 }

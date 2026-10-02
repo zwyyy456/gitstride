@@ -1,21 +1,24 @@
 import SwiftUI
 
 struct MobileItemEditor: View {
-    let store: ProjectStore
     let save: (String, String) throws -> Void
-    let detail: ProjectItemDetail
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var bodyText: String
     @State private var errorMessage: String?
+    @State private var initialTitle: String
+    @State private var initialBody: String
+    @State private var confirmingDiscard = false
+
+    private var hasChanges: Bool { title != initialTitle || bodyText != initialBody }
 
     init(store: ProjectStore, detail: ProjectItemDetail, save: @escaping (String, String) throws -> Void) {
-        self.store = store
         self.save = save
-        self.detail = detail
         let pending = store.pendingContentEdits[detail.id]
         _title = State(initialValue: pending?.title ?? detail.title)
         _bodyText = State(initialValue: pending?.body ?? detail.body)
+        _initialTitle = State(initialValue: pending?.title ?? detail.title)
+        _initialBody = State(initialValue: pending?.body ?? detail.body)
     }
 
     var body: some View {
@@ -31,7 +34,12 @@ struct MobileItemEditor: View {
             }
             .navigationTitle("Edit")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        if hasChanges { confirmingDiscard = true }
+                        else { dismiss() }
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         do {
@@ -43,7 +51,11 @@ struct MobileItemEditor: View {
                 }
             }
         }
-        .interactiveDismissDisabled(title != detail.title || bodyText != detail.body)
+        .interactiveDismissDisabled(hasChanges)
+        .confirmationDialog("Discard Changes?", isPresented: $confirmingDiscard, titleVisibility: .visible) {
+            Button("Discard Changes", role: .destructive) { dismiss() }
+            Button("Continue Editing", role: .cancel) {}
+        }
     }
 }
 

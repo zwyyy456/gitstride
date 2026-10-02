@@ -19,7 +19,7 @@ struct MobileRootView: View {
                         MobileFollowedWorkView(model: model, browseProjects: { selection = .projects })
                     }
                     .tabItem { Label(String(localized: "Following Tab", defaultValue: "Following"), systemImage: "star") }.tag(Tab.following)
-                    NavigationStack { MobileAccountView(model: model) }
+                    NavigationStack { MobileSettingsView(model: model) }
                         .tabItem { Label("Settings", systemImage: "gear") }.tag(Tab.settings)
                 }
             }

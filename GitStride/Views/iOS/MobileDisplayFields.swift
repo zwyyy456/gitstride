@@ -36,10 +36,14 @@ struct MobileDisplayFields: View {
 
 struct MobileConfiguredItemRow: View {
     let item: ProjectItem
+    let statusOption: StatusOption?
+    let showsStatus: Bool
     let fields: [ProjectField]
     @AppStorage private var visible: String
 
-    init(item: ProjectItem, fields: [ProjectField], preferenceID: String) {
+    init(item: ProjectItem, fields: [ProjectField], preferenceID: String, showsStatus: Bool = true, statusOption: StatusOption? = nil) {
+        self.statusOption = statusOption
+        self.showsStatus = showsStatus
         self.item = item
         self.fields = fields
         _visible = AppStorage(
@@ -49,25 +53,45 @@ struct MobileConfiguredItemRow: View {
 
     var body: some View {
         let keys = Set(visible.split(separator: ",").map(String.init))
-        VStack(alignment: .leading, spacing: 6) {
-            MobileItemRow(item: item)
+        MobileItemRow(item: item, showsStatus: showsStatus, statusOption: statusOption) {
             if !item.isWorkComplete && item.signals.blockedByCount > 0 {
                 Label("Blocked by \(item.signals.blockedByCount)", systemImage: "hand.raised")
                     .foregroundStyle(.orange)
             }
             if keys.contains("assignees"), !item.assignees.isEmpty {
-                Text(item.assignees.map { "@\($0.login)" }.joined(separator: ", "))
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(item.assignees.prefix(2))) { assignee in assigneeLabel(assignee) }
+                        if item.assignees.count > 2 { Text("+\(item.assignees.count - 2)").foregroundStyle(.secondary) }
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(item.assignees.prefix(2))) { assignee in assigneeLabel(assignee) }
+                        if item.assignees.count > 2 { Text("+\(item.assignees.count - 2)").foregroundStyle(.secondary) }
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(item.assignees.map { "@\($0.login)" }.joined(separator: ", "))
             }
             if keys.contains("labels"), !item.labels.isEmpty {
-                Text(item.labels.map(\.name).joined(separator: ", "))
+                Text(item.labels.map(\.name).joined(separator: ", ")).foregroundStyle(.secondary)
             }
-            if keys.contains("milestone"), let milestone = item.milestone { Text(milestone.title) }
+            if keys.contains("milestone"), let milestone = item.milestone { Text(milestone.title).foregroundStyle(.secondary) }
             if keys.contains("signals") { EngineeringSignalsView(item: item, limit: 3) }
             ForEach(fields.filter { keys.contains("field:" + $0.id) }) { field in
-                if let value = item.fieldValues[field.id] { Text("\(field.name): \(label(value))") }
+                if let value = item.fieldValues[field.id] { Text("\(field.name): \(label(value))").foregroundStyle(.secondary) }
             }
         }
-        .font(.caption).foregroundStyle(.secondary)
+        .font(.caption).foregroundStyle(.primary)
+    }
+
+    private func assigneeLabel(_ assignee: Assignee) -> some View {
+        HStack(spacing: 4) {
+            AsyncImage(url: URL(string: assignee.avatarUrl)) { image in
+                image.resizable().scaledToFill()
+            } placeholder: { Image(systemName: "person.crop.circle.fill").foregroundStyle(.secondary) }
+            .frame(width: 18, height: 18).clipShape(Circle()).accessibilityHidden(true)
+            Text("@\(assignee.login)").foregroundStyle(.secondary)
+        }
     }
 
     private func label(_ value: ProjectFieldValue) -> String {
