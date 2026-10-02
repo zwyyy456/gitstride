@@ -49,6 +49,7 @@ extension GitHubResponse {
             let closedByPullRequestsReferences: PullRequestsConnection?
             let isDraft: Bool?
             let mergeable: String?
+            let mergeStateStatus: String?
             let reviewDecision: String?
             let reviewRequests: ReviewRequestsConnection?
             let statusCheckRollup: StatusCheckRollup?
@@ -69,7 +70,7 @@ extension GitHubResponse {
                 case assignees
                 case labels
                 case closedByPullRequestsReferences
-                case isDraft, mergeable, reviewDecision, reviewRequests, statusCheckRollup
+                case isDraft, mergeable, mergeStateStatus, reviewDecision, reviewRequests, statusCheckRollup
                 case subIssuesSummary, milestone, parent, issueType, issueDependenciesSummary
             }
         }

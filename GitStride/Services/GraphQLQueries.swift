@@ -341,6 +341,7 @@ enum GraphQLQueries {
                     updatedAt
                     isDraft
                     mergeable
+                    mergeStateStatus
                     reviewDecision
                     reviewRequests(first: 20) {
                         nodes {

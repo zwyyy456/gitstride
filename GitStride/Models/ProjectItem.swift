@@ -46,6 +46,7 @@ struct SubIssueProgress: Codable, Hashable, Sendable {
 struct EngineeringSignals: Codable, Hashable {
     var isDraft = false
     var mergeability: PullRequestMergeability?
+    var mergeStateStatus: String?
     var reviewDecision: PullRequestReviewDecision?
     var checkStatus: CheckStatus?
     var reviewRequestedLogins: [String] = []
@@ -66,10 +67,13 @@ struct EngineeringSignals: Codable, Hashable {
     var isReadyToMerge: Bool {
         isDraft == false
             && mergeability == .mergeable
-            && reviewDecision == .approved
+            && mergeStateStatus == "CLEAN"
+            && reviewDecision != .changesRequested
+            && reviewDecision != .reviewRequired
             && checkStatus != .failure
             && checkStatus != .error
             && checkStatus != .pending
+            && checkStatus != .expected
     }
 }
 

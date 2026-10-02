@@ -75,6 +75,7 @@ struct MyWorkFilterTests {
             assignees: [],
             engineeringSignals: EngineeringSignals(
                 mergeability: .mergeable,
+                mergeStateStatus: "CLEAN",
                 reviewDecision: .approved,
                 checkStatus: .success,
                 reviewRequestedLogins: ["octocat"]
@@ -94,5 +95,34 @@ struct MyWorkFilterTests {
         #expect(MyWorkFilter.reviewRequested.includes(workItem, currentUserLogin: "octocat"))
         #expect(MyWorkFilter.readyToMerge.includes(workItem, currentUserLogin: "octocat"))
         #expect(MyWorkFilter.ciFailed.includes(workItem, currentUserLogin: "octocat") == false)
+    }
+}
+
+extension MyWorkFilterTests {
+    @Test func mergeReadinessWorksWithoutRequiredReviewsAndRejectsIncompleteChecks() {
+        var signals = EngineeringSignals(mergeability: .mergeable, mergeStateStatus: "CLEAN")
+        #expect(signals.isReadyToMerge) // No required reviews or checks.
+        signals.reviewDecision = .approved
+        signals.checkStatus = .success
+        #expect(signals.isReadyToMerge)
+        for status in [CheckStatus.expected, .pending, .failure, .error] {
+            signals.checkStatus = status
+            #expect(!signals.isReadyToMerge)
+        }
+        signals.checkStatus = .success
+        for status in ["BLOCKED", "BEHIND", "UNKNOWN", "DIRTY", "UNSTABLE"] {
+            signals.mergeStateStatus = status
+            #expect(!signals.isReadyToMerge)
+        }
+        signals.mergeStateStatus = nil
+        #expect(!signals.isReadyToMerge)
+        signals.mergeStateStatus = "CLEAN"
+        signals.reviewDecision = .reviewRequired
+        #expect(!signals.isReadyToMerge)
+        signals.reviewDecision = .changesRequested
+        #expect(!signals.isReadyToMerge)
+        signals.reviewDecision = nil
+        signals.isDraft = true
+        #expect(!signals.isReadyToMerge)
     }
 }

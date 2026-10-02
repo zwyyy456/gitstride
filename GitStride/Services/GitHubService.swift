@@ -1047,6 +1047,7 @@ actor GitHubService {
         let engineeringSignals = EngineeringSignals(
             isDraft: content.isDraft ?? false,
             mergeability: content.mergeable.flatMap(PullRequestMergeability.init),
+            mergeStateStatus: content.mergeStateStatus,
             reviewDecision: content.reviewDecision.flatMap(PullRequestReviewDecision.init),
             checkStatus: content.statusCheckRollup?.state.flatMap(CheckStatus.init),
             reviewRequestedLogins: content.reviewRequests?.nodes.compactMap {
