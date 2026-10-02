@@ -28,6 +28,8 @@ struct ExistingItemSearchState {
 
 struct ExistingProjectItemPicker: View {
     let store: ProjectStore
+    let project: Project?
+    let repositories: [String]
     @Binding var state: ExistingItemSearchState
     @Binding var validationMessage: String?
     @Environment(\.isEnabled) private var isEnabled
@@ -118,8 +120,8 @@ struct ExistingProjectItemPicker: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, Self.horizontalPadding)
 
-            if store.repositorySuggestions.isEmpty == false {
-                List(store.repositorySuggestions, id: \.self) { repository in
+            if repositories.isEmpty == false {
+                List(repositories, id: \.self) { repository in
                     Button {
                         updateSearchQuery("repo:\(repository) is:open")
                         searchItems()
@@ -240,7 +242,7 @@ struct ExistingProjectItemPicker: View {
     }
 
     private func isAlreadyAdded(_ item: GitHubItemCandidate) -> Bool {
-        store.selectedProject?.items.contains { $0.contentId == item.id } == true
+        project?.items.contains { $0.contentId == item.id } == true
     }
 
     private var isItemURL: Bool { GitHubItemAddress(state.query.trimmingCharacters(in: .whitespacesAndNewlines)) != nil }

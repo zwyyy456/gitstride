@@ -220,8 +220,19 @@ final class GitStrideModel {
             guard !Task.isCancelled else { return }
             if !followed.isEmpty { await store.refreshFollowedProjects(followed) }
             guard !Task.isCancelled else { return }
-            if let selectedID = store.selectedProjectId, !followed.contains(where: { $0.id == selectedID }) {
-                await store.refresh()
+            var refreshed = Set(followed.map(\.id))
+            while !Task.isCancelled {
+                var visible = store.visibleProjectIDs
+                #if os(macOS)
+                if let selectedID = store.selectedProjectId { visible.insert(selectedID) }
+                #endif
+                let pending = visible.subtracting(refreshed)
+                guard !pending.isEmpty else { break }
+                for id in pending.sorted() {
+                    guard !Task.isCancelled else { return }
+                    await store.loadProjectDetails(id: id)
+                    refreshed.insert(id)
+                }
             }
         }
         projectRefreshTask = task

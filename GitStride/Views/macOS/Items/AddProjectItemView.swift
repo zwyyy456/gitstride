@@ -20,6 +20,8 @@ struct AddProjectItemView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dismissWindow) private var dismissWindow
 
+    @State private var projectID: String?
+    @State private var ownerID: String?
     @State private var mode: Mode = .create
     @State private var maximumSheetHeight: CGFloat?
     @State private var isSubmitting = false
@@ -27,8 +29,10 @@ struct AddProjectItemView: View {
     @State private var draft = NewProjectItemDraft()
     @State private var search = ExistingItemSearchState()
 
-    init(store: ProjectStore, presentation: Presentation = .sheet, initialQuickEntry: String? = nil) {
+    init(store: ProjectStore, projectID: String?, presentation: Presentation = .sheet, initialQuickEntry: String? = nil) {
         self.store = store
+        _projectID = State(initialValue: projectID)
+        _ownerID = State(initialValue: projectID.flatMap { store.project(id: $0)?.owner.id } ?? store.selectedOwnerId)
         self.presentation = presentation
         self.initialQuickEntry = initialQuickEntry
         _draft = State(initialValue: NewProjectItemDraft(
@@ -42,6 +46,10 @@ struct AddProjectItemView: View {
     }
 
     private var isWorking: Bool { isSubmitting }
+    private var project: Project? { projectID.flatMap { store.project(id: $0) } }
+    private var canEditProject: Bool { projectID.map { store.canEditProject(id: $0) } ?? false }
+    private var availableProjects: [Project] { ownerID.map { store.projects(ownerID: $0) } ?? [] }
+    private var repositories: [String] { project.map { store.repositorySuggestions(in: $0) } ?? [] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,12 +58,12 @@ struct AddProjectItemView: View {
             Group {
                 switch mode {
                 case .create:
-                    NewProjectItemEditor(store: store, draft: $draft,
+                    NewProjectItemEditor(store: store, project: project, repositories: repositories, draft: $draft,
                                          validationMessage: $validationMessage,
                                          statusOptions: statusOptions, priorityOptions: priorityOptions,
                                          reviewQuickEntry: applyQuickEntry)
                 case .existing:
-                    ExistingProjectItemPicker(store: store, state: $search,
+                    ExistingProjectItemPicker(store: store, project: project, repositories: repositories, state: $search,
                                               validationMessage: $validationMessage)
                 }
             }
@@ -86,30 +94,42 @@ struct AddProjectItemView: View {
             if let screen = NSApp.keyWindow?.screen {
                 maximumSheetHeight = screen.visibleFrame.height - 80
             }
-            validationMessage = nil
-            if draft.repository.isEmpty {
-                draft.repository = store.defaultIssueRepository
+            if presentation == .window, projectID == nil {
+                if store.projects.isEmpty { await store.loadProjects() }
+                ownerID = store.selectedOwnerId
+                projectID = store.selectedProjectId
             }
-            draft.reconcileStatus(in: store.selectedProject)
+            if draft.repository.isEmpty {
+                draft.repository = project.map { store.defaultIssueRepository(in: $0) } ?? ""
+            }
+            draft.reconcileStatus(in: project)
             if draft.usesQuickEntry, !QuickCreateParser.parse(draft.quickEntry).title.isEmpty {
                 applyQuickEntry()
             }
         }
-        .onChange(of: store.selectedProjectId) { _, _ in
-            draft.startDate = nil
-            draft.targetDate = nil
-            guard presentation == .window else { return }
-            draft.repository = store.defaultIssueRepository
-            draft.status = ""
-            draft.reconcileStatus(in: store.selectedProject)
-            draft.priority = ""
+        .projectUsage(store: store, projectIDs: Set(projectID.map { [$0] } ?? []), refresh: false)
+        .task(id: ownerID) {
+            guard presentation == .window, let owner = store.owners.first(where: { $0.id == ownerID }) else { return }
+            do {
+                try await store.loadProjectCatalog(for: owner)
+                guard !Task.isCancelled else { return }
+                if projectID == nil { projectID = availableProjects.first?.id }
+            } catch {
+                guard !Task.isCancelled else { return }
+                validationMessage = error.localizedDescription
+            }
+        }
+        .task(id: projectID) {
+            if presentation == .window, let projectID {
+                await store.loadProjectDetails(id: projectID)
+                guard !Task.isCancelled else { return }
+                if draft.repository.isEmpty {
+                    draft.repository = project.map { store.defaultIssueRepository(in: $0) } ?? ""
+                }
+            }
         }
         .onChange(of: statusOptions) { _, _ in
-            draft.reconcileStatus(in: store.selectedProject)
-        }
-        .onChange(of: store.defaultIssueRepository) { oldValue, newValue in
-            guard draft.repository.isEmpty || draft.repository == oldValue else { return }
-            draft.repository = newValue
+            draft.reconcileStatus(in: project)
         }
         .onChange(of: mode) { _, _ in
             validationMessage = nil
@@ -120,7 +140,7 @@ struct AddProjectItemView: View {
     }
 
     private var sheetTitle: String {
-        if let project = store.project(id: store.selectedProjectId ?? "") {
+        if let project {
             return String(localized: "Add Item to “\(project.title)”")
         }
         return String(localized: "Add Item to Project")
@@ -137,11 +157,35 @@ struct AddProjectItemView: View {
                         .help(sheetTitle)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    Text("Project")
-                        .foregroundStyle(.secondary)
-                    ProjectSelectorView(store: store)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if store.owners.count > 1 {
+                        Menu(store.owners.first { $0.id == ownerID }?.login ?? String(localized: "Owner")) {
+                            ForEach(store.owners) { owner in
+                                Button(owner.login) {
+                                    guard ownerID != owner.id else { return }
+                                    projectID = nil
+                                    ownerID = owner.id
+                                }
+                            }
+                        }
+                    } else {
+                        Text("Project").foregroundStyle(.secondary)
+                    }
+                    Picker("Project", selection: $projectID) {
+                        if projectID == nil { Text("Select Project").tag(String?.none) }
+                        ForEach(availableProjects) { project in
+                            Text(project.title).tag(Optional(project.id))
+                        }
+                        if let project, !availableProjects.contains(where: { $0.id == project.id }) {
+                            Text(project.title).tag(Optional(project.id))
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+            }
+
+            if projectID != nil && project == nil {
+                Text("Project unavailable").foregroundStyle(.secondary)
             }
 
             Picker("Item source", selection: $mode) {
@@ -208,7 +252,7 @@ struct AddProjectItemView: View {
 
     private var addActionIsDisabled: Bool {
         guard let selectedResult = search.selectedResult else { return true }
-        return isWorking || search.isSearching || isAlreadyAdded(selectedResult)
+        return isWorking || !canEditProject || search.isSearching || isAlreadyAdded(selectedResult)
     }
 
     private func addSelectedItem() {
@@ -235,14 +279,14 @@ struct AddProjectItemView: View {
     }
 
     private var createActionIsDisabled: Bool {
-        isWorking || !draft.canSubmit(in: store.selectedProject)
+        isWorking || !canEditProject || !draft.canSubmit(in: project)
     }
 
-    private var statusOptions: [String] { NewProjectItemDraft.statusOptions(in: store.selectedProject) }
-    private var priorityOptions: [String] { NewProjectItemDraft.priorityOptions(in: store.selectedProject) }
+    private var statusOptions: [String] { NewProjectItemDraft.statusOptions(in: project) }
+    private var priorityOptions: [String] { NewProjectItemDraft.priorityOptions(in: project) }
 
     private func createItem() {
-        guard createActionIsDisabled == false else { return }
+        guard createActionIsDisabled == false, let projectID else { return }
         NSApp.keyWindow?.makeFirstResponder(nil)
         validationMessage = nil
         draft.repositoryValidationMessage = nil
@@ -253,11 +297,11 @@ struct AddProjectItemView: View {
                     labels: draft.labelNames,
                     assignees: draft.assigneeLogins(currentUser: store.currentUserLogin),
                     status: draft.status.nilIfEmpty, priority: draft.priority.nilIfEmpty,
-                    startDate: draft.startDate, targetDate: draft.targetDate
+                    startDate: draft.startDate, targetDate: draft.targetDate, projectID: projectID
                 )
                 try store.beginIssueCreation(creation)
             } else {
-                try store.beginDraftCreation(title: draft.title, body: draft.bodyText)
+                try store.beginDraftCreation(title: draft.title, body: draft.bodyText, projectID: projectID)
             }
             close()
         } catch {
@@ -266,12 +310,12 @@ struct AddProjectItemView: View {
     }
 
     private func add(_ item: GitHubItemCandidate) {
-        guard isWorking == false else { return }
+        guard isWorking == false, canEditProject, let projectID else { return }
         isSubmitting = true
         validationMessage = nil
         Task {
             do {
-                try await store.addExistingItem(item)
+                try await store.addExistingItem(item, projectID: projectID)
                 close()
             } catch is CancellationError {
             } catch {
@@ -282,13 +326,13 @@ struct AddProjectItemView: View {
     }
 
     private func isAlreadyAdded(_ item: GitHubItemCandidate) -> Bool {
-        store.selectedProject?.items.contains { $0.contentId == item.id } == true
+        project?.items.contains { $0.contentId == item.id } == true
     }
 
     private func applyQuickEntry() {
         guard !isWorking else { return }
         validationMessage = draft.reviewQuickEntry(
-            repositories: store.repositorySuggestions,
+            repositories: repositories,
             statuses: statusOptions, priorities: priorityOptions
         )
     }
@@ -460,12 +504,7 @@ struct QuickAddWindow: View {
     let quickEntry: String
 
     var body: some View {
-        AddProjectItemView(store: model.projectStore, presentation: .window,
+        AddProjectItemView(store: model.projectStore, projectID: model.projectStore.selectedProjectId, presentation: .window,
                            initialQuickEntry: quickEntry.isEmpty ? nil : quickEntry)
-            .task {
-                if model.projectStore.projects.isEmpty {
-                    await model.projectStore.loadProjects()
-                }
-            }
     }
 }

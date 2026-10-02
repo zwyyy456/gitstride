@@ -58,6 +58,7 @@ struct MobileAddItemView: View {
                     }
                 }
             }
+            .projectUsage(store: store, projectIDs: [projectID], refresh: false)
             .onChange(of: statuses) { _, _ in
                 draft.reconcileStatus(in: project)
                 initialDraft.reconcileStatus(in: project)

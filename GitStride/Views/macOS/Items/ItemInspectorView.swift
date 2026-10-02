@@ -169,6 +169,7 @@ struct ItemDetailView: View {
                 max: Self.inspectorMaximumWidth
             )
         }
+        .projectUsage(store: store, projectIDs: [reference.projectID])
         .focusedValue(\.itemCommandScope, true)
         .focusedSceneValue(\.workspaceCommandContext, commandContext)
         .task(id: item.map { "\($0.contentId ?? ""):\($0.updatedAt ?? "")" }) {

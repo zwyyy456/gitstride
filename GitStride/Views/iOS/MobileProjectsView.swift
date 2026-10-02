@@ -3,23 +3,29 @@ import SwiftUI
 struct MobileProjectsView: View {
     @Bindable var model: GitStrideModel
     @State private var search = ""
-    @State private var creatingProject = false
-    @State private var selectedProjectID: String?
+    @State private var creatingOwner: ProjectOwner?
+    @State private var selectedOwnerID: String?
+    @State private var catalogError: String?
+    @Binding var selectedProjectID: String?
     private var store: ProjectStore { model.projectStore }
+
+    private var owner: ProjectOwner? { store.owners.first { $0.id == selectedOwnerID } }
+    private var projects: [Project] { selectedOwnerID.map { store.projects(ownerID: $0) } ?? [] }
+    private var isLoading: Bool { selectedOwnerID.map { store.isLoadingProjects(ownerID: $0) } ?? store.isLoading }
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedProjectID) {
                 Section {
-                    ForEach(store.projects.filter(matches)) { project in projectLink(project) }
-                    if store.isLoading { ProgressView("Loading projects…") }
-                    if !store.isLoading && store.projects.filter(matches).isEmpty {
+                    ForEach(projects.filter(matches)) { project in projectLink(project) }
+                    if isLoading { ProgressView("Loading projects…") }
+                    if !isLoading && projects.filter(matches).isEmpty {
                         Text(search.isEmpty ? String(localized: "No projects") : String(localized: "No Results"))
                             .foregroundStyle(.secondary)
                     }
-                    if let error = store.error { Text(error.localizedDescription).foregroundStyle(.red) }
+                    if let catalogError { Text(catalogError).foregroundStyle(.red) }
                 } header: {
-                    if let owner = store.selectedOwner { Text("Projects owned by \(owner.login)") }
+                    if let owner { Text("Projects owned by \(owner.login)") }
                     else { Text("All Projects") }
                 }
             }
@@ -29,28 +35,29 @@ struct MobileProjectsView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Picker("Owner", selection: Binding(
-                            get: { store.selectedOwnerId },
+                            get: { selectedOwnerID },
                             set: { id in
-                                guard let owner = store.owners.first(where: { $0.id == id }) else { return }
                                 selectedProjectID = nil
-                                Task { await store.selectOwner(owner) }
+                                selectedOwnerID = id
                             }
                         )) {
                             ForEach(store.owners) { Text($0.login).tag(Optional($0.id)) }
                         }
                         .pickerStyle(.inline)
                     } label: { Label("Owner", systemImage: "person.crop.circle") }
-                    .accessibilityValue(store.selectedOwner?.login ?? "")
+                    .accessibilityValue(owner?.login ?? "")
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button { creatingProject = true } label: { Label("New Project", systemImage: "plus") }
-                        .disabled(store.selectedOwner == nil)
+                    Button { creatingOwner = owner } label: { Label("New Project", systemImage: "plus") }
+                        .disabled(owner == nil)
                 }
             }
-            .sheet(isPresented: $creatingProject) { MobileProjectManagement(model: model) }
+            .sheet(item: $creatingOwner) { owner in
+                MobileProjectManagement(model: model, creationOwner: owner)
+            }
             .mobileSearch(text: $search, prompt: "Search projects")
             .refreshable {
-                await store.loadProjects()
+                await loadCatalog()
             }
         } detail: {
             NavigationStack {
@@ -61,6 +68,28 @@ struct MobileProjectsView: View {
                     ContentUnavailableView("Select a Project", systemImage: "rectangle.stack")
                 }
             }
+        }
+        .onChange(of: store.owners, initial: true) { _, owners in
+            if !owners.contains(where: { $0.id == selectedOwnerID }) {
+                selectedOwnerID = owners.first { $0.id == store.selectedOwnerId }?.id ?? owners.first?.id
+                selectedProjectID = nil
+            }
+        }
+        .task(id: selectedOwnerID) { await loadCatalog() }
+    }
+
+    private func loadCatalog() async {
+        guard let owner else { return }
+        catalogError = nil
+        do {
+            try await store.loadProjectCatalog(for: owner)
+            guard !Task.isCancelled, selectedOwnerID == owner.id else { return }
+            if let selectedProjectID, store.project(id: selectedProjectID) == nil {
+                self.selectedProjectID = nil
+            }
+        } catch {
+            guard !Task.isCancelled, selectedOwnerID == owner.id else { return }
+            catalogError = error.localizedDescription
         }
     }
 

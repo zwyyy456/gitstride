@@ -3,6 +3,7 @@ import SwiftUI
 struct MobileProjectManagement: View {
     let model: GitStrideModel
     var project: Project?
+    var creationOwner: ProjectOwner?
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
     @State private var repositoryID: String?
@@ -10,7 +11,7 @@ struct MobileProjectManagement: View {
     @State private var isWorking = false
     @State private var confirmingDelete = false
     private var store: ProjectStore { model.projectStore }
-    private var owner: ProjectOwner? { project?.owner ?? store.selectedOwner }
+    private var owner: ProjectOwner? { project?.owner ?? creationOwner }
     private var repositories: [ProjectRepository] {
         owner.map { store.repositoryListState(ownerID: $0.id).repositories } ?? []
     }

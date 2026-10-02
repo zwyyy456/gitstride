@@ -721,3 +721,60 @@ extension ProjectStoreTests {
         }
     }
 }
+
+extension ProjectStoreTests {
+    @Test func ownerCatalogsLoadIndependentlyWithoutChangingNavigation() async throws {
+        let otherCatalog = Self.projectsResponse.replacingOccurrences(of: "P1", with: "Q1")
+            .replacingOccurrences(of: "P2", with: "Q2")
+        let runner = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.sessionResponse), .response(Self.ownersResponse), .response(Self.projectsResponse),
+            .response(Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse),
+            .suspended("other-owner", otherCatalog), .response(Self.projectsResponse)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let first = try #require(store.selectedProject)
+        let other = ProjectOwner(id: "ORG", login: "org", name: nil, kind: .organization)
+        let loadingOther = Task { try await store.loadProjectCatalog(for: other) }
+        try await runner.waitUntilSuspended("other-owner")
+        try await store.loadProjectCatalog(for: first.owner)
+        await runner.release("other-owner")
+        try await loadingOther.value
+
+        #expect(store.projects(ownerID: first.owner.id).map(\.id) == ["P1", "P2"])
+        #expect(store.projects(ownerID: other.id).map(\.id) == ["Q1", "Q2"])
+        #expect(store.selectedOwnerId == first.owner.id)
+        #expect(store.selectedProjectId == first.id)
+        #expect(store.project(id: first.id) == first)
+    }
+
+    @Test func projectUsageRetainsHiddenWindowsUntilTheLastConsumerLeaves() async throws {
+        let emptyCatalog = #"{"data":{"owner":{"projectsV2":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}"#
+        let runner = FixtureGitHubHTTPClient(responses: Self.emptyProjectResponses + [emptyCatalog])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let project = try #require(store.selectedProject)
+        let firstWindow = UUID()
+        let secondWindow = UUID()
+        store.setProjectUsage(firstWindow, projectIDs: [project.id], refresh: true)
+        store.setProjectUsage(secondWindow, projectIDs: [project.id], refresh: false)
+        try await store.loadProjectCatalog(for: project.owner)
+        #expect(store.projects.isEmpty)
+        #expect(store.project(id: project.id) == project)
+        #expect(store.visibleProjectIDs == [project.id])
+
+        store.removeProjectUsage(firstWindow)
+        #expect(store.visibleProjectIDs.isEmpty)
+        #expect(store.project(id: project.id) == project)
+        store.setFollowedProjects([FollowedProject(project: project)])
+        store.setFollowedProjects([])
+        #expect(store.project(id: project.id) == project)
+        store.setProjectUsage(secondWindow, projectIDs: [project.id], refresh: true)
+        #expect(store.visibleProjectIDs == [project.id])
+        store.removeProjectUsage(secondWindow)
+        #expect(store.visibleProjectIDs.isEmpty)
+        #expect(store.project(id: project.id) == nil)
+    }
+}

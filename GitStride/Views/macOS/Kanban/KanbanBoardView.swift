@@ -23,6 +23,7 @@ struct KanbanBoardView: View {
 
     private struct AddItemPresentation: Identifiable {
         let id = UUID()
+        let projectID: String
         let quickEntry: String?
     }
 
@@ -86,7 +87,7 @@ struct KanbanBoardView: View {
             }
             .focusedSceneValue(\.workspaceCommandContext, commandContext)
             .sheet(item: $addItemPresentation) { presentation in
-                AddProjectItemView(store: store, initialQuickEntry: presentation.quickEntry)
+                AddProjectItemView(store: store, projectID: presentation.projectID, initialQuickEntry: presentation.quickEntry)
             }
             .onChange(of: store.selectedProjectId) { _, _ in
                 currentItemID = nil
@@ -469,12 +470,14 @@ struct KanbanBoardView: View {
     }
 
     private func showAddItem() {
-        addItemPresentation = AddItemPresentation(quickEntry: nil)
+        guard let projectID = store.selectedProjectId else { return }
+        addItemPresentation = AddItemPresentation(projectID: projectID, quickEntry: nil)
     }
 
     private func submitQuickCreate() {
         guard isQuickCreating, canEditSelectedProject else { return }
-        addItemPresentation = AddItemPresentation(quickEntry: searchText)
+        guard let projectID = store.selectedProjectId else { return }
+        addItemPresentation = AddItemPresentation(projectID: projectID, quickEntry: searchText)
         searchText = ""
     }
 

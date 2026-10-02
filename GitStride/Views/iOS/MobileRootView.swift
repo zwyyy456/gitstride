@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MobileRootView: View {
     @Bindable var model: GitStrideModel
+    @State private var selectedProjectID: String?
     @State private var selection: Tab = .myWork
     private enum Tab { case myWork, projects, following, settings }
 
@@ -13,7 +14,7 @@ struct MobileRootView: View {
                 TabView(selection: $selection) {
                     NavigationStack { MobileMyWorkView(model: model) }
                         .tabItem { Label("My Work", systemImage: "tray") }.tag(Tab.myWork)
-                    MobileProjectsView(model: model)
+                    MobileProjectsView(model: model, selectedProjectID: $selectedProjectID)
                         .tabItem { Label("Projects", systemImage: "rectangle.stack") }.tag(Tab.projects)
                     NavigationStack {
                         MobileFollowedWorkView(model: model, browseProjects: { selection = .projects })
@@ -24,6 +25,9 @@ struct MobileRootView: View {
                 }
             }
         }
+        .projectUsage(store: model.projectStore, projectIDs: Set(selectedProjectID.map { [$0] } ?? []),
+                      refresh: selection == .projects)
         .id(model.connectionID)
+        .onChange(of: model.connectionID) { _, _ in selectedProjectID = nil }
     }
 }

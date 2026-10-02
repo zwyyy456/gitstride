@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        D18000000000000000000001 /* ProjectUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18000000000000000000003 /* ProjectUsage.swift */; };
+        D18000000000000000000002 /* ProjectUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18000000000000000000003 /* ProjectUsage.swift */; };
         F17000000000000000000001 /* ProjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17000000000000000000003 /* ProjectIcon.swift */; };
         F17000000000000000000002 /* ProjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17000000000000000000003 /* ProjectIcon.swift */; };
         C92000000000000000000001 /* PersonalWorkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92000000000000000000003 /* PersonalWorkView.swift */; };
@@ -236,6 +238,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+        D18000000000000000000003 /* ProjectUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectUsage.swift; sourceTree = "<group>"; };
         F17000000000000000000003 /* ProjectIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectIcon.swift; sourceTree = "<group>"; };
         C92000000000000000000003 /* PersonalWorkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalWorkView.swift; sourceTree = "<group>"; };
 		00360ADAD2AA483B9D405B79 /* MobileMyWorkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileMyWorkView.swift; sourceTree = "<group>"; };
@@ -572,6 +575,7 @@
 				C1428EA6345F49739DD5330C /* Automation */,
 				A1000037 /* EngineeringSignalsView.swift */,
                 F17000000000000000000003 /* ProjectIcon.swift */,
+                D18000000000000000000003 /* ProjectUsage.swift */,
 				C92000000000000000000003 /* PersonalWorkView.swift */,
 				A1000043 /* ItemMarkdownBodyView.swift */,
 				E1410001 /* MarkdownSourceEditor.swift */,
@@ -945,6 +949,7 @@
 				367A94BB3064B9F300F2A402 /* ItemInspectorView.swift in Sources */,
 				B731D404EFA742DEAA0A0011 /* ToolbarGroupBoundary.swift in Sources */,
 				367A94BC3064B9F300F2A402 /* ItemPropertiesView.swift in Sources */,
+                D18000000000000000000001 /* ProjectUsage.swift in Sources */,
 				367A94BD3064B9F300F2A402 /* IssueRelationEditorView.swift in Sources */,
 				367A94BE3064B9F300F2A402 /* ProjectFieldEditor.swift in Sources */,
 				367A94BF3064B9F300F2A402 /* OperationErrorBanner.swift in Sources */,
@@ -1067,6 +1072,7 @@
 				A0000026 /* ItemInspectorView.swift in Sources */,
 				B731D404EFA742DEAA0A0012 /* ToolbarGroupBoundary.swift in Sources */,
 				A0000041 /* ItemPropertiesView.swift in Sources */,
+                D18000000000000000000002 /* ProjectUsage.swift in Sources */,
 				A0000051 /* IssueRelationEditorView.swift in Sources */,
 				A0000042 /* ProjectFieldEditor.swift in Sources */,
 				A0000015 /* OperationErrorBanner.swift in Sources */,

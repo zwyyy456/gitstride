@@ -3,6 +3,8 @@ import SwiftUI
 #if os(macOS)
 struct NewProjectItemEditor: View {
     let store: ProjectStore
+    let project: Project?
+    let repositories: [String]
     @Binding var draft: NewProjectItemDraft
     @Binding var validationMessage: String?
     let statusOptions: [String]
@@ -54,7 +56,7 @@ struct NewProjectItemEditor: View {
                     VStack(alignment: .leading, spacing: 6) {
                         RepositoryComboBox(
                             text: $draft.repository,
-                            repositories: store.repositorySuggestions
+                            repositories: repositories
                         )
                         if let message = draft.repositoryValidationMessage {
                             validationNotice(message)
@@ -208,7 +210,7 @@ struct NewProjectItemEditor: View {
     }
 
     private var labelSuggestions: [String] {
-        let items = store.selectedProject?.items ?? []
+        let items = project?.items ?? []
         return Array(Set(items.filter {
             $0.repositoryName?.caseInsensitiveCompare(draft.repository.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
         }.flatMap { $0.labels.map(\.name) })).sorted()

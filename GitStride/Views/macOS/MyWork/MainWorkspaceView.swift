@@ -237,6 +237,9 @@ struct MainWorkspaceView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .projectUsage(store: model.projectStore,
+                      projectIDs: Set(model.projectStore.selectedProjectId.map { [$0] } ?? []),
+                      refresh: destination == .project)
         .frame(minWidth: 860, minHeight: 600)
         .commandPalette(store: model.projectStore, navigation: CommandPaletteNavigation(
             openProject: { id in

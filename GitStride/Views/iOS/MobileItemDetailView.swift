@@ -182,6 +182,7 @@ struct MobileItemDetailView: View {
                 }
             }
         }
+        .projectUsage(store: store, projectIDs: Set(reference.map { [$0.projectID] } ?? []))
         .task(id: contentID) {
             switch target {
             case .project: if let item { await store.loadItemDetail(for: item) }

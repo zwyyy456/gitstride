@@ -293,7 +293,10 @@ final class ProjectStore {
     private var projectStates: [String: ProjectState] = [:]
     private var contentRevision: UInt64 = 0
     private var reconciliationTasks: [String: (id: UUID, task: Task<Void, Never>)] = [:]
-    private var catalogProjectIDs: [String] = []
+    private var projectCatalogs: [String: [String]] = [:]
+    private var catalogTasks: [String: (id: UUID, task: Task<Void, Error>)] = [:]
+    private var projectUsages: [UUID: (ids: Set<String>, refresh: Bool)] = [:]
+    private var catalogProjectIDs: [String] { selectedOwnerId.flatMap { projectCatalogs[$0] } ?? [] }
     private var followedProjectIDs: Set<String> = []
     private var didRestoreCache = false
     private var cachedAccountLogin: String?
@@ -323,6 +326,27 @@ final class ProjectStore {
 
     var projects: [Project] {
         catalogProjectIDs.compactMap { project(id: $0) }
+    }
+
+    func projects(ownerID: String) -> [Project] {
+        (projectCatalogs[ownerID] ?? []).compactMap { project(id: $0) }
+    }
+
+    func isLoadingProjects(ownerID: String) -> Bool { catalogTasks[ownerID] != nil }
+
+    var visibleProjectIDs: Set<String> {
+        Set(projectUsages.values.filter(\.refresh).flatMap(\.ids))
+    }
+
+    func setProjectUsage(_ usageID: UUID, projectIDs: Set<String>, refresh: Bool) {
+        let previous = projectUsages[usageID]?.ids ?? []
+        projectUsages[usageID] = (projectIDs, refresh)
+        for id in previous.subtracting(projectIDs) { removeUnusedProject(id: id) }
+    }
+
+    func removeProjectUsage(_ usageID: UUID) {
+        let previous = projectUsages.removeValue(forKey: usageID)?.ids ?? []
+        for id in previous { removeUnusedProject(id: id) }
     }
 
     var selectedOwner: ProjectOwner? {
@@ -853,6 +877,10 @@ final class ProjectStore {
 
     var repositorySuggestions: [String] {
         guard let project = selectedProject else { return [] }
+        return repositorySuggestions(in: project)
+    }
+
+    func repositorySuggestions(in project: Project) -> [String] {
         let linked = project.linkedRepositories.sorted()
         let used = Set(project.items.compactMap(\.repositoryName)).subtracting(linked)
         return linked + used.sorted()
@@ -903,7 +931,10 @@ final class ProjectStore {
         itemDetailGenerations = [:]
         itemDetailEntries = [:]
         projectStates = [:]
-        catalogProjectIDs = []
+        projectCatalogs = [:]
+        catalogTasks.values.forEach { $0.task.cancel() }
+        catalogTasks = [:]
+        projectUsages = [:]
         followedProjectIDs = []
         pendingItemMutations = [:]
         pendingContentMutations = [:]
@@ -966,7 +997,7 @@ final class ProjectStore {
 
             let owner = loadedOwners.first { $0.id == selectedOwnerId } ?? loadedOwners.first
             guard let owner else {
-                replaceCatalog(with: [])
+                for ownerID in Array(projectCatalogs.keys) { replaceCatalog(with: [], ownerID: ownerID) }
                 selectedOwnerId = nil
                 selectedProjectId = nil
                 return
@@ -1067,10 +1098,7 @@ final class ProjectStore {
         for reference in references where projectStates[reference.id] == nil {
             projectStates[reference.id] = ProjectState(owner: reference.owner)
         }
-        for id in previousIDs.subtracting(followedProjectIDs)
-            where !catalogProjectIDs.contains(id) {
-            removeProject(id: id)
-        }
+        for id in previousIDs.subtracting(followedProjectIDs) { removeUnusedProject(id: id) }
         followedProjectsErrorMessage = nil
         isLoadingFollowedProjects = false
     }
@@ -1138,7 +1166,7 @@ final class ProjectStore {
         followedProjectsErrorMessage = nil
         let contentIDs = project.items.compactMap(\.contentId)
         invalidateContentDetails(contentIDs)
-        catalogProjectIDs.removeAll { $0 == id }
+        projectCatalogs[project.owner.id]?.removeAll { $0 == id }
         removeProject(id: id)
         let wasSelected = selectedProjectId == id
         if wasSelected {
@@ -1180,9 +1208,10 @@ final class ProjectStore {
         // The mutation succeeded. Subsequent read failures must not invite creation again.
         catalogGeneration += 1
         let generation = catalogGeneration
-        let existing = selectedOwnerId == owner.id ? projects : []
+        catalogTasks.removeValue(forKey: owner.id)?.task.cancel()
+        let existing = projects(ownerID: owner.id)
         selectedOwnerId = owner.id
-        replaceCatalog(with: [project] + existing.filter { $0.id != project.id })
+        replaceCatalog(with: [project] + existing.filter { $0.id != project.id }, ownerID: owner.id)
         selectedProjectId = project.id
         selectedStatusFilter = nil
         error = nil
@@ -1191,7 +1220,7 @@ final class ProjectStore {
         do {
             let catalog = try await gitHubService.fetchProjects(owner: owner)
             guard generation == catalogGeneration else { return }
-            replaceCatalog(with: [project] + mergingCatalog(catalog.filter { $0.id != project.id }))
+            replaceCatalog(with: [project] + mergingCatalog(catalog.filter { $0.id != project.id }), ownerID: owner.id)
         } catch {
             guard generation == catalogGeneration else { return }
             operationErrorMessage = String(localized: "Project created, but the project list could not refresh: \(error.localizedDescription)")
@@ -1224,16 +1253,34 @@ final class ProjectStore {
         }
     }
 
+    func loadProjectCatalog(for owner: ProjectOwner) async throws {
+        guard isActive else { throw CancellationError() }
+        if let loading = catalogTasks[owner.id] {
+            try await loading.task.value
+            return
+        }
+        let requestID = UUID()
+        let task = Task {
+            defer {
+                if catalogTasks[owner.id]?.id == requestID { catalogTasks[owner.id] = nil }
+            }
+            let projects = try await gitHubService.fetchProjects(owner: owner)
+            try Task.checkCancellation()
+            guard isActive, catalogTasks[owner.id]?.id == requestID else { throw CancellationError() }
+            replaceCatalog(with: mergingCatalog(projects), ownerID: owner.id)
+        }
+        catalogTasks[owner.id] = (requestID, task)
+        try await task.value
+    }
+
     private func loadProjects(for owner: ProjectOwner, generation: Int) async {
         defer {
             if generation == catalogGeneration { isLoading = false }
         }
         do {
-            let loadedProjects = try await gitHubService.fetchProjects(owner: owner).filter { !deletedProjectIDs.contains($0.id) }
-            try Task.checkCancellation()
+            try await loadProjectCatalog(for: owner)
             guard generation == catalogGeneration, selectedOwnerId == owner.id else { return }
-            let mergedProjects = mergingCatalog(loadedProjects)
-            replaceCatalog(with: mergedProjects)
+            let loadedProjects = projects(ownerID: owner.id)
 
             let selectedProject = loadedProjects.first { $0.id == selectedProjectId }
                 ?? loadedProjects.first
@@ -1255,7 +1302,7 @@ final class ProjectStore {
             } else if projects.contains(where: { $0.owner.id == owner.id }) {
                 operationErrorMessage = String(localized: "The project list could not refresh: \(error.localizedDescription)")
             } else {
-                replaceCatalog(with: [])
+                replaceCatalog(with: [], ownerID: owner.id)
                 selectedProjectId = nil
                 self.error = error
             }
@@ -1273,7 +1320,7 @@ final class ProjectStore {
         cachedAccountLogin = snapshot.accountLogin
         owners = [snapshot.owner]
         let cachedProjects = snapshot.projects.map(makeReadOnly)
-        replaceCatalog(with: cachedProjects)
+        replaceCatalog(with: cachedProjects, ownerID: snapshot.owner.id)
         for id in snapshot.detailedProjectIDs where projectStates[id] != nil {
             projectStates[id]?.source = .cache
         }
@@ -1497,17 +1544,26 @@ final class ProjectStore {
         return observedDate > confirmedDate
     }
 
-    private func replaceCatalog(with projects: [Project]) {
+    private func replaceCatalog(with projects: [Project], ownerID: String) {
         let projects = projects.filter { !deletedProjectIDs.contains($0.id) }
+        let previous = Set(projectCatalogs[ownerID] ?? [])
         let newIDs = Set(projects.map(\.id))
-        for id in Set(catalogProjectIDs).subtracting(newIDs) where !followedProjectIDs.contains(id) {
-            removeProject(id: id)
-        }
-        catalogProjectIDs = projects.map(\.id)
+        projectCatalogs[ownerID] = projects.map(\.id)
+        for id in previous.subtracting(newIDs) { removeUnusedProject(id: id) }
         for project in projects {
             if projectStates[project.id] == nil { projectStates[project.id] = ProjectState(owner: project.owner) }
             projectStates[project.id]?.snapshot = project
         }
+    }
+
+    private func removeUnusedProject(id: String) {
+        guard !projectCatalogs.values.contains(where: { $0.contains(id) }),
+              !followedProjectIDs.contains(id),
+              !projectUsages.values.contains(where: { $0.ids.contains(id) }),
+              !pendingCreations.values.contains(where: { $0.projectID == id }),
+              !pendingContentEdits.values.contains(where: { $0.reference?.projectID == id }),
+              projectStates[id]?.mutations.isEmpty != false else { return }
+        removeProject(id: id)
     }
 
     private func makeReadOnly(_ project: Project) -> Project {
