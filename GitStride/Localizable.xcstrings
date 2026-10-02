@@ -7,6 +7,9 @@
     " " : {
 
     },
+    " (⌘P)" : {
+
+    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -3189,6 +3192,7 @@
       }
     },
     "Description mode" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

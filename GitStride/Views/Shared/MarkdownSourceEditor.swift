@@ -58,6 +58,7 @@ enum MarkdownSourceHighlighting {
 struct MarkdownSourceEditor: NSViewRepresentable {
     @Binding var text: String
     let isActive: Bool
+    let focusRequest: Int
     @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -108,6 +109,18 @@ struct MarkdownSourceEditor: NSViewRepresentable {
             coordinator.highlight(editor)
         }
         coordinator.colorScheme = colorScheme
+        if coordinator.scheduledFocusRequest != focusRequest {
+            coordinator.scheduledFocusRequest = focusRequest
+            let request = focusRequest
+            // Let SwiftUI finish releasing title focus before AppKit focuses the source editor.
+            DispatchQueue.main.async { [weak editor, weak coordinator] in
+                guard let editor, let coordinator,
+                      coordinator.parent.isActive,
+                      coordinator.parent.focusRequest == request,
+                      let window = editor.window else { return }
+                window.makeFirstResponder(editor)
+            }
+        }
     }
 
     final class SourceTextView: NSTextView {
@@ -121,6 +134,7 @@ struct MarkdownSourceEditor: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: MarkdownSourceEditor
         var colorScheme: ColorScheme?
+        var scheduledFocusRequest = 0
         init(_ parent: MarkdownSourceEditor) { self.parent = parent }
 
         func textDidChange(_ notification: Notification) {

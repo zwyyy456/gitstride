@@ -69,13 +69,10 @@ struct ItemDetailView: View {
         .toolbar {
             if editingSession.reference == reference {
                 ToolbarItem(placement: .principal) {
-                    Picker("Description mode", selection: $showsPreview) {
-                        Text("Edit").tag(false)
-                        Text("Preview").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
+                    Toggle("Preview", isOn: $showsPreview)
+                        .toggleStyle(.button)
+                        .keyboardShortcut("p", modifiers: .command)
+                        .help(Text("Preview") + Text(" (⌘P)"))
                 }
             }
 

@@ -4,6 +4,7 @@ struct ItemContentEditorView: View {
     @Bindable var session: ItemEditingSession
     @Binding var showsPreview: Bool
     @FocusState private var isTitleFocused: Bool
+    @State private var descriptionFocusRequest = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -14,6 +15,18 @@ struct ItemContentEditorView: View {
                     .textFieldStyle(.plain)
                     .focused($isTitleFocused)
                     .accessibilityLabel("Title")
+                    .onKeyPress(.return, phases: .down) { press in
+                        guard press.modifiers.isEmpty else { return .ignored }
+                        if let editor = NSApp.keyWindow?.firstResponder as? NSTextView,
+                           editor.hasMarkedText() {
+                            return .ignored
+                        }
+                        if !showsPreview {
+                            isTitleFocused = false
+                            descriptionFocusRequest += 1
+                        }
+                        return .handled
+                    }
                 if let error = session.errorMessage {
                     Text(error).font(.callout).foregroundStyle(.red).textSelection(.enabled)
                 }
@@ -25,7 +38,8 @@ struct ItemContentEditorView: View {
 
             ZStack {
                 // Keep the editor mounted so preview doesn't reset selection, undo, or scrolling.
-                MarkdownSourceEditor(text: $session.text, isActive: !showsPreview)
+                MarkdownSourceEditor(text: $session.text, isActive: !showsPreview,
+                                     focusRequest: descriptionFocusRequest)
                     .opacity(showsPreview ? 0 : 1)
                     .allowsHitTesting(!showsPreview)
                     .accessibilityHidden(showsPreview)
