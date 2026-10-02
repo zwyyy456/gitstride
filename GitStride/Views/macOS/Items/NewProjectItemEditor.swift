@@ -1,5 +1,6 @@
 import SwiftUI
 
+#if os(macOS)
 struct NewProjectItemEditor: View {
     let store: ProjectStore
     @Binding var draft: NewProjectItemDraft
@@ -275,3 +276,5 @@ struct NewProjectItemEditor: View {
         focusedField = draft.usesQuickEntry ? .quickEntry : .title
     }
 }
+
+#endif

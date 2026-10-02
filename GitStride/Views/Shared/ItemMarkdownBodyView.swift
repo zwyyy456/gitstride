@@ -14,7 +14,9 @@ struct ItemMarkdownBodyView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     MarkdownText(markdown)
+                        #if os(macOS)
                         .font(NSFont.systemFont(ofSize: NSFont.systemFontSize), for: .body)
+                        #endif
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }

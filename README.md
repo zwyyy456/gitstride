@@ -52,6 +52,8 @@ Before building, open `GitStride.xcodeproj`, select the GitStride target, and ch
 
 The `GITSTRIDE_OAUTH_CLIENT_ID` build setting is a public desktop OAuth App ID. For your own distribution, register an OAuth App, enable Device Flow, and set its Client ID on both app targets. Do not embed a Client Secret. The `GitStrideAppStore` scheme supports OAuth login only and excludes Sparkle; this build target does not imply availability in the Mac App Store.
 
+The `GitStrideAppStore` target and scheme support native macOS and iPhone/iPad (iOS 17+); select the corresponding run destination in Xcode. See the [iOS guide](docs/ios.md) for its current scope and build instructions. This does not imply App Store availability.
+
 See [validation commands](docs-index.md#5-常用验证命令), [architecture](architecture.md), and the [release guide](docs/releasing.md). Worker development separately requires Node.js 22 or later; instructions are in [Automation/README.md](Automation/README.md).
 
 ## Origin and license

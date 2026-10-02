@@ -2,14 +2,14 @@ import Foundation
 
 enum GitHubAuthenticationMethod: String, Codable, CaseIterable, Sendable {
     case oauth
-    #if !APP_STORE
+    #if os(macOS) && !APP_STORE
     case cli
     #endif
 
     var title: String {
         switch self {
         case .oauth: String(localized: "GitHub Login")
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         case .cli: String(localized: "GitHub CLI")
         #endif
         }
@@ -59,7 +59,7 @@ actor GitHubAuthentication: GitHubAuthenticating {
     private var shouldLoadStoredCredential: Bool
     private var rejectedToken: String?
     private var refreshTask: Task<GitHubOAuthCredential, Error>?
-    #if !APP_STORE
+    #if os(macOS) && !APP_STORE
     private let runner: any GitHubCommandRunning
     private var cliToken: String?
     private var cliAccount: GitHubAccount?
@@ -74,7 +74,7 @@ actor GitHubAuthentication: GitHubAuthenticating {
         self.http = http
         self.clientID = clientID
         self.keychain = keychain
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         self.runner = ProcessGitHubCommandRunner()
         #endif
     }
@@ -89,7 +89,7 @@ actor GitHubAuthentication: GitHubAuthenticating {
         refreshTask?.cancel()
         refreshTask = nil
         credential = nil
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         cliToken = nil
         #endif
     }
@@ -100,14 +100,14 @@ actor GitHubAuthentication: GitHubAuthenticating {
 
     func rejectAccessToken(_ token: String) {
         rejectedToken = token
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         if cliToken == token { cliToken = nil }
         #endif
     }
 
     func accessToken() async throws -> String {
         try checkActive()
-        #if !APP_STORE
+        #if os(macOS) && !APP_STORE
         if method == .cli { return try await loadCLIToken() }
         #endif
         if shouldLoadStoredCredential {
@@ -240,7 +240,7 @@ actor GitHubAuthentication: GitHubAuthenticating {
         return GitHubAccount(id: user.node_id, login: user.login)
     }
 
-    #if !APP_STORE
+    #if os(macOS) && !APP_STORE
     private func loadCLIToken() async throws -> String {
         if let cliToken { return cliToken }
         var arguments = ["auth", "token", "--hostname", "github.com"]

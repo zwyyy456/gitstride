@@ -22,7 +22,7 @@
 
 ## 当前自动化边界
 
-- 当前 Xcode 工程包含 `GitStride` 与 `GitStrideAppStore` app targets 和聚焦外部数据边界的 `GitStrideTests` unit test target，没有 UI test target。
+- 当前 Xcode 工程包含 `GitStride` 与多平台 `GitStrideAppStore` app targets 和聚焦外部数据边界的 `GitStrideTests` unit test target，没有 UI test target。
 - 普通改动至少运行与 `docs-index.md` 一致的 macOS app build；仅修改 Markdown 时可用文档一致性检查代替构建，并明确未运行构建。
 - `GitStrideTests` 只为确定性的解析、输入建模、状态转换、远程响应解码和已确认回归提供少量定点测试。
 - 不为了测试数量给简单 accessor、临时 View 结构或系统框架行为补测试。

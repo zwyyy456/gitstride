@@ -10,11 +10,11 @@
 
 ## 1. 项目定位
 
-GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `GitStride.xcodeproj`，包含 `GitStride`、`GitStrideAppStore` app targets 和聚焦确定性边界的 `GitStrideTests` unit test target；两个发行版通过 URLSession 直接访问 GitHub，Release 版还提供 CLI 凭据来源与 Sparkle。
+GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `GitStride.xcodeproj`，包含 `GitStride` 与多平台 `GitStrideAppStore` app targets 和聚焦确定性边界的 `GitStrideTests` unit test target；两个发行版通过 URLSession 直接访问 GitHub，Release 版还提供 CLI 凭据来源与 Sparkle。
 
 ## 2. 最短阅读路径
 
-1. `GitStride/GitStrideApp.swift`：App composition、菜单栏和窗口 scene。
+1. `GitStride/App/macOS/GitStrideApp.swift`：App composition、菜单栏和窗口 scene。
 2. `GitStride/Store/GitStrideModel.swift`：app 级组合、My Work 协调、监控和通知动作。
 3. `GitStride/Store/ProjectStore.swift`：远程项目快照真源、目录/选择、加载和 mutation 编排。
 4. `GitStride/Store/MyWorkStore.swift`：关注引用与筛选偏好。
@@ -22,18 +22,20 @@ GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `Git
 6. `GitStride/Services/ProjectMonitor.swift`：关注项目的后台快照与变化事件流。
 7. `GitStride/Services/GraphQLQueries.swift`：GitHub Projects 查询与 mutation 文本。
 8. `GitStride/Models/Project.swift`、`ProjectItem.swift`、`MyWork.swift`：领域模型、搜索/筛选规则和响应解码结构。
-9. `GitStride/Views/MyWork/MainWorkspaceView.swift`：项目看板与 My Work 的主工作区。
+9. `GitStride/Views/macOS/MyWork/MainWorkspaceView.swift`：项目看板与 My Work 的主工作区。
 
 ## 3. 目录地图
 
-- `GitStride/GitStrideApp.swift`：应用入口、scene 和平台窗口适配。
+- `GitStride/App/macOS/GitStrideApp.swift`：macOS 应用入口、scene 和平台窗口适配。
+- `GitStride/App/iOS/` 与 `GitStride/Views/iOS/`：iOS App 入口、移动端导航、项目工作区与表单；共用 `GitStride/Models`、`Store` 和服务源码。
 - `GitStride/Models/`：项目、条目、状态、用户和 GitHub response models。
 - `GitStride/Services/`：GitHub、项目缓存、后台监控、系统通知和 Sparkle 更新边界。
+- `GitStride/Services/Preferences/`：双端共享的项目布局、保存视图和展示偏好。
 - `GitStride/Store/`：共享的 `GitStrideModel`、远程快照 owner `ProjectStore` 与偏好 owner `MyWorkStore`。
-- `GitStride/Views/MenuBar/`：菜单栏浏览、筛选、搜索与快速操作入口。
-- `GitStride/Views/Kanban/`：看板窗口和拖放入口。
-- `GitStride/Views/Settings/`：设置与更新入口。
-- `GitStride/Views/Shared/`：当前由多个 surface 使用的行视图。
+- `GitStride/Views/macOS/MenuBar/`：菜单栏浏览、筛选、搜索与快速操作入口。
+- `GitStride/Views/macOS/Kanban/`：看板窗口和拖放入口。
+- `GitStride/Views/macOS/Settings/`：桌面设置与更新入口；自动化设置由 `Views/Shared/Automation/` 供双端使用。
+- `GitStride/Views/Shared/`：跨平台详情组件和自动化设置；桌面专用编辑器位于 `Views/macOS/Items/`。
 - 仓库根目录脚本：release build、DMG 与 appcast 操作入口；其内容不属于普通开发规范。
 
 ## 4. 关键执行链路

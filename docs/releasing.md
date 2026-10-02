@@ -2,7 +2,7 @@
 
 This guide covers ZIP distribution through [gitstride.hyperseek.tech](https://gitstride.hyperseek.tech) and [zwyyy456/GitStride Releases](https://github.com/zwyyy456/GitStride/releases). It does not deploy the website or Automation Worker.
 
-The client and release artifacts use GitStride. The repository, website, and Sparkle feed still use their existing URLs. When those resources move, update `GitStride/Info.plist` (`SUFeedURL`), the download prefix and website link in `update_appcast.sh`, and the channel link in `appcast.xml` together. Feed entries must match the exact published ZIP bytes.
+The client and release artifacts use GitStride. The repository, website, and Sparkle feed still use their existing URLs. When those resources move, update `GitStride/App/macOS/Info.plist` (`SUFeedURL`), the download prefix and website link in `update_appcast.sh`, and the channel link in `appcast.xml` together. Feed entries must match the exact published ZIP bytes.
 
 ## Distribution targets and desktop OAuth
 
@@ -38,7 +38,7 @@ If an existing GitHub Release asset is deliberately replaced, regenerate its app
    ./bin/generate_keys --account gitstride
    ```
 
-   This creates or reuses a signing key in your login Keychain and prints its **public** key. Put that public key in `GitStride/Info.plist` under `SUPublicEDKey`. Keep the private key in Keychain and back it up securely outside the repository. The ZIP release script checks the exported app's public key against this account.
+   This creates or reuses a signing key in your login Keychain and prints its **public** key. Put that public key in `GitStride/App/macOS/Info.plist` under `SUPublicEDKey`. Keep the private key in Keychain and back it up securely outside the repository. The ZIP release script checks the exported app's public key against this account.
 
 4. Store a separate `notarytool` credential profile in Keychain before running the release script. Xcode's signing account does not create this profile. For an Apple Account, run the command below in your terminal and enter an **app-specific password** at the secure prompt (do not pass it on the command line):
 

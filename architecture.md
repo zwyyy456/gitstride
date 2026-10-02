@@ -3,7 +3,7 @@
 - 权威性：Normative
 - 加载方式：涉及 app composition、scene、状态所有权、并发、外部服务、持久化或目录边界时默认读取
 - 状态：Active
-- 适用平台：macOS 14+
+- 适用平台：macOS 14+、iOS / iPadOS 17+
 - 职责：定义 GitStride 当前长期工程边界；不定义产品功能、视觉设计或发布流程
 
 ## 产品与发行标识
@@ -20,6 +20,8 @@
 - 生产依赖方向为 `App -> Views -> Store -> Services / Models`。Services 不依赖 SwiftUI View、窗口或 scene。
 - `openWindow`、菜单栏关闭、`NSWorkspace` 打开链接和 `NSWindow` 外观等平台 presentation 留在 App 或 Views；它们不得进入 GitHub 数据访问层。
 
+- `GitStrideiOSApp` 是移动端 composition root，持有 app-lifetime 的 `GitStrideModel`。移动端与桌面端共用 Models、Store 和 GitHub/Automation 服务源码，页面与平台控件分别装配。iOS 仅支持 OAuth，不编译 CLI 与 Sparkle，不启动本地项目监控或请求项目通知权限。iOS 的 scene phase 控制自动化事件连接的前后台生命周期；前台恢复与 Worker 事件经过 `GitStrideModel.refreshVisibleProjects` 合并进行中的刷新。
+
 ## 状态所有权
 
 - `ProjectStore` 是全部远程 `Project` 快照、项目目录顺序、当前项目、状态筛选、远程 mutation、加载/错误状态、更新时间和当前用户的唯一可写真源。未确认的创建和内容编辑只作为 Store 持有的内存待同步操作及展示投影，不写入已确认快照或项目缓存；项目目录与 My Work 只保存排序或关注引用，不复制完整项目快照。
@@ -27,7 +29,7 @@
 - `GitStrideModel` 负责 app 级组合与跨功能编排，包括 My Work 刷新、监控生命周期、通知动作和静音/稍后提醒偏好。它不复制 `ProjectStore` 的远程实体状态。
 - `AutomationSetupModel` 负责自动化的 setup session、配置草稿、连接健康和管理操作；它由 `GitStrideModel` 持有，设置窗口不得创建竞争实例。
 - `ProjectStore` 保持 `@MainActor` 隔离。所有会改变可观察 UI 状态的结果必须回到该 owner 应用。
-- `NewProjectItemDraft` 是创建表单模型，集中推导可选状态、优先级、默认状态与提交条件；View 只装配控件，Store 仍验证当前权限、连接和字段身份。
+- `NewProjectItemDraft` 是双端共享的创建表单模型，集中推导可选状态、优先级、默认状态与提交条件；平台 View 只装配控件，Store 仍验证当前权限、连接和字段身份。
 - Views 只持有搜索文本、输入草稿、表单校验、焦点、局部展开状态等 surface-local presentation state；不得复制可写的项目集合、当前项目或远程 mutation 状态。
 - 工作区的已保存视图只持久化用户命名、筛选身份和显示偏好；筛选与交付统计从 `ProjectStore` 的完整项目投影派生。看板隐藏列只影响看板呈现，不缩小表格或交付统计的数据范围。
 - `ProjectDisplayPreferences` 集中拥有展示偏好的键集合、项目/保存视图命名空间和复制、删除逻辑；View 通过其键继续使用 `@AppStorage`，不另建可写的偏好快照。
@@ -56,7 +58,7 @@
 - 重新登录先失效旧连接，不预先删除已保存的 OAuth 凭据。新 OAuth 登录会话在设备授权成功、账号验证及凭据保存完成前不得读取旧凭据；保存时更新已有条目，不存在时新增。授权失败或取消后保持退出状态，删除凭据只由显式退出登录触发。
 - `GraphQLQueries` 集中保存查询与 mutation 文本。Models 负责已知响应结构；Views 和 Store 不解析原始 JSON 字典。CLI 子进程只服务认证，使用明确 executable URL 与 arguments 数组。
 - HTTP 状态、GraphQL errors、权限、SSO、限流和取消分别处理；凭据及完整响应不进入错误文案或日志。只读请求遇到 401 可以刷新凭据后重试一次，mutation 不自动重发。
-- `GitStride` target 包含 CLI 来源与 Sparkle；`GitStrideAppStore` target 使用 `APP_STORE` 编译条件、沙盒及网络 client entitlement，不编译 CLI runner 和 updater，不链接 Sparkle。业务源码由两个 target 共用。
+- `GitStride` target 包含 CLI 来源与 Sparkle；`GitStrideAppStore` 是 macOS / iOS / iPadOS 共用的多平台 target 和 scheme，使用 `APP_STORE` 编译条件，不编译 CLI runner 和 updater，不链接 Sparkle。Sources 的平台筛选分别装配 macOS 和 iOS 入口及页面；macOS 的沙盒 entitlement 与两个平台的 Info.plist 通过 SDK 条件配置。Mac 使用原生 macOS 入口，不启用 Mac Catalyst 或 Designed for iPad。业务源码由两个 target 共用。
 
 ## 身份、模型与远程变更
 
@@ -98,11 +100,11 @@
 
 ## 目录边界
 
-- `GitStrideApp.swift`：app 入口、scene、composition 与必要的平台适配。
+- `GitStride/App/macOS/`、`GitStride/App/iOS/`：各平台 app 入口、scene、composition、Info.plist 与平台配置。
 - `GitStride/Models/`：稳定领域模型和外部响应的 typed decoding structures。
-- `GitStride/Services/`：GitHub、项目缓存、后台监控、通知和更新等外部副作用边界。
+- `GitStride/Services/`：GitHub、项目缓存、后台监控、通知和更新等外部副作用边界；`Services/Preferences/` 拥有双端共享的项目展示偏好。
 - `GitStride/Store/`：业务状态 owner 与 app 级跨功能编排。
-- `GitStride/Views/`：SwiftUI surface、局部 presentation state 和平台交互。
+- `GitStride/Views/macOS/`、`GitStride/Views/iOS/`：平台页面、局部 presentation state 和平台交互；`GitStride/Views/Shared/` 只放跨平台使用的组件。
 - 新代码放入拥有其职责的现有目录。只有出现多个真实消费者或明确外部边界时才新增共享模块；不创建无明确所有权的 `Utilities`、`Helpers` 或 pass-through wrapper 作为默认落点。
 
 ## 规范演进

@@ -1,19 +1,21 @@
-import AppKit
 import SwiftUI
 
 struct AutomationConnectionList: View {
     @Bindable var setup: AutomationSetupModel
+    @Environment(\.openURL) private var openURL
     @State private var pendingDeletion: AutomationService.Automation?
     @State private var isShowingDeletionConfirmation = false
 
     var body: some View {
         ForEach(setup.automations) { automation in
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline) {
+                actionLayout {
                     Text(automation.accountLogin)
                         .font(.headline)
                         .fixedSize(horizontal: false, vertical: true)
+                    #if os(macOS)
                     Spacer()
+                    #endif
                     Button(
                         automation.enabled ? String(localized: "Pause") : String(localized: "Resume"),
                         action: { setEnabled(automation) }
@@ -64,6 +66,14 @@ struct AutomationConnectionList: View {
         }
     }
 
+    private var actionLayout: AnyLayout {
+        #if os(macOS)
+        AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        #else
+        AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+        #endif
+    }
+
     private func setEnabled(_ automation: AutomationService.Automation) {
         Task {
             await setup.setAutomationEnabled(id: automation.id, enabled: !automation.enabled)
@@ -73,7 +83,7 @@ struct AutomationConnectionList: View {
     private func reauthorize(_ automation: AutomationService.Automation) {
         Task {
             if let url = await setup.reauthorizeAutomation(id: automation.id) {
-                NSWorkspace.shared.open(url)
+                openURL(url)
             }
         }
     }
