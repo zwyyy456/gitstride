@@ -136,7 +136,7 @@ struct MobileProjectView: View {
             selection = selection.filter { ids.contains($0.itemID) }
         }
         .task(id: projectID) {
-            if let project { await store.selectProject(project, refresh: true) }
+            await store.loadProjectDetails(id: projectID)
         }
         .sheet(item: $changingStatusItem) { item in
             NavigationStack {

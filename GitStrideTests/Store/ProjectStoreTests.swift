@@ -212,13 +212,14 @@ struct ProjectStoreTests {
         #expect(await runner.recordedRequests().count == callCount)
     }
 
-    @Test func selectingAnotherProjectDiscardsThePreviousInFlightLoad() async throws {
+    @Test func selectingAnotherProjectKeepsBothLoadsIndependent() async throws {
         let runner = SuspendingGitHubHTTPClient(steps: [
             .response(Self.sessionResponse),
             .response(Self.ownersResponse),
             .response(Self.projectsResponse),
             .suspended("first-project", Self.firstProjectFieldsResponse),
             .response(Self.secondProjectFieldsResponse),
+            .response(Self.emptyItemsResponse),
             .response(Self.emptyItemsResponse)
         ])
         let (store, cleanup) = makeStore(runner: runner)
@@ -245,6 +246,10 @@ struct ProjectStoreTests {
 
         #expect(store.selectedProjectId == "P2")
         #expect(store.operationErrorMessage == nil)
+        guard case .empty(_, false, false) = store.projectContentState(id: "P1") else {
+            Issue.record("Loading another project must not cancel the first project's request")
+            return
+        }
     }
 
     @Test func itemDetailLoadIsSharedWhileTheRequestIsInFlight() async throws {
@@ -673,24 +678,46 @@ extension ProjectStoreTests {
         #expect(loaded.id == "P2")
     }
 
-    @Test func reopeningProjectReplacesAnInterruptedInitialRequest() async throws {
+    @Test func reopeningProjectSharesTheLoadAfterItsFirstWaiterLeaves() async throws {
         let runner = SuspendingGitHubHTTPClient(steps: [
             .response(Self.sessionResponse), .response(Self.ownersResponse), .response(Self.projectsResponse),
-            .suspended("old-project-request", Self.firstProjectFieldsResponse),
-            .response(Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse)
+            .suspended("project-request", Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse)
         ])
         let (store, cleanup) = makeStore(runner: runner)
         defer { cleanup() }
         let firstLoad = Task { await store.loadProjects() }
-        try await runner.waitUntilSuspended("old-project-request")
-        let project = try #require(store.project(id: "P1"))
-        await store.selectProject(project, refresh: true)
-        await runner.release("old-project-request")
+        try await runner.waitUntilSuspended("project-request")
+        firstLoad.cancel()
+        let release = Task { await runner.release("project-request") }
+        await store.loadProjectDetails(id: "P1")
+        await release.value
         await firstLoad.value
         guard case .empty(let loaded, false, false) = store.projectContentState(id: "P1") else {
-            Issue.record("The new route must complete even while the old request is suspended")
+            Issue.record("A cancelled waiter must not cancel the shared project request")
             return
         }
         #expect(loaded.id == "P1")
+        #expect(await runner.recordedCallCount() == 5)
+    }
+
+    @Test(arguments: [true, false])
+    func cancelledInitialProjectLoadOffersRetry(swiftCancellation: Bool) async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.sessionResponse), .response(Self.ownersResponse), .response(Self.projectsResponse),
+            swiftCancellation ? .cancelled : .failure(.cancelled),
+            .response(Self.firstProjectFieldsResponse), .response(Self.emptyItemsResponse)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        guard case .failed = store.projectContentState(id: "P1") else {
+            Issue.record("A cancelled initial request must not leave a taskless loading indicator")
+            return
+        }
+        await store.loadProjectDetails(id: "P1")
+        guard case .empty(_, false, false) = store.projectContentState(id: "P1") else {
+            Issue.record("Retry must complete the initial load")
+            return
+        }
     }
 }

@@ -289,7 +289,6 @@ final class ProjectStore {
     private let sessionID = UUID()
 
     private var catalogGeneration = 0
-    private var projectGeneration = 0
     private var followedProjectsGeneration = 0
     private var projectStates: [String: ProjectState] = [:]
     private var contentRevision: UInt64 = 0
@@ -298,7 +297,7 @@ final class ProjectStore {
     private var followedProjectIDs: Set<String> = []
     private var didRestoreCache = false
     private var cachedAccountLogin: String?
-    private var projectLoadTask: Task<Project?, Error>?
+    private var projectLoadTasks: [String: (id: UUID, task: Task<Void, Never>)] = [:]
     private var itemDetailEntries: [String: ItemDetailEntry] = [:]
     private var itemDetailTasks: [String: Task<ProjectItemDetail, Error>] = [:]
     private var itemDetailGenerations: [String: Int] = [:]
@@ -895,7 +894,8 @@ final class ProjectStore {
         catalogGeneration += 1
         followedProjectsGeneration += 1
         contentRevision += 1
-        cancelProjectLoad()
+        projectLoadTasks.values.forEach { $0.task.cancel() }
+        projectLoadTasks = [:]
         reconciliationTasks.values.forEach { $0.task.cancel() }
         reconciliationTasks = [:]
         itemDetailTasks.values.forEach { $0.cancel() }
@@ -929,7 +929,6 @@ final class ProjectStore {
     }
 
     func loadProjects() async {
-        cancelProjectLoad()
         guard isActive else { return }
         catalogGeneration += 1
         let generation = catalogGeneration
@@ -988,35 +987,35 @@ final class ProjectStore {
     }
 
     func loadProjectDetails(id: String) async {
-        guard projectStates[id] != nil else { return }
-        cancelProjectLoad()
+        guard isActive, projectStates[id] != nil else { return }
+        if let loading = projectLoadTasks[id] {
+            await loading.task.value
+            return
+        }
         if let reconciliation = reconciliationTasks[id] {
             await reconciliation.task.value
             return
         }
-        let generation = projectGeneration
+        let requestID = UUID()
         operationErrorMessage = nil
-        let task = Task { try await refreshProjectSnapshot(id: id) }
-        projectLoadTask = task
-        defer {
-            if generation == projectGeneration {
-                projectLoadTask = nil
+        let task = Task {
+            defer {
+                if projectLoadTasks[id]?.id == requestID { projectLoadTasks[id] = nil }
+            }
+            do {
+                _ = try await refreshProjectSnapshot(id: id)
+            } catch is CancellationError {
+            } catch {
+                guard projectLoadTasks[id]?.id == requestID else { return }
+                operationErrorMessage = error.localizedDescription
             }
         }
-        do {
-            _ = try await withTaskCancellationHandler {
-                try await task.value
-            } onCancel: { task.cancel() }
-        } catch is CancellationError {
-        } catch {
-            guard generation == projectGeneration else { return }
-            operationErrorMessage = error.localizedDescription
-        }
+        projectLoadTasks[id] = (requestID, task)
+        await task.value
     }
 
     func selectOwner(_ owner: ProjectOwner) async {
         guard owner.id != selectedOwnerId else { return }
-        cancelProjectLoad()
         catalogGeneration += 1
         let generation = catalogGeneration
         selectedOwnerId = owner.id
@@ -1143,7 +1142,6 @@ final class ProjectStore {
         removeProject(id: id)
         let wasSelected = selectedProjectId == id
         if wasSelected {
-            cancelProjectLoad()
             selectedProjectId = catalogProjectIDs.first
             selectedStatusFilter = nil
             operationErrorMessage = nil
@@ -1180,7 +1178,6 @@ final class ProjectStore {
         project.linkedRepositories = repository.map { [$0.nameWithOwner] } ?? []
 
         // The mutation succeeded. Subsequent read failures must not invite creation again.
-        cancelProjectLoad()
         catalogGeneration += 1
         let generation = catalogGeneration
         let existing = selectedOwnerId == owner.id ? projects : []
@@ -1355,7 +1352,12 @@ final class ProjectStore {
             return canCommit(ticket) ? snapshot : nil
         } catch {
             guard canCommit(ticket) else { discardRead(ticket); return nil }
-            projectStates[id]?.load = error is CancellationError ? .idle : .failed(error.localizedDescription)
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                projectStates[id]?.load = state.source == .catalog
+                    ? .failed(String(localized: "Loading was cancelled. Try again.")) : .idle
+                throw CancellationError()
+            }
+            projectStates[id]?.load = .failed(error.localizedDescription)
             throw error
         }
     }
@@ -1407,6 +1409,7 @@ final class ProjectStore {
     }
 
     private func removeProject(id: String) {
+        projectLoadTasks.removeValue(forKey: id)?.task.cancel()
         projectStates[id] = nil
         pendingRoadmapEdits = pendingRoadmapEdits.filter { $0.key.projectID != id }
         pendingStatusMoves = pendingStatusMoves.filter { $0.key.projectID != id }
@@ -1525,12 +1528,6 @@ final class ProjectStore {
     private func cachedDataMessage(for state: GitHubSessionState) -> String {
         let reason = sessionError(for: state)?.localizedDescription ?? String(localized: "GitHub is unavailable.")
         return String(localized: "Showing cached data. \(reason)")
-    }
-
-    private func cancelProjectLoad() {
-        projectLoadTask?.cancel()
-        projectLoadTask = nil
-        projectGeneration += 1
     }
 
     private func sessionError(for state: GitHubSessionState) -> GitHubError? {
