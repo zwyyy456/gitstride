@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        F17000000000000000000001 /* ProjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17000000000000000000003 /* ProjectIcon.swift */; };
+        F17000000000000000000002 /* ProjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17000000000000000000003 /* ProjectIcon.swift */; };
+        C92000000000000000000001 /* PersonalWorkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92000000000000000000003 /* PersonalWorkView.swift */; };
+        C92000000000000000000002 /* PersonalWorkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C92000000000000000000003 /* PersonalWorkView.swift */; };
 		034A1C5457534637AA06944F /* Services/ProjectCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE756C642FB4254A3DDD761 /* Services/ProjectCacheTests.swift */; };
 		0A268DFF1FB34EA2A03336F0 /* ExistingProjectItemPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906BAEE59D54492EB681F8B9 /* ExistingProjectItemPicker.swift */; platformFilters = (macos, ); };
 		1256B447FBC34D199F0B53D1 /* Support/ProjectStoreFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10606AD13FB545669AC004F6 /* Support/ProjectStoreFixtures.swift */; };
@@ -232,6 +236,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+        F17000000000000000000003 /* ProjectIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectIcon.swift; sourceTree = "<group>"; };
+        C92000000000000000000003 /* PersonalWorkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalWorkView.swift; sourceTree = "<group>"; };
 		00360ADAD2AA483B9D405B79 /* MobileMyWorkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileMyWorkView.swift; sourceTree = "<group>"; };
 		067616FE0D8F4BB582025D8E /* ItemLabelsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemLabelsSection.swift; sourceTree = "<group>"; };
 		06B05A2CAC624B4DA01C8B59 /* MobileItemDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileItemDetailView.swift; sourceTree = "<group>"; };
@@ -565,6 +571,8 @@
 			children = (
 				C1428EA6345F49739DD5330C /* Automation */,
 				A1000037 /* EngineeringSignalsView.swift */,
+                F17000000000000000000003 /* ProjectIcon.swift */,
+				C92000000000000000000003 /* PersonalWorkView.swift */,
 				A1000043 /* ItemMarkdownBodyView.swift */,
 				E1410001 /* MarkdownSourceEditor.swift */,
 				E1410000 /* ItemEditingSession.swift */,
@@ -929,6 +937,8 @@
 				367A94B53064B9F300F2A402 /* ProjectManagementViews.swift in Sources */,
 				367A94B63064B9F300F2A402 /* AddProjectItemView.swift in Sources */,
 				367A94B73064B9F300F2A402 /* EngineeringSignalsView.swift in Sources */,
+                F17000000000000000000001 /* ProjectIcon.swift in Sources */,
+				C92000000000000000000001 /* PersonalWorkView.swift in Sources */,
 				367A94B83064B9F300F2A402 /* ItemMarkdownBodyView.swift in Sources */,
 				367A94B93064B9F300F2A402 /* ItemDescriptionView.swift in Sources */,
 				367A94BA3064B9F300F2A402 /* ItemContentEditorView.swift in Sources */,
@@ -1049,6 +1059,8 @@
 				CA461A15C72B4DBDAAB413CC /* ProjectManagementViews.swift in Sources */,
 				A0000025 /* AddProjectItemView.swift in Sources */,
 				A0000037 /* EngineeringSignalsView.swift in Sources */,
+                F17000000000000000000002 /* ProjectIcon.swift in Sources */,
+				C92000000000000000000002 /* PersonalWorkView.swift in Sources */,
 				A0000043 /* ItemMarkdownBodyView.swift in Sources */,
 				A0000040 /* ItemDescriptionView.swift in Sources */,
 				2DD77887FA1449C58FA45800 /* ItemContentEditorView.swift in Sources */,

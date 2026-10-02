@@ -9,6 +9,8 @@ struct ProjectItemDetail: Identifiable, Hashable, Sendable {
     let createdAt: String?
     var updatedAt: String?
     var issueMetadata: IssueMetadata?
+    var state: String? = nil
+    var pullRequestSignals: EngineeringSignals? = nil
 }
 
 struct ItemAuthor: Hashable, Sendable {

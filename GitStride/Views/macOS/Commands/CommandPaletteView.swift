@@ -668,7 +668,7 @@ struct CommandPaletteView: View {
         for filter in MyWorkFilter.allCases {
             add(
                 .init(
-                    id: "mywork:" + filter.rawValue, title: filter.title, keywords: "My Work 我的工作",
+                    id: "mywork:" + filter.rawValue, title: filter.title, keywords: filter.isPersonal ? "My Work 我的工作" : "Followed Projects 关注项目",
                     symbol: "briefcase", group: .myWork, perform: { navigation.openMyWork(filter) }))
         }
         add(

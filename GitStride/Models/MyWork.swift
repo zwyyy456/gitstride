@@ -38,7 +38,9 @@ struct FollowedProject: Identifiable, Codable, Hashable {
 
 enum MyWorkFilter: String, CaseIterable, Codable, Identifiable {
     case assigned = "Assigned to Me"
+    case authored = "My Pull Requests"
     case reviewRequested = "Review Requested"
+    case allOpen = "Open Items"
     case readyToMerge = "Ready to Merge"
     case ciFailed = "CI Failed"
     case due = "Due Soon"
@@ -49,7 +51,9 @@ enum MyWorkFilter: String, CaseIterable, Codable, Identifiable {
     var title: String {
         switch self {
         case .assigned: String(localized: "Assigned to Me")
+        case .authored: String(localized: "My Pull Requests")
         case .reviewRequested: String(localized: "Review Requested")
+        case .allOpen: String(localized: "Open Items")
         case .readyToMerge: String(localized: "Ready to Merge")
         case .ciFailed: String(localized: "CI Failed")
         case .due: String(localized: "Due Soon")
@@ -64,13 +68,28 @@ enum MyWorkFilter: String, CaseIterable, Codable, Identifiable {
     var icon: String {
         switch self {
         case .assigned: "person.crop.circle"
-        case .reviewRequested: "person.crop.circle.badge.questionmark"
+        case .authored: "arrow.triangle.pull"
+        case .reviewRequested: "text.bubble"
+        case .allOpen: "tray"
         case .readyToMerge: "arrow.triangle.merge"
         case .ciFailed: "xmark.octagon"
         case .due: "calendar.badge.clock"
         case .blocked: "exclamationmark.octagon"
         case .recent: "clock.arrow.circlepath"
         case .stale: "zzz"
+        }
+    }
+
+    static let personalCases: [Self] = [.assigned, .authored, .reviewRequested]
+    static let followedCases: [Self] = [.allOpen, .readyToMerge, .ciFailed, .due, .blocked, .recent, .stale]
+    var isPersonal: Bool { Self.personalCases.contains(self) }
+
+    func searchQuery(login: String) -> String? {
+        switch self {
+        case .assigned: "is:open is:issue assignee:\(login) sort:updated-desc"
+        case .authored: "is:open is:pr author:\(login) sort:updated-desc"
+        case .reviewRequested: "is:open is:pr review-requested:\(login) -author:\(login) sort:updated-desc"
+        default: nil
         }
     }
 
@@ -86,9 +105,13 @@ enum MyWorkFilter: String, CaseIterable, Codable, Identifiable {
             return item.assignees.contains {
                 $0.login.caseInsensitiveCompare(currentUserLogin) == .orderedSame
             } && workItem.isOpen
+        case .authored:
+            return false // Authored PRs come from the account query, not Project membership.
         case .reviewRequested:
             guard let currentUserLogin else { return false }
             return workItem.isOpen && item.signals.reviewRequested(for: currentUserLogin)
+        case .allOpen:
+            return workItem.isOpen
         case .readyToMerge:
             return workItem.isOpen && item.signals.isReadyToMerge
         case .ciFailed:
@@ -149,5 +172,46 @@ struct MyWorkItem: Identifiable, Hashable {
         return Calendar(identifier: .gregorian).date(
             from: DateComponents(year: parts[0], month: parts[1], day: parts[2])
         )
+    }
+}
+
+/// Account search results use Issue/PR identity and have no Project membership.
+struct PersonalWorkItem: Identifiable, Hashable {
+    let id: String
+    var title: String
+    let number: Int
+    let url: URL
+    let repository: String
+    let isPullRequest: Bool
+    var updatedAt: String
+    var signals: EngineeringSignals
+}
+
+struct PersonalWorkResult {
+    var items: [PersonalWorkItem]
+    let totalCount: Int
+    var isTruncated: Bool { totalCount > items.count }
+}
+
+enum PullRequestWorkStatus: String, CaseIterable, Identifiable {
+    case all, ready, failed, draft, review
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .all: String(localized: "All Pull Requests")
+        case .ready: String(localized: "Ready to Merge")
+        case .failed: String(localized: "CI Failed")
+        case .draft: String(localized: "Draft")
+        case .review: String(localized: "Awaiting Review")
+        }
+    }
+    func includes(_ signals: EngineeringSignals) -> Bool {
+        switch self {
+        case .all: true
+        case .ready: signals.isReadyToMerge
+        case .failed: signals.hasFailedChecks
+        case .draft: signals.isDraft
+        case .review: signals.reviewDecision == .reviewRequired
+        }
     }
 }

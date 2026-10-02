@@ -263,7 +263,24 @@
         }
       }
     },
+    "%lld changes across %lld followed projects." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld changes across %lld followed projects."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld 个关注项目中有 %1$lld 项变更。"
+          }
+        }
+      }
+    },
     "%lld changes across %lld projects in My Work." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -322,6 +339,7 @@
       }
     },
     "%lld items in %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "variations" : {
@@ -361,6 +379,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已显示 %1$lld / %2$lld 列"
+          }
+        }
+      }
+    },
+    "%lld of %lld completed · %lld blocked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld completed · %lld blocked"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成 %1$lld/%2$lld · %3$lld 项受阻"
           }
         }
       }
@@ -431,6 +466,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "百分之 %lld"
+          }
+        }
+      }
+    },
+    "%lld selected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld selected"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已选择 %lld 项"
           }
         }
       }
@@ -536,6 +588,23 @@
     "+%lld" : {
       "shouldTranslate" : false
     },
+    "> Title repo:owner/repo @me #bug" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "> Title repo:owner/repo @me #bug"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "> 标题 repo:owner/repo @me #bug"
+          }
+        }
+      }
+    },
     "5 minutes" : {
       "localizations" : {
         "en" : {
@@ -583,57 +652,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "30 分钟"
-          }
-        }
-      }
-    },
-    "%lld of %lld completed · %lld blocked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld of %lld completed · %lld blocked"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已完成 %1$lld/%2$lld · %3$lld 项受阻"
-          }
-        }
-      }
-    },
-    "%lld selected" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld selected"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已选择 %lld 项"
-          }
-        }
-      }
-    },
-    "> Title repo:owner/repo @me #bug" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "> Title repo:owner/repo @me #bug"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "> 标题 repo:owner/repo @me #bug"
           }
         }
       }
@@ -720,6 +738,7 @@
       }
     },
     "Add %@ to My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -746,6 +765,7 @@
       }
     },
     "Add a Project to My Work to start monitoring." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -986,6 +1006,7 @@
       }
     },
     "Add to My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1110,6 +1131,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有条目"
+          }
+        }
+      }
+    },
+    "All Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部项目"
+          }
+        }
+      }
+    },
+    "All Pull Requests" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Pull Requests"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全部 PR"
           }
         }
       }
@@ -1582,6 +1635,9 @@
         }
       }
     },
+    "Author" : {
+
+    },
     "Authorization required" : {
       "localizations" : {
         "en" : {
@@ -1642,6 +1698,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动检查更新"
+          }
+        }
+      }
+    },
+    "Automation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automation"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动化"
           }
         }
       }
@@ -1723,6 +1795,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "等待首次匹配"
+          }
+        }
+      }
+    },
+    "Awaiting Review" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Awaiting Review"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待 Review"
           }
         }
       }
@@ -1914,6 +2002,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在工作区或菜单栏中浏览和更新你的 GitHub 项目。"
+          }
+        }
+      }
+    },
+    "Browse Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browse Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "浏览项目"
           }
         }
       }
@@ -2512,6 +2616,22 @@
         }
       }
     },
+    "Clear filters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear filters"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除筛选"
+          }
+        }
+      }
+    },
     "Clear Filters" : {
       "localizations" : {
         "en" : {
@@ -2576,6 +2696,55 @@
         }
       }
     },
+    "Closed Issue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed Issue"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭 Issue"
+          }
+        }
+      }
+    },
+    "Closed PR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed PR"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭 PR"
+          }
+        }
+      }
+    },
+    "Collapsed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Collapsed"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已折叠"
+          }
+        }
+      }
+    },
     "Commands" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2618,7 +2787,40 @@
         }
       }
     },
+    "Configure Followed Project views" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure Followed Project views"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置关注项目视图"
+          }
+        }
+      }
+    },
+    "Configure Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置关注项目"
+          }
+        }
+      }
+    },
     "Configure My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2635,6 +2837,7 @@
       }
     },
     "Configure My Work views" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2976,6 +3179,22 @@
         }
       }
     },
+    "Couldn’t load followed projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t load followed projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载关注项目"
+          }
+        }
+      }
+    },
     "Couldn’t Load Item" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2989,6 +3208,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法加载条目"
+          }
+        }
+      }
+    },
+    "Couldn’t Load Project" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Load Project"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法加载项目"
           }
         }
       }
@@ -3745,6 +3980,22 @@
         }
       }
     },
+    "Draft PR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draft PR"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draft PR"
+          }
+        }
+      }
+    },
     "Draft pull request" : {
       "localizations" : {
         "en" : {
@@ -3962,6 +4213,22 @@
         }
       }
     },
+    "Enabled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enabled"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已启用"
+          }
+        }
+      }
+    },
     "End time" : {
       "localizations" : {
         "en" : {
@@ -4149,6 +4416,23 @@
         }
       }
     },
+    "Expanded" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expanded"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已展开"
+          }
+        }
+      }
+    },
     "Failed" : {
       "localizations" : {
         "en" : {
@@ -4246,6 +4530,22 @@
         }
       }
     },
+    "Filters applied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filters applied"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已应用筛选"
+          }
+        }
+      }
+    },
     "Find in Current View" : {
       "localizations" : {
         "zh-Hans" : {
@@ -4305,6 +4605,87 @@
         }
       }
     },
+    "Follow %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注 %@"
+          }
+        }
+      }
+    },
+    "Follow a project to start monitoring." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow a project to start monitoring."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注项目后即可开始监控。"
+          }
+        }
+      }
+    },
+    "Follow Project" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow Project"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注项目"
+          }
+        }
+      }
+    },
+    "Follow projects below to keep them here." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow projects below to keep them here."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注下方的项目后，即可在此快速访问。"
+          }
+        }
+      }
+    },
+    "Follow projects to see their items here." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow projects to see their items here."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注项目后，即可在此查看项目条目。"
+          }
+        }
+      }
+    },
     "Follow projects to see your work here." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4322,6 +4703,22 @@
         }
       }
     },
+    "Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注项目"
+          }
+        }
+      }
+    },
     "Following" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4335,6 +4732,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已关注"
+          }
+        }
+      }
+    },
+    "Following Tab" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Following"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注"
           }
         }
       }
@@ -4357,6 +4770,22 @@
     },
     "GitHub" : {
       "shouldTranslate" : false
+    },
+    "GitHub Account" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub Account"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 账号"
+          }
+        }
+      }
     },
     "GitHub API error: %@" : {
       "localizations" : {
@@ -4798,6 +5227,22 @@
         }
       }
     },
+    "GitHub search returned a limited set of results. Open GitHub to see more." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub search returned a limited set of results. Open GitHub to see more."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHub 搜索返回的结果数量有限，请打开 GitHub 查看更多。"
+          }
+        }
+      }
+    },
     "GitHub sync needs attention" : {
 
     },
@@ -4981,8 +5426,37 @@
         }
       }
     },
+    "Group by Project" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group by Project"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按项目分组"
+          }
+        }
+      }
+    },
     "Group by Status" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group by Status"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 Status 分组"
+          }
+        }
+      }
     },
     "Group, sort, and choose visible fields" : {
       "localizations" : {
@@ -5311,6 +5785,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "条目来源"
+          }
+        }
+      }
+    },
+    "Item State Open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未关闭"
           }
         }
       }
@@ -5734,6 +6224,22 @@
         }
       }
     },
+    "Loading Followed Projects…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading Followed Projects…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在加载关注项目…"
+          }
+        }
+      }
+    },
     "Loading item editor…" : {
       "localizations" : {
         "zh-Hans" : {
@@ -5974,7 +6480,24 @@
         }
       }
     },
+    "Manage Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理关注项目"
+          }
+        }
+      }
+    },
     "Manage My Work Projects" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6066,6 +6589,22 @@
         }
       }
     },
+    "Merged PR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merged PR"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已合并 PR"
+          }
+        }
+      }
+    },
     "Milestone" : {
       "localizations" : {
         "en" : {
@@ -6124,7 +6663,24 @@
         }
       }
     },
+    "Monitor Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "监控关注项目"
+          }
+        }
+      }
+    },
     "Monitor Projects in My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6275,7 +6831,6 @@
       }
     },
     "More Actions" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -6419,6 +6974,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "静音此项目"
+          }
+        }
+      }
+    },
+    "My PRs" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My PRs"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的 PR"
+          }
+        }
+      }
+    },
+    "My Pull Requests" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My Pull Requests"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我创建的 PR"
           }
         }
       }
@@ -6625,6 +7212,38 @@
         }
       }
     },
+    "No followed projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No followed projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未关注任何项目"
+          }
+        }
+      }
+    },
+    "No Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未关注项目"
+          }
+        }
+      }
+    },
     "No items" : {
       "localizations" : {
         "en" : {
@@ -6658,7 +7277,24 @@
         }
       }
     },
+    "No items in followed projects match this filter." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No items in followed projects match this filter."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注项目中没有符合此筛选条件的条目。"
+          }
+        }
+      }
+    },
     "No items in My Work match this filter." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6824,6 +7460,22 @@
         }
       }
     },
+    "No open items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No open items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无未完成条目"
+          }
+        }
+      }
+    },
     "No project is selected." : {
       "localizations" : {
         "en" : {
@@ -6873,6 +7525,7 @@
       }
     },
     "No Projects in My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6999,6 +7652,25 @@
           }
         }
       }
+    },
+    "Not configured" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not configured"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未配置"
+          }
+        }
+      }
+    },
+    "Not connected" : {
+
     },
     "Not selected" : {
       "localizations" : {
@@ -7165,7 +7837,41 @@
         }
       }
     },
+    "Open %@ in GitHub" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open %@ in GitHub"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 GitHub 中打开 %@"
+          }
+        }
+      }
+    },
+    "Open a project and choose Follow Project in the toolbar." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open a project and choose Follow Project in the toolbar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开项目，然后在工具栏选择“关注项目”。"
+          }
+        }
+      }
+    },
     "Open a Project and click Add to My Work in the toolbar." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7180,6 +7886,9 @@
           }
         }
       }
+    },
+    "Open a Project and click Follow Project in the toolbar." : {
+
     },
     "Open Browser" : {
       "localizations" : {
@@ -7293,6 +8002,22 @@
         }
       }
     },
+    "Open Issue State" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Issue"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未关闭 Issue"
+          }
+        }
+      }
+    },
     "Open Item Details" : {
       "localizations" : {
         "zh-Hans" : {
@@ -7313,6 +8038,22 @@
         }
       }
     },
+    "Open Items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未完成条目"
+          }
+        }
+      }
+    },
     "Open Kanban Board" : {
       "localizations" : {
         "en" : {
@@ -7325,6 +8066,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开看板"
+          }
+        }
+      }
+    },
+    "Open PR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open PR"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未关闭 PR"
           }
         }
       }
@@ -7652,11 +8409,30 @@
         }
       }
     },
+    "PR" : {
+
+    },
     "PR #%lld" : {
       "shouldTranslate" : false
     },
     "PR #%lld: %@" : {
       "shouldTranslate" : false
+    },
+    "PR Status" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PR Status"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PR 状态"
+          }
+        }
+      }
     },
     "Preparing setup…" : {
       "localizations" : {
@@ -7854,6 +8630,22 @@
         }
       }
     },
+    "Project Actions" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project Actions"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目操作"
+          }
+        }
+      }
+    },
     "Project created, but the project list could not refresh: %@" : {
       "localizations" : {
         "en" : {
@@ -8015,6 +8807,22 @@
         }
       }
     },
+    "Project properties are available when this item belongs to a loaded project." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project properties are available when this item belongs to a loaded project."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此条目出现在已加载的项目中时，可在这里查看和编辑项目属性。"
+          }
+        }
+      }
+    },
     "Project Template" : {
       "localizations" : {
         "en" : {
@@ -8027,6 +8835,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "项目模板"
+          }
+        }
+      }
+    },
+    "Project unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project unavailable"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目不可用"
+          }
+        }
+      }
+    },
+    "Project Work" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project Work"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目工作"
           }
         }
       }
@@ -8048,6 +8889,7 @@
       }
     },
     "Projects %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8064,6 +8906,7 @@
       }
     },
     "Projects in My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8075,6 +8918,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“我的工作”中的项目"
+          }
+        }
+      }
+    },
+    "Projects owned by %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projects owned by %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的项目"
           }
         }
       }
@@ -8092,6 +8951,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "属性"
+          }
+        }
+      }
+    },
+    "Properties in %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Properties in %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的属性"
           }
         }
       }
@@ -8404,6 +9280,22 @@
         }
       }
     },
+    "Refresh Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刷新关注项目"
+          }
+        }
+      }
+    },
     "Refresh Item" : {
       "localizations" : {
         "en" : {
@@ -8510,6 +9402,22 @@
         }
       }
     },
+    "Refreshing Followed Projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refreshing Followed Projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在刷新关注项目"
+          }
+        }
+      }
+    },
     "Refreshing item" : {
       "localizations" : {
         "en" : {
@@ -8544,6 +9452,7 @@
       }
     },
     "Refreshing My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8555,6 +9464,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在刷新我的工作"
+          }
+        }
+      }
+    },
+    "Refreshing…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refreshing…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在刷新…"
           }
         }
       }
@@ -8640,6 +9565,7 @@
       }
     },
     "Remove %@ from My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8720,6 +9646,7 @@
       }
     },
     "Remove from My Work" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -8945,6 +9872,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请先解决连接错误，再恢复此自动化。"
+          }
+        }
+      }
+    },
+    "Restricted item" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restricted item"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受限条目"
           }
         }
       }
@@ -9384,6 +10327,22 @@
         }
       }
     },
+    "Scope" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scope"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "范围"
+          }
+        }
+      }
+    },
     "Search" : {
       "localizations" : {
         "en" : {
@@ -9516,6 +10475,22 @@
         }
       }
     },
+    "Search items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索条目"
+          }
+        }
+      }
+    },
     "Search items, #number, or @assignee" : {
       "localizations" : {
         "en" : {
@@ -9591,12 +10566,44 @@
         }
       }
     },
+    "Search projects" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search projects"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索项目"
+          }
+        }
+      }
+    },
     "Search repository labels" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索仓库标签"
+          }
+        }
+      }
+    },
+    "Search results" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search results"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索结果"
           }
         }
       }
@@ -9665,6 +10672,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索标题、#编号或 @负责人"
+          }
+        }
+      }
+    },
+    "Search title, repository, or #number" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search title, repository, or #number"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索标题、仓库或 #编号"
           }
         }
       }
@@ -9795,6 +10818,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择所有者"
+          }
+        }
+      }
+    },
+    "Select items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择条目"
           }
         }
       }
@@ -10507,6 +11546,9 @@
         }
       }
     },
+    "State" : {
+
+    },
     "Status" : {
       "localizations" : {
         "en" : {
@@ -10641,6 +11683,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sub-issue"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "子 Issue"
+          }
+        }
+      }
+    },
+    "Sub-issues" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sub-issues"
           }
         },
         "zh-Hans" : {
@@ -11324,6 +12382,22 @@
         }
       }
     },
+    "This project has no items" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This project has no items"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此项目暂无条目"
+          }
+        }
+      }
+    },
     "This Project has no recognizable Done status." : {
       "localizations" : {
         "en" : {
@@ -11546,6 +12620,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重试"
+          }
+        }
+      }
+    },
+    "Try another search or clear the filters." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try another search or clear the filters."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请尝试其他搜索词，或清除筛选条件。"
           }
         }
       }
@@ -11796,6 +12886,38 @@
         }
       }
     },
+    "Unfollow %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unfollow %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消关注 %@"
+          }
+        }
+      }
+    },
+    "Unfollow Project" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unfollow Project"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消关注项目"
+          }
+        }
+      }
+    },
     "Unscheduled" : {
       "localizations" : {
         "zh-Hans" : {
@@ -12026,6 +13148,22 @@
         }
       }
     },
+    "Views" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Views"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "视图"
+          }
+        }
+      }
+    },
     "Waiting for authorization…" : {
       "localizations" : {
         "en" : {
@@ -12144,6 +13282,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的更改尚未提交到 GitHub。"
+          }
+        }
+      }
+    },
+    "Your followed projects have no open items." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your followed projects have no open items."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关注的项目中没有未完成条目。"
           }
         }
       }

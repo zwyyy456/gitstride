@@ -1,6 +1,25 @@
 import Foundation
 
 enum GraphQLQueries {
+    static let personalWork = """
+        query($searchQuery: String!, $after: String) {
+            search(query: $searchQuery, type: ISSUE, first: 100, after: $after) {
+                issueCount
+                nodes {
+                    ... on Issue {
+                        id title number url updatedAt repository { nameWithOwner }
+                    }
+                    ... on PullRequest {
+                        id title number url updatedAt repository { nameWithOwner }
+                        isDraft mergeable mergeStateStatus reviewDecision
+                        statusCheckRollup { state }
+                    }
+                }
+                pageInfo { hasNextPage endCursor }
+            }
+        }
+        """
+
     static let deleteProject = """
         mutation($projectId: ID!) {
             deleteProjectV2(input: { projectId: $projectId }) { clientMutationId }
@@ -416,6 +435,7 @@ enum GraphQLQueries {
             node(id: $id) {
                 __typename
                 ... on Issue {
+                    state
                     id
                     title
                     body
@@ -474,6 +494,8 @@ enum GraphQLQueries {
                     }
                 }
                 ... on PullRequest {
+                    state isDraft mergeable mergeStateStatus reviewDecision
+                    statusCheckRollup { state }
                     viewerCanUpdate
                     id
                     title

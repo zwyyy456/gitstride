@@ -24,8 +24,9 @@
 
 ## 状态所有权
 
-- `ProjectStore` 是全部远程 `Project` 快照、项目目录顺序、当前项目、状态筛选、远程 mutation、加载/错误状态、更新时间和当前用户的唯一可写真源。未确认的创建和内容编辑只作为 Store 持有的内存待同步操作及展示投影，不写入已确认快照或项目缓存；项目目录与 My Work 只保存排序或关注引用，不复制完整项目快照。
-- `MyWorkStore` 只拥有关注项目引用和 My Work 筛选偏好，并从 `ProjectStore` 的快照派生列表；不得直接请求 GitHub、保存远程快照或执行远程 mutation。
+- `ProjectStore` 是全部远程 `Project` 快照、项目目录顺序、当前项目、状态筛选、远程 mutation、加载/错误状态、更新时间和当前用户的唯一可写真源。未确认的创建和内容编辑只作为 Store 持有的内存待同步操作及展示投影，不写入已确认快照或项目缓存；项目目录与关注偏好只保存排序或关注引用，不复制完整项目快照。
+- `MyWorkStore` 只拥有关注项目引用和关注视图筛选偏好，并从 `ProjectStore` 的快照派生关注项目列表；不得直接请求 GitHub、保存远程快照或执行远程 mutation。
+- 个人待办由 `ProjectStore` 持有按当前账号查询的 Issue/PR 摘要及加载状态，使用内容 node ID，不伪造 Project membership。查询不受关注列表约束；关注项目仍独立决定本地监控范围。个人查询按类别合并进行中请求，连接失效时取消并清空；内容 mutation 会取消重叠查询，并在完成后刷新已加载类别。摘要不写入偏好或项目缓存。个人条目与 Project 条目按内容 node ID 共用详情缓存和编辑冲突控制；个人编辑不依赖 Project membership，确认结果同步到已加载的关联项目与个人摘要。
 - `GitStrideModel` 负责 app 级组合与跨功能编排，包括 My Work 刷新、监控生命周期、通知动作和静音/稍后提醒偏好。它不复制 `ProjectStore` 的远程实体状态。
 - `AutomationSetupModel` 负责自动化的 setup session、配置草稿、连接健康和管理操作；它由 `GitStrideModel` 持有，设置窗口不得创建竞争实例。
 - `ProjectStore` 保持 `@MainActor` 隔离。所有会改变可观察 UI 状态的结果必须回到该 owner 应用。

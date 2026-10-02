@@ -503,3 +503,116 @@ extension ProjectStoreTests {
         #expect(await nextHTTP.recordedRequests().count == count)
     }
 }
+
+extension ProjectStoreTests {
+    @Test func personalWorkLoadsWithoutProjectsAndDiscardsResponsesAfterSignOut() async throws {
+        let emptyProjects = #"{"data":{"owner":{"projectsV2":{"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}"#
+        let personal = #"{"data":{"search":{"issueCount":1,"nodes":[{"id":"I1","title":"Assigned","number":1,"url":"https://github.com/acme/repo/issues/1","updatedAt":"2026-10-01T00:00:00Z","repository":{"nameWithOwner":"acme/repo"}}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#
+        let runner = SuspendingGitHubHTTPClient(steps: [
+            .response(Self.sessionResponse), .response(Self.ownersResponse), .response(emptyProjects),
+            .response(personal), .suspended("personal", personal)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        #expect(store.projects.isEmpty)
+        await store.refreshPersonalWork(.assigned)
+        #expect(store.personalWork[.assigned]?.items.map(\.id) == ["I1"])
+        let refresh = Task { await store.refreshPersonalWork(.assigned) }
+        try await runner.waitUntilSuspended("personal")
+        try await store.invalidateSession()
+        await runner.release("personal")
+        await refresh.value
+        #expect(store.personalWork.isEmpty)
+        #expect(store.personalWorkErrors.isEmpty)
+        #expect(store.loadingPersonalWork.isEmpty)
+    }
+}
+
+extension ProjectStoreTests {
+    @Test func contentMutationReplacesAnOverlappingPersonalSearch() async throws {
+        let personal = #"{"data":{"search":{"issueCount":1,"nodes":[{"id":"CONTENT1","title":"Assigned","number":1,"url":"https://github.com/acme/app/issues/1","updatedAt":"2026-10-01T00:00:00Z","repository":{"nameWithOwner":"acme/app"}}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#
+        let empty = #"{"data":{"search":{"issueCount":0,"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(personal), .response(Self.graphQLFailureResponse),
+            .suspended("old-personal", personal), .response("{}"), .suspended("new-personal", empty)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        await store.refreshPersonalWork(.assigned)
+        await store.refreshPersonalWork(.assigned)
+        #expect(store.personalWork[.assigned]?.items.count == 1)
+        #expect(store.personalWorkErrors[.assigned] != nil)
+        let oldRead = Task { await store.refreshPersonalWork(.assigned) }
+        try await runner.waitUntilSuspended("old-personal")
+        let item = try #require(store.selectedProject?.items.first)
+        try await store.removeAssignee(from: item, in: "P1", user: Assignee(login: "me", avatarUrl: "", name: nil))
+        try await runner.waitUntilSuspended("new-personal")
+        await runner.release("old-personal")
+        await oldRead.value
+        #expect(store.loadingPersonalWork.contains(.assigned))
+        await runner.release("new-personal")
+        try await waitForState("personal refresh after reassignment") { !store.loadingPersonalWork.contains(.assigned) }
+        #expect(store.personalWork[.assigned]?.items.isEmpty == true)
+        #expect(store.personalWorkErrors[.assigned] == nil)
+        #expect(store.loadingPersonalWork.isEmpty)
+    }
+}
+
+extension ProjectStoreTests {
+    @Test(arguments: [false, true])
+    func personalDetailEditsWithoutProjectMembershipRespectPermissions(canUpdate: Bool) async throws {
+        let detail = Self.itemDetailResponse(body: "Original")
+            .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":\#(canUpdate)"#)
+        let mutation = #"{"data":{"update":{"content":{"id":"CONTENT1","title":"Changed","body":"Updated","updatedAt":"2026-08-02T00:00:00Z"}}}}"#
+        let runner = SuspendingGitHubHTTPClient(steps: [.response(detail), .suspended("personal-edit", mutation)])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        let item = PersonalWorkItem(
+            id: "CONTENT1", title: "Item", number: 1, url: URL(string: "https://github.com/acme/repo/issues/1")!,
+            repository: "acme/repo", isPullRequest: false, updatedAt: "2026-08-01T00:00:00Z", signals: EngineeringSignals()
+        )
+        await store.loadPersonalItemDetail(item)
+        #expect(store.allProjects.isEmpty)
+        if !canUpdate {
+            #expect(throws: GitHubError.insufficientPermissions) {
+                try store.beginPersonalContentEdit(item, title: "Changed", body: "Updated")
+            }
+            #expect(store.pendingContentEdits.isEmpty)
+            #expect(await runner.recordedRequests().count == 1)
+            return
+        }
+        try store.beginPersonalContentEdit(item, title: "Changed", body: "Updated")
+        #expect(store.pendingContentEdits[item.id]?.body == "Updated")
+        try await runner.waitUntilSuspended("personal-edit")
+        await runner.release("personal-edit")
+        try await waitForState("personal edit confirmed") { store.pendingContentEdits[item.id] == nil }
+        guard case .loaded(let updated) = store.personalItemDetailState(item.id) else {
+            Issue.record("Personal content must remain available without project membership")
+            return
+        }
+        #expect(updated.title == "Changed")
+        #expect(updated.body == "Updated")
+        #expect(updated.updatedAt == "2026-08-02T00:00:00Z")
+        #expect(store.allProjects.isEmpty)
+        #expect(await runner.recordedRequests().last?.hasVariable("id", item.id) == true)
+    }
+
+    @Test func personalDetailResponseCannotReappearAfterSignOut() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: [.suspended("personal-detail", Self.itemDetailResponse(body: "Original"))])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        let item = PersonalWorkItem(
+            id: "CONTENT1", title: "Item", number: 1, url: URL(string: "https://github.com/acme/repo/issues/1")!,
+            repository: "acme/repo", isPullRequest: false, updatedAt: "2026-08-01T00:00:00Z", signals: EngineeringSignals()
+        )
+        let loading = Task { await store.loadPersonalItemDetail(item) }
+        try await runner.waitUntilSuspended("personal-detail")
+        try await store.invalidateSession()
+        await runner.release("personal-detail")
+        await loading.value
+        #expect(store.personalItemDetailState(item.id) == .idle)
+    }
+
+}

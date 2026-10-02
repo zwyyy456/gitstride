@@ -39,17 +39,18 @@ final class GitStrideModel {
     private var didStart = false
 
     var mutedProjectCount: Int { mutedProjectIDs.count }
-    var myWorkProjects: [Project] {
+    var followedProjects: [Project] {
         myWorkStore.followedProjects.compactMap { projectStore.followedProject(id: $0.id) }
     }
-    var myWorkErrorMessage: String? {
+    var followedProjectsErrorMessage: String? {
         projectStore.followedProjectsErrorMessage ?? projectStore.operationErrorMessage
     }
     var attentionCount: Int {
-        myWorkStore.attentionCount(
-            in: myWorkProjects,
-            currentUserLogin: projectStore.currentUserLogin
+        let followedIDs = myWorkStore.attentionItemIDs(
+            in: followedProjects, currentUserLogin: projectStore.currentUserLogin
         )
+        let reviewIDs = projectStore.personalWork[.reviewRequested]?.items.map(\.id) ?? []
+        return followedIDs.union(reviewIDs).count
     }
 
     init() {
@@ -95,9 +96,12 @@ final class GitStrideModel {
         }
         myWorkStore.activate(accountLogin: projectStore.currentUserLogin)
         if myWorkStore.followedProjects.isEmpty == false {
-            await refreshMyWork()
+            await refreshFollowedProjects()
         } else {
             projectStore.setFollowedProjects([])
+        }
+        if projectStore.currentUserLogin != nil {
+            await projectStore.refreshPersonalWork(.reviewRequested)
         }
         if monitoringEnabled {
             guard await notificationService.checkPermission() else {
@@ -209,6 +213,11 @@ final class GitStrideModel {
         let store = projectStore
         let followed = myWorkStore.followedProjects
         let task = Task {
+            for filter in MyWorkFilter.personalCases where store.personalWork[filter] != nil || filter == .reviewRequested {
+                guard !Task.isCancelled else { return }
+                await store.refreshPersonalWork(filter)
+            }
+            guard !Task.isCancelled else { return }
             if !followed.isEmpty { await store.refreshFollowedProjects(followed) }
             guard !Task.isCancelled else { return }
             if let selectedID = store.selectedProjectId, !followed.contains(where: { $0.id == selectedID }) {
@@ -279,7 +288,7 @@ final class GitStrideModel {
     func toggleFollowing(_ project: Project) async {
         myWorkStore.toggleFollowing(project)
         if myWorkStore.isFollowing(project.id) {
-            await refreshMyWork()
+            await refreshFollowedProjects()
         } else {
             projectStore.setFollowedProjects(myWorkStore.followedProjects)
         }
@@ -296,24 +305,27 @@ final class GitStrideModel {
         guard accountLogin == projectStore.currentUserLogin else { return }
         let oldProjects = myWorkStore.followedProjects.map(\.id)
         myWorkStore.activate(accountLogin: accountLogin)
+        let store = projectStore
+        if accountLogin != nil { await store.refreshPersonalWork(.reviewRequested) }
+        guard projectStore === store, accountLogin == store.currentUserLogin else { return }
         if myWorkStore.followedProjects.isEmpty {
             projectStore.setFollowedProjects([])
         } else if oldProjects != myWorkStore.followedProjects.map(\.id) {
-            await refreshMyWork()
+            await refreshFollowedProjects()
         }
         if monitoringEnabled, oldProjects != myWorkStore.followedProjects.map(\.id) {
             await restartMonitoring()
         }
     }
 
-    func refreshMyWork() async {
+    func refreshFollowedProjects() async {
         await projectStore.refreshFollowedProjects(myWorkStore.followedProjects)
     }
 
-    func myWorkItems(for filter: MyWorkFilter) -> [MyWorkItem] {
+    func followedItems(for filter: MyWorkFilter) -> [MyWorkItem] {
         myWorkStore.items(
             for: filter,
-            in: myWorkProjects,
+            in: followedProjects,
             currentUserLogin: projectStore.currentUserLogin
         )
     }
@@ -389,7 +401,7 @@ final class GitStrideModel {
         }
         let projects = myWorkStore.followedProjects
         guard projects.isEmpty == false else {
-            monitoringStatus = String(localized: "Add a Project to My Work to start monitoring.")
+            monitoringStatus = String(localized: "Follow a project to start monitoring.")
             return
         }
 

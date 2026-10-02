@@ -15,7 +15,7 @@ GitStride 是 macOS 14+ 的原生 SwiftUI 菜单栏应用。工程入口为 `Git
 ## 2. 最短阅读路径
 
 1. `GitStride/App/macOS/GitStrideApp.swift`：App composition、菜单栏和窗口 scene。
-2. `GitStride/Store/GitStrideModel.swift`：app 级组合、My Work 协调、监控和通知动作。
+2. `GitStride/Store/GitStrideModel.swift`：app 级组合、个人待办与关注项目协调、监控和通知动作。
 3. `GitStride/Store/ProjectStore.swift`：远程项目快照真源、目录/选择、加载和 mutation 编排。
 4. `GitStride/Store/MyWorkStore.swift`：关注引用与筛选偏好。
 5. `GitStride/Services/GitHubService.swift`：GraphQL/API 调用和错误转换；`GitHubAuthentication.swift` 拥有 OAuth/CLI 认证。
@@ -53,11 +53,20 @@ View task / refresh action
   -> menu bar and kanban surfaces
 ```
 
-My Work：
+个人待办：
+
+```text
+PersonalWorkView
+  -> ProjectStore.refreshPersonalWork
+  -> GitHubService account search (Issue/PR identity, paginated)
+  -> ProjectStore personal query results
+```
+
+关注项目：
 
 ```text
 View intent
-  -> GitStrideModel.refreshMyWork
+  -> GitStrideModel.refreshFollowedProjects
   -> ProjectStore refreshes followed project IDs
   -> one canonical projectSnapshots dictionary
   -> MyWorkStore filters derived MyWorkItem values

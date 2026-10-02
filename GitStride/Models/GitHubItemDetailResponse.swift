@@ -9,6 +9,12 @@ extension GitHubResponse {
             let id: String?
             let title: String?
             let body: String?
+            let state: String?
+            let isDraft: Bool?
+            let mergeable: String?
+            let mergeStateStatus: String?
+            let reviewDecision: String?
+            let statusCheckRollup: ItemNode.StatusCheckRollup?
             let createdAt: String?
             let updatedAt: String?
             let author: Actor?
@@ -27,7 +33,7 @@ extension GitHubResponse {
                 case typename = "__typename"
                 case id
                 case title
-                case body
+                case body, state, isDraft, mergeable, mergeStateStatus, reviewDecision, statusCheckRollup
                 case createdAt
                 case updatedAt
                 case author

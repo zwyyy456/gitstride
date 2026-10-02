@@ -2,16 +2,16 @@ import SwiftUI
 
 struct MobileItemEditor: View {
     let store: ProjectStore
-    let reference: ItemInspectorReference
+    let save: (String, String) throws -> Void
     let detail: ProjectItemDetail
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var bodyText: String
     @State private var errorMessage: String?
 
-    init(store: ProjectStore, reference: ItemInspectorReference, detail: ProjectItemDetail) {
+    init(store: ProjectStore, detail: ProjectItemDetail, save: @escaping (String, String) throws -> Void) {
         self.store = store
-        self.reference = reference
+        self.save = save
         self.detail = detail
         let pending = store.pendingContentEdits[detail.id]
         _title = State(initialValue: pending?.title ?? detail.title)
@@ -35,10 +35,7 @@ struct MobileItemEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         do {
-                            try store.beginContentEdit(
-                                reference, contentID: detail.id,
-                                title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-                                body: bodyText)
+                            try save(title.trimmingCharacters(in: .whitespacesAndNewlines), bodyText)
                             dismiss()
                         } catch { errorMessage = error.localizedDescription }
                     }
@@ -46,15 +43,16 @@ struct MobileItemEditor: View {
                 }
             }
         }
+        .interactiveDismissDisabled(title != detail.title || bodyText != detail.body)
     }
 }
 
 struct MobilePendingOperations: View {
     @Bindable var store: ProjectStore
-    let projectID: String?
+    let projectIDs: Set<String>
 
     var body: some View {
-        ForEach(store.pendingCreationList.filter { projectID == nil || $0.projectID == projectID })
+        ForEach(store.pendingCreationList.filter { projectIDs.contains($0.projectID) })
         {
             operation in
             VStack(alignment: .leading, spacing: 8) {
@@ -76,7 +74,7 @@ struct MobilePendingOperations: View {
             }
         }
         ForEach(
-            store.pendingEditList.filter { projectID == nil || $0.reference.projectID == projectID }
+            store.pendingEditList.filter { $0.reference.map { projectIDs.contains($0.projectID) } == true }
         ) { edit in
             VStack(alignment: .leading, spacing: 8) {
                 Text(edit.title).font(.headline)

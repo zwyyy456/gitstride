@@ -304,7 +304,7 @@ private struct GitStrideCommands: Commands {
 
             if let stopFollowing = workspaceCommandContext?.stopFollowing,
                stopFollowing.isEmpty == false {
-                Menu("Projects in My Work") {
+                Menu("Followed Projects") {
                     ForEach(stopFollowing) { action in
                         Button(action.title, role: .destructive, action: action.perform)
                             .disabled(action.isEnabled == false)

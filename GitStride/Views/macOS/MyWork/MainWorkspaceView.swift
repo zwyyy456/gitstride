@@ -138,6 +138,13 @@ struct MainWorkspaceView: View {
                     }
                 }
 
+                Section("My Work") {
+                    ForEach(MyWorkFilter.personalCases) { filter in
+                        Label(filter.title, systemImage: filter.icon)
+                            .tag(SidebarSelection.myWork(filter))
+                    }
+                }
+
                 Section {
                     ForEach(model.myWorkStore.filters) { filter in
                         Label(filter.title, systemImage: filter.icon)
@@ -169,18 +176,18 @@ struct MainWorkspaceView: View {
                     }
                 } header: {
                     HStack {
-                        Text("My Work")
+                        Text("Followed Projects")
                         Spacer()
                         Menu {
                             filterVisibilityControls
                         } label: {
-                            Label("Configure My Work", systemImage: "ellipsis.circle")
+                            Label("Configure Followed Projects", systemImage: "ellipsis.circle")
                                 .labelStyle(.iconOnly)
                         }
                         .menuStyle(.borderlessButton)
                         .menuIndicator(.hidden)
                         .fixedSize()
-                        .help("Configure My Work views")
+                        .help("Configure Followed Project views")
                     }
                     .contextMenu {
                         filterVisibilityControls
@@ -206,12 +213,16 @@ struct MainWorkspaceView: View {
                             isSelecting: $isSelectingProjectItems
                         )
                     case .myWork(let filter):
-                        MyWorkView(
-                            model: model,
-                            filter: filter,
-                            showItemDetail: showItemDetail
-                        ) {
-                            destination = .project
+                        if filter.isPersonal {
+                            PersonalWorkView(store: model.projectStore, filter: filter)
+                        } else {
+                            MyWorkView(
+                                model: model,
+                                filter: filter,
+                                showItemDetail: showItemDetail
+                            ) {
+                                destination = .project
+                            }
                         }
                     }
                 }
@@ -257,7 +268,7 @@ struct MainWorkspaceView: View {
             }
             await model.activateMyWork(accountLogin: model.projectStore.currentUserLogin)
             if model.myWorkStore.followedProjects.isEmpty == false {
-                await model.refreshMyWork()
+                await model.refreshFollowedProjects()
             }
         }
         .onChange(of: model.projectStore.selectedProjectId) { _, _ in
@@ -299,7 +310,7 @@ struct MainWorkspaceView: View {
 
     @ViewBuilder
     private var filterVisibilityControls: some View {
-        ForEach(MyWorkFilter.allCases) { filter in
+        ForEach(MyWorkFilter.followedCases) { filter in
             Toggle(
                 filter.title,
                 isOn: Binding(

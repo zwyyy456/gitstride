@@ -14,7 +14,7 @@ struct MyWorkView: View {
     @State private var searchPresented = false
 
     private var items: [MyWorkItem] {
-        model.myWorkItems(for: filter).filter {
+        model.followedItems(for: filter).filter {
             ![$0.item].matching(searchText, currentUserLogin: model.projectStore.currentUserLogin).isEmpty
         }
     }
@@ -25,7 +25,7 @@ struct MyWorkView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let errorMessage = operationErrorMessage ?? model.myWorkErrorMessage {
+            if let errorMessage = operationErrorMessage ?? model.followedProjectsErrorMessage {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
@@ -39,18 +39,18 @@ struct MyWorkView: View {
 
             if model.myWorkStore.followedProjects.isEmpty {
                 ContentUnavailableView(
-                    "No Projects in My Work",
+                    "No Followed Projects",
                     systemImage: "briefcase",
-                    description: Text("Open a Project and click Add to My Work in the toolbar.")
+                    description: Text("Open a Project and click Follow Project in the toolbar.")
                 )
-            } else if model.projectStore.isLoadingFollowedProjects && model.myWorkProjects.isEmpty {
-                ProgressView("Loading My Work…")
+            } else if model.projectStore.isLoadingFollowedProjects && model.followedProjects.isEmpty {
+                ProgressView("Loading Followed Projects…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if items.isEmpty {
                 ContentUnavailableView(
                     "Nothing in \(filter.title)",
                     systemImage: filter.icon,
-                    description: Text("No items in My Work match this filter.")
+                    description: Text("No items in followed projects match this filter.")
                 )
             } else {
                 ScrollViewReader { proxy in
@@ -111,15 +111,6 @@ struct MyWorkView: View {
         }
         .onChange(of: filter) { _, _ in selectedID = nil; selectedIDs = []; isSelecting = false; searchText = "" }
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 6) {
-                    Label(filter.title, systemImage: filter.icon)
-                    Text("\(items.count)")
-                        .foregroundStyle(.secondary)
-                }
-                .help("\(items.count) items in \(filter.title)")
-            }
-
             if isSelecting {
                 ToolbarItemGroup(placement: .automatic) {
                     Text("\(selectedIDs.count) Selected")
@@ -145,28 +136,28 @@ struct MyWorkView: View {
                 Menu {
                     ForEach(model.myWorkStore.followedProjects) { reference in
                         let title = followedProjectTitle(reference)
-                        Button("Remove \(title) from My Work", role: .destructive) {
+                        Button("Unfollow \(title)", role: .destructive) {
                             stopFollowing(reference)
                         }
                     }
                 } label: {
                     Label(
-                        "Projects \(model.myWorkStore.followedProjects.count)",
+                        "Manage Followed Projects",
                         systemImage: "briefcase"
                     )
                 }
                 .labelStyle(.iconOnly)
                 .disabled(model.myWorkStore.followedProjects.isEmpty)
-                .help("Manage My Work Projects")
+                .help("Manage Followed Projects")
 
                 if model.projectStore.isLoadingFollowedProjects {
                     ProgressView()
                         .controlSize(.small)
-                        .help("Refreshing My Work")
+                        .help("Refreshing Followed Projects")
                 } else {
-                    Button("Refresh My Work", systemImage: "arrow.clockwise", action: refresh)
+                    Button("Refresh Followed Projects", systemImage: "arrow.clockwise", action: refresh)
                         .labelStyle(.iconOnly)
-                        .help("Refresh My Work")
+                        .help("Refresh Followed Projects")
                 }
             }
             if isSelecting {
@@ -190,14 +181,14 @@ struct MyWorkView: View {
             } : nil,
             refresh: .init(
                 id: "refresh-my-work",
-                title: String(localized: "Refresh My Work"),
+                title: String(localized: "Refresh Followed Projects"),
                 isEnabled: model.projectStore.isLoadingFollowedProjects == false,
                 keywords: "r refresh reload 刷新", shortcut: .refresh, symbol: "arrow.clockwise", perform: refresh
             ),
             stopFollowing: model.myWorkStore.followedProjects.map { reference in
                 .init(
                     id: "stop-following-\(reference.id)",
-                    title: String(localized: "Remove \(followedProjectTitle(reference)) from My Work"),
+                    title: String(localized: "Unfollow \(followedProjectTitle(reference))"),
                     keywords: "follow 关注 我的工作", symbol: "briefcase", perform: { stopFollowing(reference) }
                 )
             }
@@ -272,7 +263,7 @@ struct MyWorkView: View {
     }
 
     private func refresh() {
-        Task { await model.refreshMyWork() }
+        Task { await model.refreshFollowedProjects() }
     }
 
     private func stopFollowing(_ reference: FollowedProject) {

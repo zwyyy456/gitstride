@@ -57,6 +57,7 @@ struct MyWorkFilterTests {
         #expect(MyWorkFilter.stale.includes(workItem, currentUserLogin: nil, now: now))
         #expect(MyWorkFilter.recent.includes(workItem, currentUserLogin: nil, now: now) == false)
         #expect(workItem.id != MyWorkItem(project: secondProject, item: item).id)
+        #expect(MyWorkFilter.allOpen.includes(workItem, currentUserLogin: nil))
     }
 
     @Test func engineeringViewsUseReviewAndMergeSignals() {
@@ -99,6 +100,12 @@ struct MyWorkFilterTests {
 }
 
 extension MyWorkFilterTests {
+    @Test func personalQueriesDistinguishAuthorshipAssignmentAndReviewRequests() {
+        #expect(MyWorkFilter.assigned.searchQuery(login: "me") == "is:open is:issue assignee:me sort:updated-desc")
+        #expect(MyWorkFilter.authored.searchQuery(login: "me") == "is:open is:pr author:me sort:updated-desc")
+        #expect(MyWorkFilter.reviewRequested.searchQuery(login: "me") == "is:open is:pr review-requested:me -author:me sort:updated-desc")
+    }
+
     @Test func mergeReadinessWorksWithoutRequiredReviewsAndRejectsIncompleteChecks() {
         var signals = EngineeringSignals(mergeability: .mergeable, mergeStateStatus: "CLEAN")
         #expect(signals.isReadyToMerge) // No required reviews or checks.

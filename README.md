@@ -9,7 +9,7 @@ A native macOS app for GitHub Projects. Check projects from the menu bar, organi
 ## Features
 
 - **Menu bar and workspace** — check projects quickly, or open a full window with Board, Table, Roadmap, search, and filters.
-- **My Work and local views** — find work across projects and save filters and display preferences on your Mac.
+- **My Work and local views** — automatically find assigned issues, your pull requests, and review requests across GitHub. Follow projects separately for cross-project views and monitoring.
 - **Issue editing** — create issues and manage assignees, labels, milestones, parent/sub-issues, and dependencies.
 - **Project notifications** — get configured reminders about status, assignment, and due dates while the app runs.
 - **Optional PR automation** — update matching personal Projects as linked pull requests progress, even after you quit the app.

@@ -198,3 +198,28 @@ extension GitHubResponse {
         }
     }
 }
+
+extension GitHubResponse {
+    struct PersonalWorkPayload: Decodable {
+        let search: Connection
+        struct Connection: Decodable {
+            let issueCount: Int
+            let nodes: [Node?]
+            let pageInfo: PageInfo
+        }
+        struct Node: Decodable {
+            let id: String
+            let title: String
+            let number: Int
+            let url: URL
+            let updatedAt: String
+            let repository: Repository
+            let isDraft: Bool?
+            let mergeable: String?
+            let mergeStateStatus: String?
+            let reviewDecision: String?
+            let statusCheckRollup: ItemNode.StatusCheckRollup?
+        }
+        struct Repository: Decodable { let nameWithOwner: String }
+    }
+}

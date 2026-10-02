@@ -200,11 +200,11 @@ struct KanbanBoardView: View {
                         .labelStyle(.iconOnly)
                         .help("Open Project in GitHub")
                 }
-                Button(myWorkStore.isFollowing(project.id) ? String(localized: "Remove from My Work") : String(localized: "Add to My Work"),
+                Button(myWorkStore.isFollowing(project.id) ? String(localized: "Unfollow Project") : String(localized: "Follow Project"),
                        systemImage: myWorkStore.isFollowing(project.id) ? "briefcase.fill" : "briefcase",
                        action: toggleFollowingProject)
                     .labelStyle(.iconOnly)
-                    .help(myWorkStore.isFollowing(project.id) ? String(localized: "Remove from My Work") : String(localized: "Add to My Work"))
+                    .help(myWorkStore.isFollowing(project.id) ? String(localized: "Unfollow Project") : String(localized: "Follow Project"))
             }
         }
 
@@ -451,8 +451,8 @@ struct KanbanBoardView: View {
             context.toggleFollowing = .init(
                 id: "toggle-following",
                 title: isFollowing
-                    ? String(localized: "Remove \(project.title) from My Work")
-                    : String(localized: "Add \(project.title) to My Work"),
+                    ? String(localized: "Unfollow \(project.title)")
+                    : String(localized: "Follow \(project.title)"),
                 keywords: "follow 关注 我的工作", symbol: "briefcase", perform: toggleFollowingProject
             )
         }

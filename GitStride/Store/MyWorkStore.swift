@@ -56,11 +56,11 @@ final class MyWorkStore {
             .sorted { $0.updatedDate > $1.updatedDate }
     }
 
-    func attentionCount(in projects: [Project], currentUserLogin: String?) -> Int {
+    func attentionItemIDs(in projects: [Project], currentUserLogin: String?) -> Set<String> {
         let filters: [MyWorkFilter] = [.reviewRequested, .ciFailed, .due]
         return Set(filters.flatMap {
-            items(for: $0, in: projects, currentUserLogin: currentUserLogin).map(\.id)
-        }).count
+            items(for: $0, in: projects, currentUserLogin: currentUserLogin).map { $0.item.contentId ?? $0.id }
+        })
     }
 
     func setFilterVisible(_ filter: MyWorkFilter, visible: Bool) {
@@ -127,9 +127,9 @@ final class MyWorkStore {
 
     private static func loadFilters() -> [MyWorkFilter] {
         guard let values = UserDefaults.standard.stringArray(forKey: "myWorkFilters") else {
-            return MyWorkFilter.allCases
+            return MyWorkFilter.followedCases
         }
-        let filters = values.compactMap(MyWorkFilter.init(rawValue:))
-        return filters.isEmpty ? MyWorkFilter.allCases : filters
+        let filters = values.compactMap(MyWorkFilter.init(rawValue:)).filter { !$0.isPersonal }
+        return filters.isEmpty ? MyWorkFilter.followedCases : filters
     }
 }

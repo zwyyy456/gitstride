@@ -49,10 +49,10 @@ struct MobileProjectView: View {
             }
             if filter.isDelivery, let project { deliverySummary(project) }
             if store.pendingCreationList.contains(where: { $0.projectID == projectID })
-                || store.pendingEditList.contains(where: { $0.reference.projectID == projectID })
+                || store.pendingEditList.contains(where: { $0.reference?.projectID == projectID })
             {
                 DisclosureGroup("Pending Changes") {
-                    ScrollView { MobilePendingOperations(store: store, projectID: projectID) }
+                    ScrollView { MobilePendingOperations(store: store, projectIDs: [projectID]) }
                         .frame(
                             maxHeight: 180)
                 }.padding()

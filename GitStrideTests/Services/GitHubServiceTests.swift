@@ -509,7 +509,7 @@ struct GitHubServiceTests {
                 )
             ),
             (
-                #"{"data":{"node":{"__typename":"PullRequest","id":"PR1","viewerCanUpdate":true,"title":"PR title","body":"PR body","createdAt":null,"updatedAt":"2026-08-03T00:00:00Z","author":null}}}"#,
+                #"{"data":{"node":{"__typename":"PullRequest","id":"PR1","state":"OPEN","isDraft":false,"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","statusCheckRollup":{"state":"SUCCESS"},"viewerCanUpdate":true,"title":"PR title","body":"PR body","createdAt":null,"updatedAt":"2026-08-03T00:00:00Z","author":null}}}"#,
                 ProjectItemDetail(
                     id: "PR1",
                     title: "PR title",
@@ -518,7 +518,9 @@ struct GitHubServiceTests {
                     author: nil,
                     createdAt: nil,
                     updatedAt: "2026-08-03T00:00:00Z",
-                    issueMetadata: nil
+                    issueMetadata: nil,
+                    state: "OPEN",
+                    pullRequestSignals: EngineeringSignals(mergeability: .mergeable, mergeStateStatus: "CLEAN", checkStatus: .success)
                 )
             ),
             (
@@ -598,4 +600,43 @@ struct GitHubServiceTests {
         #expect(calls[1].hasVariable("milestoneId", "M1") == false)
     }
 
+}
+
+extension GitHubServiceTests {
+    @Test func personalWorkPaginatesWithoutProjectMembershipAndDeduplicatesContentIDs() async throws {
+        let issue = #"{"id":"I1","title":"Assigned","number":1,"url":"https://github.com/acme/repo/issues/1","updatedAt":"2026-10-01T00:00:00Z","repository":{"nameWithOwner":"acme/repo"}}"#
+        let pr = #"{"id":"PR1","title":"My draft","number":2,"url":"https://github.com/acme/repo/pull/2","updatedAt":"2026-10-02T00:00:00Z","repository":{"nameWithOwner":"acme/repo"},"isDraft":true,"mergeable":"MERGEABLE","mergeStateStatus":"DRAFT","reviewDecision":null,"statusCheckRollup":{"state":"SUCCESS"}}"#
+        let client = FixtureGitHubHTTPClient(responses: [
+            "{\"data\":{\"search\":{\"issueCount\":2,\"nodes\":[\(issue)],\"pageInfo\":{\"hasNextPage\":true,\"endCursor\":\"next\"}}}}",
+            "{\"data\":{\"search\":{\"issueCount\":2,\"nodes\":[\(issue),\(pr)],\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null}}}}"
+        ])
+        let result = try await GitHubService(http: client).fetchPersonalWork(filter: .assigned, login: "me")
+        #expect(result.items.map(\.id) == ["I1", "PR1"])
+        #expect(result.items[0].repository == "acme/repo")
+        #expect(!result.items[0].isPullRequest)
+        #expect(result.items[1].isPullRequest)
+        #expect(result.items[1].signals.isDraft)
+        #expect(!result.items[1].signals.isReadyToMerge)
+        #expect(!result.isTruncated)
+        let requests = await client.recordedRequests()
+        #expect(requests.count == 2)
+        let body = try #require(requests.last?.httpBody)
+        let object = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let variables = try #require(object["variables"] as? [String: String])
+        #expect(variables["after"] == "next")
+        #expect(variables["searchQuery"] == MyWorkFilter.assigned.searchQuery(login: "me"))
+    }
+
+    @Test func personalWorkReportsSearchLimitsAndRejectsPartialErrors() async throws {
+        let client = FixtureGitHubHTTPClient(responses: [
+            #"{"data":{"search":{"issueCount":1001,"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}"#,
+            #"{"data":{"search":{"issueCount":1,"nodes":[],"pageInfo":{"hasNextPage":false,"endCursor":null}}},"errors":[{"message":"Unavailable"}]}"#
+        ])
+        let service = GitHubService(http: client)
+        let result = try await service.fetchPersonalWork(filter: .authored, login: "me")
+        #expect(result.isTruncated)
+        await #expect(throws: GitHubError.self) {
+            _ = try await service.fetchPersonalWork(filter: .reviewRequested, login: "me")
+        }
+    }
 }

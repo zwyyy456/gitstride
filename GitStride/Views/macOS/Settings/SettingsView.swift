@@ -53,7 +53,7 @@ struct GeneralSettingsView: View {
         Form {
             Section {
                 Toggle(
-                    "Monitor Projects in My Work",
+                    "Monitor Followed Projects",
                     isOn: Binding(
                         get: { model.monitoringEnabled },
                         set: { enabled in

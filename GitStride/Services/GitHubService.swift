@@ -375,7 +375,15 @@ actor GitHubService {
             author: author.map { ItemAuthor(login: $0.login, avatarURL: $0.avatarUrl) },
             createdAt: node.createdAt,
             updatedAt: node.updatedAt,
-            issueMetadata: issueMetadata
+            issueMetadata: issueMetadata,
+            state: node.state,
+            pullRequestSignals: node.typename == "PullRequest" ? EngineeringSignals(
+                isDraft: node.isDraft ?? false,
+                mergeability: node.mergeable.flatMap(PullRequestMergeability.init),
+                mergeStateStatus: node.mergeStateStatus,
+                reviewDecision: node.reviewDecision.flatMap(PullRequestReviewDecision.init),
+                checkStatus: node.statusCheckRollup?.state.flatMap(CheckStatus.init)
+            ) : nil
         )
     }
 
@@ -859,6 +867,42 @@ actor GitHubService {
             ids.append(user.id)
         }
         return ids
+    }
+
+    func fetchPersonalWork(filter: MyWorkFilter, login: String) async throws -> PersonalWorkResult {
+        guard let query = filter.searchQuery(login: login) else { throw GitHubError.invalidResponse }
+        var after: String?
+        var items: [PersonalWorkItem] = []
+        var seen: Set<String> = []
+        var totalCount = 0
+        var fetchedCount = 0
+        repeat {
+            try Task.checkCancellation()
+            var variables = cursorVariables(after)
+            variables["searchQuery"] = query
+            let payload: GitHubResponse.PersonalWorkPayload = try await request(
+                GraphQLQueries.personalWork, variables: variables, as: GitHubResponse.PersonalWorkPayload.self
+            )
+            totalCount = payload.search.issueCount
+            fetchedCount += payload.search.nodes.count
+            for node in payload.search.nodes.compactMap({ $0 }) where seen.insert(node.id).inserted {
+                items.append(PersonalWorkItem(
+                    id: node.id, title: node.title, number: node.number, url: node.url,
+                    repository: node.repository.nameWithOwner, isPullRequest: node.isDraft != nil,
+                    updatedAt: node.updatedAt,
+                    signals: EngineeringSignals(
+                        isDraft: node.isDraft ?? false,
+                        mergeability: node.mergeable.flatMap(PullRequestMergeability.init),
+                        mergeStateStatus: node.mergeStateStatus,
+                        reviewDecision: node.reviewDecision.flatMap(PullRequestReviewDecision.init),
+                        checkStatus: node.statusCheckRollup?.state.flatMap(CheckStatus.init)
+                    )
+                ))
+            }
+            after = try nextCursor(from: payload.search.pageInfo)
+            // GitHub search exposes at most 1,000 results; report the limit in the UI.
+        } while after != nil && fetchedCount < 1_000
+        return PersonalWorkResult(items: items, totalCount: totalCount)
     }
 
     func searchItems(query: String) async throws -> [GitHubItemCandidate] {

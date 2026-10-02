@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct EngineeringSignalsView: View {
-    let item: ProjectItem
+    let signals: EngineeringSignals
     var limit = 3
 
+    init(item: ProjectItem, limit: Int = 3) {
+        self.signals = item.signals
+        self.limit = limit
+    }
+
+    init(signals: EngineeringSignals, limit: Int = 3) {
+        self.signals = signals
+        self.limit = limit
+    }
+
     private var badges: [EngineeringSignalBadge] {
-        let signals = item.signals
         var badges: [EngineeringSignalBadge] = []
 
         if signals.isReadyToMerge {
@@ -33,7 +42,7 @@ struct EngineeringSignalsView: View {
             case .changesRequested:
                 badges.append(.init(id: "changes", title: String(localized: "Changes"), icon: "arrow.uturn.backward.circle.fill", color: .orange))
             case .reviewRequired:
-                badges.append(.init(id: "review", title: String(localized: "Review"), icon: "person.crop.circle.badge.questionmark", color: .blue))
+                badges.append(.init(id: "review", title: String(localized: "Awaiting Review"), icon: "text.bubble", color: .blue))
             case nil:
                 break
             }

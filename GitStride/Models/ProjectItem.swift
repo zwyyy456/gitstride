@@ -18,19 +18,19 @@ enum PullRequestState: String, Codable {
     case merged = "MERGED"
 }
 
-enum PullRequestMergeability: String, Codable, Hashable {
+enum PullRequestMergeability: String, Codable, Hashable, Sendable {
     case mergeable = "MERGEABLE"
     case conflicting = "CONFLICTING"
     case unknown = "UNKNOWN"
 }
 
-enum PullRequestReviewDecision: String, Codable, Hashable {
+enum PullRequestReviewDecision: String, Codable, Hashable, Sendable {
     case approved = "APPROVED"
     case changesRequested = "CHANGES_REQUESTED"
     case reviewRequired = "REVIEW_REQUIRED"
 }
 
-enum CheckStatus: String, Codable, Hashable {
+enum CheckStatus: String, Codable, Hashable, Sendable {
     case error = "ERROR"
     case expected = "EXPECTED"
     case failure = "FAILURE"
@@ -43,7 +43,7 @@ struct SubIssueProgress: Codable, Hashable, Sendable {
     let total: Int
 }
 
-struct EngineeringSignals: Codable, Hashable {
+struct EngineeringSignals: Codable, Hashable, Sendable {
     var isDraft = false
     var mergeability: PullRequestMergeability?
     var mergeStateStatus: String?

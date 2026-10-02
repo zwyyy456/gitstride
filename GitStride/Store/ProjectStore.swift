@@ -124,9 +124,18 @@ struct PendingItemCreation: Identifiable {
     var state: PendingSyncState = .syncing
 }
 
+enum ContentEditTarget {
+    case project(ItemInspectorReference)
+    case personal(PersonalWorkItem)
+}
+
 struct PendingContentEdit: Identifiable {
     let id: String
-    let reference: ItemInspectorReference
+    let target: ContentEditTarget
+    var reference: ItemInspectorReference? {
+        if case .project(let reference) = target { return reference }
+        return nil
+    }
     let title: String
     let body: String
     let author: ItemAuthor?
@@ -197,6 +206,53 @@ private struct ProjectReadTicket {
 final class ProjectStore {
     var sessionState: GitHubSessionState = .checking
     var owners: [ProjectOwner] = []
+    private(set) var personalWork: [MyWorkFilter: PersonalWorkResult] = [:]
+    private(set) var personalWorkErrors: [MyWorkFilter: String] = [:]
+    private(set) var loadingPersonalWork: Set<MyWorkFilter> = []
+    private var personalWorkTasks: [MyWorkFilter: Task<Void, Never>] = [:]
+    private var personalWorkReadIDs: [MyWorkFilter: UUID] = [:]
+    private var personalWorkNeedsRefresh: Set<MyWorkFilter> = []
+
+    func refreshPersonalWork(_ filter: MyWorkFilter) async {
+        await startPersonalWorkRefresh(filter)?.value
+    }
+
+    @discardableResult
+    private func startPersonalWorkRefresh(_ filter: MyWorkFilter) -> Task<Void, Never>? {
+        guard isActive, filter.isPersonal, let account = currentAccount else { return nil }
+        guard pendingContentMutations.isEmpty else {
+            personalWorkNeedsRefresh.insert(filter)
+            return nil
+        }
+        if let task = personalWorkTasks[filter] { return task }
+        let readID = UUID()
+        personalWorkReadIDs[filter] = readID
+        loadingPersonalWork.insert(filter)
+        personalWorkErrors[filter] = nil
+        let task = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if self.personalWorkReadIDs[filter] == readID {
+                    self.loadingPersonalWork.remove(filter)
+                    self.personalWorkTasks[filter] = nil
+                }
+            }
+            do {
+                let result = try await self.gitHubService.fetchPersonalWork(filter: filter, login: account.login)
+                try Task.checkCancellation()
+                guard self.isActive, self.currentAccount == account,
+                      self.personalWorkReadIDs[filter] == readID else { return }
+                self.personalWork[filter] = result
+            } catch is CancellationError {
+            } catch {
+                guard !Task.isCancelled, self.isActive, self.personalWorkReadIDs[filter] == readID else { return }
+                self.personalWorkErrors[filter] = error.localizedDescription
+            }
+        }
+        personalWorkTasks[filter] = task
+        return task
+    }
+
     private(set) var isLoadingFollowedProjects = false
     private(set) var followedProjectsErrorMessage: String?
     var selectedOwnerId: String? {
@@ -472,6 +528,7 @@ final class ProjectStore {
                 item.title = updated.title
                 item.updatedAt = updated.updatedAt
             }
+            self.updatePersonalSummary(contentID: contentID, updated: updated)
             self.updateDetail(contentID: contentID, sourceUpdatedAt: updated.updatedAt) { detail in
                 detail.title = updated.title
                 detail.body = updated.body
@@ -498,7 +555,7 @@ final class ProjectStore {
             throw ProjectStoreError.operationInProgress
         }
         pendingContentEdits[contentID] = PendingContentEdit(
-            id: contentID, reference: reference, title: title, body: body, author: detail.author
+            id: contentID, target: .project(reference), title: title, body: body, author: detail.author
         )
         startPendingEdit(contentID)
     }
@@ -512,9 +569,14 @@ final class ProjectStore {
 
     func dismissPendingEdit(_ contentID: String) {
         guard pendingEditTasks[contentID] == nil else { return }
-        let reference = pendingContentEdits.removeValue(forKey: contentID)?.reference
-        if let reference, let item = item(for: reference) {
-            Task { await self.loadItemDetail(for: item, forceRefresh: true) }
+        guard let edit = pendingContentEdits.removeValue(forKey: contentID) else { return }
+        Task {
+            switch edit.target {
+            case .project(let reference):
+                if let item = self.item(for: reference) { await self.loadItemDetail(for: item, forceRefresh: true) }
+            case .personal(let item):
+                await self.loadPersonalItemDetail(item, forceRefresh: true)
+            }
         }
     }
 
@@ -529,8 +591,12 @@ final class ProjectStore {
         var retryCount = 0
         while let edit = pendingContentEdits[contentID] {
             do {
-                try await updateItemContent(edit.reference, contentID: contentID,
-                                            title: edit.title, body: edit.body)
+                switch edit.target {
+                case .project(let reference):
+                    try await updateItemContent(reference, contentID: contentID, title: edit.title, body: edit.body)
+                case .personal(let item):
+                    try await updatePersonalItemContent(item, title: edit.title, body: edit.body)
+                }
                 pendingContentEdits[contentID] = nil
                 return
             } catch is CancellationError {
@@ -581,11 +647,70 @@ final class ProjectStore {
     }
 
     func loadItemDetail(for item: ProjectItem, forceRefresh: Bool = false) async {
-        guard let contentID = item.contentId, pendingContentMutations[contentID] == nil else { return }
+        guard let contentID = item.contentId else { return }
+        await loadContentDetail(contentID: contentID, updatedAt: item.updatedAt, forceRefresh: forceRefresh)
+    }
 
+    func personalItemDetailState(_ contentID: String) -> ItemDetailState {
+        itemDetailEntries[contentID]?.state ?? .idle
+    }
+
+    func loadPersonalItemDetail(_ item: PersonalWorkItem, forceRefresh: Bool = false) async {
+        await loadContentDetail(contentID: item.id, updatedAt: item.updatedAt, forceRefresh: forceRefresh)
+    }
+
+    func beginPersonalContentEdit(_ item: PersonalWorkItem, title: String, body: String) throws {
+        guard isActive else { throw CancellationError() }
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw ProjectStoreError.emptyItemTitle }
+        guard pendingContentEdits[item.id] == nil, pendingContentMutations[item.id] == nil else {
+            throw ProjectStoreError.operationInProgress
+        }
+        guard case .loaded(let detail) = personalItemDetailState(item.id), detail.viewerCanUpdate else {
+            throw GitHubError.insufficientPermissions
+        }
+        pendingContentEdits[item.id] = PendingContentEdit(
+            id: item.id, target: .personal(item), title: title, body: body, author: detail.author
+        )
+        startPendingEdit(item.id)
+    }
+
+    private func updatePersonalItemContent(_ item: PersonalWorkItem, title: String, body: String) async throws {
+        guard isActive else { throw CancellationError() }
+        guard pendingContentMutations[item.id] == nil else { throw ProjectStoreError.operationInProgress }
+        await loadPersonalItemDetail(item)
+        try Task.checkCancellation()
+        guard isActive else { throw CancellationError() }
+        switch personalItemDetailState(item.id) {
+        case .loaded(let detail):
+            guard detail.viewerCanUpdate else { throw GitHubError.insufficientPermissions }
+        case .failed(let message): throw ProjectStoreError.itemDetailsFailed(message)
+        case .idle, .loading: throw ProjectStoreError.operationInProgress
+        }
+        try await performContentMutation([item.id], operation: {
+            try await self.gitHubService.updateItemContent(
+                contentID: item.id, contentType: item.isPullRequest ? .pullRequest : .issue,
+                title: title, body: body
+            )
+        }) { updated in
+            self.updateContent(contentID: item.id) { projectItem in
+                projectItem.title = updated.title
+                projectItem.updatedAt = updated.updatedAt
+            }
+            self.updatePersonalSummary(contentID: item.id, updated: updated)
+            self.updateDetail(contentID: item.id, sourceUpdatedAt: updated.updatedAt) { detail in
+                detail.title = updated.title
+                detail.body = updated.body
+                detail.updatedAt = updated.updatedAt
+            }
+        }
+    }
+
+    private func loadContentDetail(contentID: String, updatedAt: String?, forceRefresh: Bool) async {
+        guard isActive, pendingContentMutations[contentID] == nil else { return }
         if forceRefresh == false,
            let entry = itemDetailEntries[contentID],
-           entry.sourceUpdatedAt == item.updatedAt {
+           entry.sourceUpdatedAt == updatedAt {
             switch entry.state {
             case .loaded:
                 return
@@ -594,7 +719,7 @@ final class ProjectStore {
                     await finishItemDetailLoad(
                         task,
                         contentID: contentID,
-                        sourceUpdatedAt: item.updatedAt,
+                        sourceUpdatedAt: updatedAt,
                         generation: itemDetailGenerations[contentID, default: 0]
                     )
                 }
@@ -608,7 +733,7 @@ final class ProjectStore {
         let generation = itemDetailGenerations[contentID, default: 0] + 1
         itemDetailGenerations[contentID] = generation
         itemDetailEntries[contentID] = ItemDetailEntry(
-            sourceUpdatedAt: item.updatedAt,
+            sourceUpdatedAt: updatedAt,
             state: .loading
         )
 
@@ -617,7 +742,7 @@ final class ProjectStore {
         await finishItemDetailLoad(
             task,
             contentID: contentID,
-            sourceUpdatedAt: item.updatedAt,
+            sourceUpdatedAt: updatedAt,
             generation: generation
         )
     }
@@ -752,6 +877,13 @@ final class ProjectStore {
 
     func invalidateSession() async throws {
         isActive = false
+        personalWorkTasks.values.forEach { $0.cancel() }
+        personalWorkTasks = [:]
+        personalWorkReadIDs = [:]
+        personalWorkNeedsRefresh = []
+        personalWork = [:]
+        personalWorkErrors = [:]
+        loadingPersonalWork = []
         catalogGeneration += 1
         followedProjectsGeneration += 1
         contentRevision += 1
@@ -2121,6 +2253,12 @@ final class ProjectStore {
             }
             let operationID = UUID()
             for id in contentIDs { pendingContentMutations[id] = operationID }
+            personalWorkNeedsRefresh.formUnion(personalWork.keys)
+            personalWorkNeedsRefresh.formUnion(personalWorkTasks.keys)
+            personalWorkTasks.values.forEach { $0.cancel() }
+            personalWorkTasks = [:]
+            personalWorkReadIDs = [:]
+            loadingPersonalWork = []
             contentRevision += 1
             defer {
                 let ownedIDs = contentIDs.filter { pendingContentMutations[$0] == operationID }
@@ -2129,6 +2267,11 @@ final class ProjectStore {
                     contentRevision += 1
                 }
                 scheduleReconciliation()
+                if pendingContentMutations.isEmpty {
+                    let filters = personalWorkNeedsRefresh
+                    personalWorkNeedsRefresh = []
+                    for filter in filters { startPersonalWorkRefresh(filter) }
+                }
             }
             do {
                 let result = try await operation()
@@ -2173,6 +2316,17 @@ final class ProjectStore {
         projectStates.values.compactMap(\.snapshot).filter { project in
             project.items.contains { $0.contentId == contentID }
         }.map(\.id).sorted()
+    }
+
+    private func updatePersonalSummary(contentID: String, updated: UpdatedItemContent) {
+        for filter in personalWork.keys {
+            guard var result = personalWork[filter] else { continue }
+            for index in result.items.indices where result.items[index].id == contentID {
+                result.items[index].title = updated.title
+                result.items[index].updatedAt = updated.updatedAt
+            }
+            personalWork[filter] = result
+        }
     }
 
     private func updateContent(contentID: String, transform: (inout ProjectItem) -> Void) {
