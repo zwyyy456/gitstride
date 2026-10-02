@@ -66,6 +66,7 @@ struct ItemDetailView: View {
             minHeight: 520
         )
         .navigationTitle(item?.displayTitle ?? String(localized: "Item"))
+        .onExitCommand(perform: allowsOpeningNewWindow && !editingSession.isEditing ? { dismiss() } : nil)
         .toolbar {
             if editingSession.reference == reference {
                 ToolbarItem(placement: .principal) {
