@@ -45,10 +45,10 @@ The current development toolchain is Xcode 26.5. macOS 14 is the app's deploymen
 git clone https://github.com/zwyyy456/GitStride.git gitstride
 cd gitstride
 xcodebuild -project GitStride.xcodeproj -scheme GitStride \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+  -destination 'platform=macOS' build
 ```
 
-For running from Xcode, open `GitStride.xcodeproj`, select the GitStride target, and choose your own development team under Signing & Capabilities. Sparkle uses hardened-runtime library validation, so an unsigned compile check does not establish that the app can launch locally.
+Before building, open `GitStride.xcodeproj`, select the GitStride target, and choose your own development team under Signing & Capabilities. The command above uses the project’s signing configuration, including the signature required by Sparkle’s hardened-runtime library validation.
 
 The `GITSTRIDE_OAUTH_CLIENT_ID` build setting is a public desktop OAuth App ID. For your own distribution, register an OAuth App, enable Device Flow, and set its Client ID on both app targets. Do not embed a Client Secret. The `GitStrideAppStore` scheme supports OAuth login only and excludes Sparkle; this build target does not imply availability in the Mac App Store.
 

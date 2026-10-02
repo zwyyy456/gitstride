@@ -38,22 +38,24 @@
 
 ## 5. 常用验证命令
 
+以下 App 构建和单元测试命令沿用工程的签名与 entitlements 配置；本地使用已配置的开发 Team。
+
 默认 macOS 构建：
 
 ```bash
-xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform=macOS' build
 ```
 
 商店版编译（OAuth-only、沙盒，不含 Sparkle）：
 
 ```bash
-xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project GitStride.xcodeproj -scheme GitStrideAppStore -destination 'platform=macOS' build
 ```
 
 单元测试：
 
 ```bash
-xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO test
+xcodebuild -project GitStride.xcodeproj -scheme GitStride -destination 'platform=macOS' test
 ```
 
 Automation Worker 本地验证：

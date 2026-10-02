@@ -45,10 +45,10 @@ GitHub Release 版也可以复用 `gh` 登录，配置方法见[快速开始指�
 git clone https://github.com/zwyyy456/GitStride.git gitstride
 cd gitstride
 xcodebuild -project GitStride.xcodeproj -scheme GitStride \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+  -destination 'platform=macOS' build
 ```
 
-要从 Xcode 运行，打开 `GitStride.xcodeproj`，选择 GitStride target，在 **Signing & Capabilities** 中选择自己的开发团队。Sparkle 使用强化运行时的库验证，因此未签名的编译检查通过，不代表 App 能直接在本机启动。
+构建前，打开 `GitStride.xcodeproj`，选择 GitStride target，在 **Signing & Capabilities** 中选择自己的开发团队。上面的命令沿用工程签名配置，包括 Sparkle 强化运行时库验证所需的签名。
 
 `GITSTRIDE_OAUTH_CLIENT_ID` 是桌面 OAuth App 的公开 Client ID。如果你要发行自己的版本，请注册 OAuth App、启用 Device Flow，并在两个 App target 中设置对应的 Client ID。不要嵌入 Client Secret。`GitStrideAppStore` scheme 仅支持 OAuth 登录，不包含 Sparkle；该构建目标不代表应用已在 Mac App Store 上架。
 
