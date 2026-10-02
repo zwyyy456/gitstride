@@ -7,17 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-        B731D404EFA742DEAA0A0011 /* ToolbarGroupBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */; };
-        B731D404EFA742DEAA0A0012 /* ToolbarGroupBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */; };
-        E1450002 /* MarkdownThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = E1450001 /* MarkdownThirdPartyNotices.txt */; };
-        E1450003 /* MarkdownThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = E1450001 /* MarkdownThirdPartyNotices.txt */; };
-        E1440002 /* Views/MarkdownSourceHighlightingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1440001 /* Views/MarkdownSourceHighlightingTests.swift */; };
-        E1420001 /* MarkdownSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410001 /* MarkdownSourceEditor.swift */; };
-        E1430001 /* MarkdownSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410001 /* MarkdownSourceEditor.swift */; };
-        E1420000 /* ItemEditingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410000 /* ItemEditingSession.swift */; };
-        E1430000 /* ItemEditingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410000 /* ItemEditingSession.swift */; };
-        E1400001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = E1400010 /* MarkdownView */; };
-        E1400002 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = E1400010 /* MarkdownView */; };
 		034A1C5457534637AA06944F /* Services/ProjectCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE756C642FB4254A3DDD761 /* Services/ProjectCacheTests.swift */; };
 		0A268DFF1FB34EA2A03336F0 /* ExistingProjectItemPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906BAEE59D54492EB681F8B9 /* ExistingProjectItemPicker.swift */; };
 		1256B447FBC34D199F0B53D1 /* Support/ProjectStoreFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10606AD13FB545669AC004F6 /* Support/ProjectStoreFixtures.swift */; };
@@ -173,6 +162,8 @@
 		A0000059 /* Store/AutomationSetupModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000059 /* Store/AutomationSetupModelTests.swift */; };
 		ABD3A3B8EA1143E196327B2A /* ProjectRoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */; };
 		B25D980EFC4840B0A60615D9 /* ProjectWorkPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409B744D9F7140539E4E1D1F /* ProjectWorkPreferences.swift */; };
+		B731D404EFA742DEAA0A0011 /* ToolbarGroupBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */; };
+		B731D404EFA742DEAA0A0012 /* ToolbarGroupBoundary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */; };
 		B9000001 /* ProjectTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000002 /* ProjectTableView.swift */; };
 		B9000003 /* Views/ProjectTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9000004 /* Views/ProjectTableTests.swift */; };
 		B94760305D8740FB8B6A2C40 /* AddProjectItemFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = B53D98D3EDD74DB89F2C48D6 /* AddProjectItemFields.swift */; };
@@ -195,6 +186,15 @@
 		DA0000000000000000000004 /* GitHubSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0000000000000000000004 /* GitHubSettingsView.swift */; };
 		DA0000000000000000000005 /* Services/GitHubAuthenticationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB0000000000000000000005 /* Services/GitHubAuthenticationTests.swift */; };
 		DF3F8A19CD864E769BBE7AC2 /* MenuBarControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E357115AA2E4E1C824AFD31 /* MenuBarControls.swift */; };
+		E1400001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = E1400010 /* MarkdownView */; };
+		E1400002 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = E1400010 /* MarkdownView */; };
+		E1420000 /* ItemEditingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410000 /* ItemEditingSession.swift */; };
+		E1420001 /* MarkdownSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410001 /* MarkdownSourceEditor.swift */; };
+		E1430000 /* ItemEditingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410000 /* ItemEditingSession.swift */; };
+		E1430001 /* MarkdownSourceEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1410001 /* MarkdownSourceEditor.swift */; };
+		E1440002 /* Views/MarkdownSourceHighlightingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1440001 /* Views/MarkdownSourceHighlightingTests.swift */; };
+		E1450002 /* MarkdownThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = E1450001 /* MarkdownThirdPartyNotices.txt */; };
+		E1450003 /* MarkdownThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = E1450001 /* MarkdownThirdPartyNotices.txt */; };
 		E6000001 /* SupportPurchaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6000002 /* SupportPurchaseModel.swift */; };
 		E610D76D43314F7D85AA7983 /* ProjectRoadmap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BFE2EF3051402A84FE3594 /* ProjectRoadmap.swift */; };
 		E96EC83E08924E37AA7DFEFE /* Views/Commands/CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2D2B3535CE45C9A72F5DF4 /* Views/Commands/CommandPaletteView.swift */; };
@@ -218,11 +218,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-        B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarGroupBoundary.swift; sourceTree = "<group>"; };
-        E1450001 /* MarkdownThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = MarkdownThirdPartyNotices.txt; sourceTree = "<group>"; };
-        E1440001 /* Views/MarkdownSourceHighlightingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/MarkdownSourceHighlightingTests.swift; sourceTree = "<group>"; };
-        E1410001 /* MarkdownSourceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownSourceEditor.swift; sourceTree = "<group>"; };
-        E1410000 /* ItemEditingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemEditingSession.swift; sourceTree = "<group>"; };
 		067616FE0D8F4BB582025D8E /* ItemLabelsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemLabelsSection.swift; sourceTree = "<group>"; };
 		10606AD13FB545669AC004F6 /* Support/ProjectStoreFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/ProjectStoreFixtures.swift; sourceTree = "<group>"; };
 		1A1E2B59828146B583272AC1 /* Models/QuickCreateParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/QuickCreateParserTests.swift; sourceTree = "<group>"; };
@@ -302,6 +297,7 @@
 		A4AD93EE1FB04A9D9CF802E5 /* Support/GitHubHTTPClients.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Support/GitHubHTTPClients.swift; sourceTree = "<group>"; };
 		AC6D407A095F41C7BAB85F69 /* ItemMilestoneSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemMilestoneSection.swift; sourceTree = "<group>"; };
 		B53D98D3EDD74DB89F2C48D6 /* AddProjectItemFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectItemFields.swift; sourceTree = "<group>"; };
+		B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarGroupBoundary.swift; sourceTree = "<group>"; };
 		B9000002 /* ProjectTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectTableView.swift; sourceTree = "<group>"; };
 		B9000004 /* Views/ProjectTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ProjectTableTests.swift; sourceTree = "<group>"; };
 		BACB16D1BB734F30BF32C09A /* NewProjectItemEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProjectItemEditor.swift; sourceTree = "<group>"; };
@@ -327,6 +323,10 @@
 		DB0000000000000000000004 /* GitHubSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubSettingsView.swift; sourceTree = "<group>"; };
 		DB0000000000000000000005 /* Services/GitHubAuthenticationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/GitHubAuthenticationTests.swift; sourceTree = "<group>"; };
 		DC100000 /* GitStride.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GitStride.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1410000 /* ItemEditingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemEditingSession.swift; sourceTree = "<group>"; };
+		E1410001 /* MarkdownSourceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownSourceEditor.swift; sourceTree = "<group>"; };
+		E1440001 /* Views/MarkdownSourceHighlightingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/MarkdownSourceHighlightingTests.swift; sourceTree = "<group>"; };
+		E1450001 /* MarkdownThirdPartyNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = MarkdownThirdPartyNotices.txt; sourceTree = "<group>"; };
 		E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRoadmapView.swift; sourceTree = "<group>"; };
 		E6000002 /* SupportPurchaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportPurchaseModel.swift; sourceTree = "<group>"; };
 		EDE756C642FB4254A3DDD761 /* Services/ProjectCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ProjectCacheTests.swift; sourceTree = "<group>"; };
@@ -340,7 +340,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A0000021 /* Sparkle in Frameworks */,
-                E1400001 /* MarkdownView in Frameworks */,
+				E1400001 /* MarkdownView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -355,7 +355,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1400002 /* MarkdownView in Frameworks */,
+				E1400002 /* MarkdownView in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,7 +376,7 @@
 			children = (
 				BD0000000000000000000002 /* LICENSE */,
 				A1000001 /* GitStrideApp.swift */,
-                E1450001 /* MarkdownThirdPartyNotices.txt */,
+				E1450001 /* MarkdownThirdPartyNotices.txt */,
 				BF0000000000000000000002 /* Localizable.xcstrings */,
 				A1000044 /* WorkspaceCommandContext.swift */,
 				6B2D2B3535CE45C9A72F5DF4 /* Views/Commands/CommandPaletteView.swift */,
@@ -506,8 +506,8 @@
 				A1000037 /* EngineeringSignalsView.swift */,
 				A1000043 /* ItemMarkdownBodyView.swift */,
 				A1000040 /* ItemDescriptionView.swift */,
-                E1410001 /* MarkdownSourceEditor.swift */,
-                E1410000 /* ItemEditingSession.swift */,
+				E1410001 /* MarkdownSourceEditor.swift */,
+				E1410000 /* ItemEditingSession.swift */,
 				92917782F0194B5FA178787A /* ItemContentEditorView.swift */,
 				A1000026 /* ItemInspectorView.swift */,
 				B731D404EFA742DEAA0A0010 /* ToolbarGroupBoundary.swift */,
@@ -557,7 +557,7 @@
 				6BE86DAE172A4F919768058D /* Views/ProjectWorkPreferencesTests.swift */,
 				FF2A0BB18D464368ADC92757 /* Views/NewProjectItemDraftTests.swift */,
 				99620A5365C14BBFB9086395 /* Views/CommandSearchTests.swift */,
-                E1440001 /* Views/MarkdownSourceHighlightingTests.swift */,
+				E1440001 /* Views/MarkdownSourceHighlightingTests.swift */,
 				F7DE3A1447C4442497CC9916 /* Store/ProjectStoreTests.swift */,
 				1F984E1BF5A14E0AABEAEB41 /* Store/ProjectStoreMutationTests.swift */,
 				CF04DCD734F7459B903E47A4 /* Store/ProjectStoreCreationTests.swift */,
@@ -603,7 +603,7 @@
 			);
 			name = GitStride;
 			packageProductDependencies = (
-                E1400010 /* MarkdownView */,
+				E1400010 /* MarkdownView */,
 				A6000001 /* Sparkle */,
 			);
 			productName = GitStride;
@@ -642,7 +642,7 @@
 			);
 			name = GitStrideAppStore;
 			packageProductDependencies = (
-                E1400010 /* MarkdownView */,
+				E1400010 /* MarkdownView */,
 			);
 			productName = GitStride;
 			productReference = DC100000 /* GitStride.app */;
@@ -685,7 +685,7 @@
 			);
 			mainGroup = A3000000;
 			packageReferences = (
-                E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */,
+				E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */,
 				A6000000 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			productRefGroup = A3000010 /* Products */;
@@ -704,7 +704,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1450002 /* MarkdownThirdPartyNotices.txt in Resources */,
+				E1450002 /* MarkdownThirdPartyNotices.txt in Resources */,
 				367A94C13064B9F300F2A402 /* AppIcon.icon in Resources */,
 				367A94C23064B9F300F2A402 /* LICENSE in Resources */,
 				367A94C33064B9F300F2A402 /* Localizable.xcstrings in Resources */,
@@ -722,7 +722,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1450003 /* MarkdownThirdPartyNotices.txt in Resources */,
+				E1450003 /* MarkdownThirdPartyNotices.txt in Resources */,
 				A0000047 /* AppIcon.icon in Resources */,
 				BD0000000000000000000001 /* LICENSE in Resources */,
 				BF0000000000000000000001 /* Localizable.xcstrings in Resources */,
@@ -736,8 +736,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1420001 /* MarkdownSourceEditor.swift in Sources */,
-                E1420000 /* ItemEditingSession.swift in Sources */,
+				E1420001 /* MarkdownSourceEditor.swift in Sources */,
+				E1420000 /* ItemEditingSession.swift in Sources */,
 				367A94773064B9F300F2A402 /* GitHubSettingsView.swift in Sources */,
 				367A94783064B9F300F2A402 /* WelcomeView.swift in Sources */,
 				367A94793064B9F300F2A402 /* GitHubAuthentication.swift in Sources */,
@@ -827,7 +827,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1440002 /* Views/MarkdownSourceHighlightingTests.swift in Sources */,
+				E1440002 /* Views/MarkdownSourceHighlightingTests.swift in Sources */,
 				DA0000000000000000000005 /* Services/GitHubAuthenticationTests.swift in Sources */,
 				7E11B23897274E1A8C79FFD8 /* Views/ProjectWorkPreferencesTests.swift in Sources */,
 				FFC8E795899043D584F51D7F /* Views/NewProjectItemDraftTests.swift in Sources */,
@@ -854,8 +854,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-                E1430001 /* MarkdownSourceEditor.swift in Sources */,
-                E1430000 /* ItemEditingSession.swift in Sources */,
+				E1430001 /* MarkdownSourceEditor.swift in Sources */,
+				E1430000 /* ItemEditingSession.swift in Sources */,
 				DA0000000000000000000004 /* GitHubSettingsView.swift in Sources */,
 				BE0000000000000000000001 /* WelcomeView.swift in Sources */,
 				DA0000000000000000000003 /* GitHubAuthentication.swift in Sources */,
@@ -1084,20 +1084,21 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/GitStride.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
 				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
 				INFOPLIST_FILE = GitStride/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GitStride;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1113,20 +1114,21 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/GitStride.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				GITSTRIDE_AUTOMATION_BASE_URL = "https://gitstride-automation.zwyyy456.workers.dev";
 				GITSTRIDE_OAUTH_CLIENT_ID = Ov23liP4CiYF6mIHqcVa;
 				INFOPLIST_FILE = GitStride/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = GitStride;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1174,7 +1176,7 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/GitStrideAppStore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1189,7 +1191,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
 				PRODUCT_NAME = GitStride;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
@@ -1206,7 +1208,7 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/GitStrideAppStore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1221,7 +1223,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = tech.hyperseek.gitstride;
 				PRODUCT_NAME = GitStride;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
@@ -1273,11 +1275,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-        E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */ = {
-            isa = XCRemoteSwiftPackageReference;
-            repositoryURL = "https://github.com/LiYanan2004/MarkdownView.git";
-            requirement = { kind = revision; revision = d24d6b6a5a4dbf210cce5c9f2de70d12cbe73690; };
-        };
 		A6000000 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
@@ -1286,18 +1283,26 @@
 				minimumVersion = 2.6.0;
 			};
 		};
+		E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LiYanan2004/MarkdownView.git";
+			requirement = {
+				kind = revision;
+				revision = d24d6b6a5a4dbf210cce5c9f2de70d12cbe73690;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-        E1400010 /* MarkdownView */ = {
-            isa = XCSwiftPackageProductDependency;
-            package = E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */;
-            productName = MarkdownView;
-        };
 		A6000001 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A6000000 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		E1400010 /* MarkdownView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1400011 /* XCRemoteSwiftPackageReference "MarkdownView" */;
+			productName = MarkdownView;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
