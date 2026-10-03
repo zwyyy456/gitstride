@@ -8,14 +8,16 @@
 
 ## 按影响域选择反馈面
 
+下表中的构建、静态检查和单元测试由开发代理执行。需要运行应用的检查由用户在当前运行的应用中完成，代理依据用户提供的结果或截图分析；启动、截图和 UI 测试权限见 `AGENTS.md` 的 Validation。
+
 | 影响域 | 先确认的真源 | 优先反馈面 |
 | --- | --- | --- |
-| App composition、scene 或窗口适配 | `architecture.md` | macOS app build；启动受影响 scene，确认依赖共享和窗口入口可达 |
+| App composition、scene 或窗口适配 | `architecture.md` | macOS app build；静态核对 scene 注入和依赖共享；由用户检查窗口入口可达 |
 | `ProjectStore` 状态或选择 | `architecture.md` | macOS app build；检查加载、项目切换、筛选和错误恢复不会产生第二状态真源 |
 | async、轮询或取消 | `architecture.md` | macOS app build；定点检查启动/停止轮询、手动刷新与项目切换，不出现重复任务或过期结果 |
 | GitHub 认证、HTTP、GraphQL 或解码 | `architecture.md` | 对令牌轮换、会话失效、HTTP 序列化、分页和解码运行 `GitStrideTests`；分别构建两个发行 target；远程 mutation 仅在任务明确授权且目标安全时执行 |
 | 远程 mutation 与乐观更新 | `architecture.md` | macOS app build；在安全目标上检查成功结果，以及可控失败下的回滚和错误反馈 |
-| Models 或 GraphQL selection set | `architecture.md` | macOS app build；用受影响真实响应检查解码边界；若未来已有 model tests，运行对应定点测试 |
+| Models 或 GraphQL selection set | `architecture.md` | macOS app build；运行受影响的解码测试，按响应字段核对边界；真实私有响应不得写入日志或 fixture |
 | 通知 | `architecture.md` | macOS app build；按改动风险检查授权、拒绝和状态变化通知，不重复请求或发送 |
 | Sparkle 更新代码 | `architecture.md` 的依赖方向 | macOS app build；检查设置中的 updater 状态和手动检查入口；发布签名与 appcast 不属于本文范围 |
 | Automation Worker、D1、Queue 或 GitHub 集成 | `architecture.md` | 在 `Automation/` 运行 TypeScript typecheck、Vitest 和 Wrangler dry-run build；涉及 schema 时应用本地 D1 migrations；真实远程 mutation 仅按 `Automation/README.md` 的 disposable 数据 gate 执行并恢复原状态 |
