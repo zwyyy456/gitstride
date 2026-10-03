@@ -219,37 +219,26 @@ struct MyWorkView: View {
     }
 
     private var selectedItems: [MyWorkItem] { items.filter { selectedIDs.contains($0.id) } }
-    private var canWork: Bool {
-        !isBulkWorking && !selectedItems.isEmpty
-            && selectedItems.allSatisfy { model.projectStore.canEditProject(id: $0.project.id) }
+    private var selectedReferences: [ItemInspectorReference] {
+        selectedItems.map { ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id) }
     }
-    private var commonStatuses: [String] {
-        guard let first = selectedItems.first else { return [] }
-        return first.project.statusOptions.map(\.name).filter { name in
-            selectedItems.allSatisfy { $0.project.statusOptions.contains { $0.name == name } }
-        }
-    }
+    private var canWork: Bool { !isBulkWorking && model.projectStore.canEditItems(selectedReferences) }
+    private var commonStatuses: [String] { model.projectStore.commonStatuses(for: selectedReferences) }
 
     private func performBulk(status: String?) {
         guard canWork else { return }
-        let targets = selectedItems
+        let targets = selectedReferences
+        let selected = selectedItems
         let store = model.projectStore
         isBulkWorking = true
         operationErrorMessage = nil
         Task { @MainActor in
             defer { isBulkWorking = false }
             do {
-                for target in targets {
-                    let reference = ItemInspectorReference(projectID: target.project.id, itemID: target.item.id)
-                    guard let item = store.item(for: reference) else { throw ProjectStoreError.itemUnavailable }
-                    if let status {
-                        guard let option = store.project(id: target.project.id)?.statusOptions.first(where: { $0.name == status })
-                        else { throw ProjectStoreError.itemUnavailable }
-                        try await store.moveItem(item, toStatus: option, in: target.project.id)
-                    } else {
-                        try await store.archiveItem(item, in: target.project.id)
-                    }
-                    selectedIDs.remove(target.id)
+                try await store.performBatch(status.map(ProjectStore.BatchAction.moveToStatus) ?? .archive, on: targets) { reference in
+                    if let target = selected.first(where: {
+                        $0.project.id == reference.projectID && $0.item.id == reference.itemID
+                    }) { selectedIDs.remove(target.id) }
                 }
                 if selectedIDs.isEmpty { isSelecting = false }
             } catch { report(error) }

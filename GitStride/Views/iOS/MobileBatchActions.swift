@@ -13,19 +13,11 @@ struct MobileBatchActions: View {
             selection.contains(ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id))
         }
     }
-    private var statuses: [String] {
-        guard let first = selected.first else { return [] }
-        return first.project.statusOptions.map(\.name).filter { name in
-            selected.allSatisfy { $0.project.statusOptions.contains { $0.name == name } }
-        }
+    private var selectedReferences: [ItemInspectorReference] {
+        selected.map { ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id) }
     }
-    private var canEdit: Bool {
-        !selected.isEmpty
-            && selected.allSatisfy {
-                store.statusChangeUnavailableReason(
-                    ItemInspectorReference(projectID: $0.project.id, itemID: $0.item.id)) == nil
-            }
-    }
+    private var statuses: [String] { store.commonStatuses(for: selectedReferences) }
+    private var canEdit: Bool { store.canEditItems(selectedReferences) }
 
     var body: some View {
         VStack {
@@ -51,24 +43,14 @@ struct MobileBatchActions: View {
     }
 
     private func apply(status: String?) {
-        let targets = selected
+        let targets = selectedReferences
         isWorking = true
         errorMessage = nil
         Task {
             defer { isWorking = false }
             do {
-                for work in targets {
-                    if let status, let field = work.project.statusField,
-                        let option = field.options.first(where: { $0.name == status })
-                    {
-                        try await store.moveItemToStatus(
-                            projectID: work.project.id, itemID: work.item.id,
-                            fieldID: field.id, optionID: option.id)
-                    } else if status == nil {
-                        try await store.archiveItem(work.item, in: work.project.id)
-                    }
-                    selection.remove(
-                        ItemInspectorReference(projectID: work.project.id, itemID: work.item.id))
+                try await store.performBatch(status.map(ProjectStore.BatchAction.moveToStatus) ?? .archive, on: targets) { reference in
+                    selection.remove(reference)
                 }
             } catch { errorMessage = error.localizedDescription }
         }

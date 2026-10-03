@@ -3,6 +3,52 @@ import Testing
 @testable import GitStride
 
 extension ProjectStoreTests {
+    @Test(arguments: [false, true])
+    func batchCommitsOnlySuccessfulItemsBeforeFailure(archive: Bool) async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: try Self.twoItemResponses().map { .response($0) } + [
+            .response(Self.graphQLSuccessResponse), .httpFailure(403)
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let first = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let second = ItemInspectorReference(projectID: "P1", itemID: "ITEM2")
+        let missing = ItemInspectorReference(projectID: "P1", itemID: "missing")
+        #expect(store.canEditItems([first, second]))
+        #expect(store.commonStatuses(for: [first, second]) == ["Todo", "Review"])
+        var completed: [ItemInspectorReference] = []
+        do {
+            try await store.performBatch(archive ? .archive : .moveToStatus("Review"), on: [first, second, missing]) {
+                completed.append($0)
+            }
+            Issue.record("The batch must stop at the failed write")
+        } catch GitHubError.insufficientPermissions { }
+        #expect(completed == [first])
+        #expect(store.item(for: second)?.status == "Todo")
+        if archive {
+            #expect(store.item(for: first) == nil)
+        } else {
+            #expect(store.item(for: first)?.status == "Review")
+        }
+        #expect(await runner.recordedRequests().count == Self.mutationProjectResponses.count + 2)
+    }
+
+    @Test func batchArchiveDoesNotRequireStatusField() async throws {
+        var responses = Self.mutationProjectResponses
+        responses[3] = Self.firstProjectFieldsResponse
+        let runner = FixtureGitHubHTTPClient(responses: responses + [Self.graphQLSuccessResponse])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        #expect(store.commonStatuses(for: [reference]).isEmpty)
+        #expect(store.canEditItems([reference]))
+        var completed: [ItemInspectorReference] = []
+        try await store.performBatch(.archive, on: [reference]) { completed.append($0) }
+        #expect(completed == [reference])
+        #expect(store.item(for: reference) == nil)
+    }
+
     @Test func relationshipReadMergesOnlyRelationshipFields() async throws {
         let detail = Self.itemDetailResponse(body: "Keep this body")
             .replacingOccurrences(of: #""viewerCanUpdate":false"#, with: #""viewerCanUpdate":true"#)
