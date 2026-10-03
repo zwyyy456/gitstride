@@ -208,7 +208,7 @@ struct BoardDisplayOptions: View {
     init(project: Project, preferenceID: String, visibleStatusIDs: Binding<Set<String>>) {
         self.project = project
         _visibleStatusIDs = visibleStatusIDs
-        _fields = AppStorage(wrappedValue: "assignees", ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
+        _fields = AppStorage(wrappedValue: ProjectDisplayPreferences.defaultCardFields, ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
     }
 
     var body: some View {
@@ -219,7 +219,7 @@ struct BoardDisplayOptions: View {
                 fieldToggle(String(localized: "Labels"), id: "labels")
                 fieldToggle(String(localized: "Engineering Signals"), id: "signals")
                 ForEach(project.fields.filter { $0.isEditable && $0.id != project.statusField?.id }) { field in
-                    fieldToggle(field.name, id: "field:" + field.id)
+                    fieldToggle(field.name, id: ProjectDisplayPreferences.cardFieldID(field))
                 }
             }
             Menu("Board Columns") {
@@ -233,15 +233,13 @@ struct BoardDisplayOptions: View {
                 }
             }
             Divider()
-            Button("Reset Card Fields") { fields = "assignees" }
+            Button("Reset Card Fields") { fields = ProjectDisplayPreferences.defaultCardFields }
         }.help("Choose board columns and card fields")
     }
 
     private func fieldToggle(_ title: String, id: String) -> some View {
-        Toggle(title, isOn: Binding(get: { fields.split(separator: ",").contains(Substring(id)) }, set: { enabled in
-            var values = Set(fields.split(separator: ",").map(String.init))
-            if enabled { values.insert(id) } else { values.remove(id) }
-            fields = values.sorted().joined(separator: ",")
+        Toggle(title, isOn: Binding(get: { ProjectDisplayPreferences.cardFields(fields).contains(id) }, set: { enabled in
+            ProjectDisplayPreferences.setCardField(id, visible: enabled, in: &fields)
         }))
     }
 }

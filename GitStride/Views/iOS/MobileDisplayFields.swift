@@ -7,7 +7,7 @@ struct MobileDisplayFields: View {
     init(project: Project, preferenceID: String) {
         self.project = project
         _fields = AppStorage(
-            wrappedValue: "assignees",
+            wrappedValue: ProjectDisplayPreferences.defaultCardFields,
             ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
     }
 
@@ -18,18 +18,16 @@ struct MobileDisplayFields: View {
             Toggle("Milestone", isOn: binding("milestone"))
             Toggle("Engineering", isOn: binding("signals"))
             ForEach(project.fields) { field in
-                Toggle(field.name, isOn: binding("field:" + field.id))
+                Toggle(field.name, isOn: binding(ProjectDisplayPreferences.cardFieldID(field)))
             }
         }
     }
 
     private func binding(_ key: String) -> Binding<Bool> {
         Binding(
-            get: { fields.split(separator: ",").contains(Substring(key)) },
+            get: { ProjectDisplayPreferences.cardFields(fields).contains(key) },
             set: { enabled in
-                var values = Set(fields.split(separator: ",").map(String.init))
-                if enabled { values.insert(key) } else { values.remove(key) }
-                fields = values.sorted().joined(separator: ",")
+                ProjectDisplayPreferences.setCardField(key, visible: enabled, in: &fields)
             })
     }
 }
@@ -47,12 +45,12 @@ struct MobileConfiguredItemRow: View {
         self.item = item
         self.fields = fields
         _visible = AppStorage(
-            wrappedValue: "assignees",
+            wrappedValue: ProjectDisplayPreferences.defaultCardFields,
             ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
     }
 
     var body: some View {
-        let keys = Set(visible.split(separator: ",").map(String.init))
+        let keys = ProjectDisplayPreferences.cardFields(visible)
         MobileItemRow(item: item, showsStatus: showsStatus, statusOption: statusOption) {
             if !item.isWorkComplete && item.signals.blockedByCount > 0 {
                 Label("Blocked by \(item.signals.blockedByCount)", systemImage: "hand.raised")
@@ -77,7 +75,7 @@ struct MobileConfiguredItemRow: View {
             }
             if keys.contains("milestone"), let milestone = item.milestone { Text(milestone.title).foregroundStyle(.secondary) }
             if keys.contains("signals") { EngineeringSignalsView(item: item, limit: 3) }
-            ForEach(fields.filter { keys.contains("field:" + $0.id) }) { field in
+            ForEach(fields.filter { keys.contains(ProjectDisplayPreferences.cardFieldID($0)) }) { field in
                 if let value = item.fieldValues[field.id] { Text("\(field.name): \(label(value))").foregroundStyle(.secondary) }
             }
         }

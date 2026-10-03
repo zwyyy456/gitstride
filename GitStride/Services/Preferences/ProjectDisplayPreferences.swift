@@ -6,6 +6,20 @@ struct ProjectDisplayPreferences {
         case roadmapStartField, roadmapEndField, roadmapZoom, roadmapGroupsByStatus, roadmapTitleWidth
     }
 
+    static let defaultCardFields = "assignees"
+
+    static func cardFields(_ stored: String) -> Set<String> {
+        Set(stored.split(separator: ",").map(String.init))
+    }
+
+    static func setCardField(_ id: String, visible: Bool, in stored: inout String) {
+        var fields = cardFields(stored)
+        if visible { fields.insert(id) } else { fields.remove(id) }
+        stored = fields.sorted().joined(separator: ",")
+    }
+
+    static func cardFieldID(_ field: ProjectField) -> String { "field:" + field.id }
+
     let id: String
 
     init(id: String) {

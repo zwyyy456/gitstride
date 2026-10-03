@@ -10,10 +10,10 @@ struct KanbanCardContent: View {
         self.item = item
         self.showsRepository = showsRepository
         self.availableFields = availableFields
-        _fields = AppStorage(wrappedValue: "assignees", ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
+        _fields = AppStorage(wrappedValue: ProjectDisplayPreferences.defaultCardFields, ProjectDisplayPreferences(id: preferenceID).key(for: .cardFields))
     }
 
-    private var visibleFields: Set<String> { Set(fields.split(separator: ",").map(String.init)) }
+    private var visibleFields: Set<String> { ProjectDisplayPreferences.cardFields(fields) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -95,7 +95,7 @@ struct KanbanCardContent: View {
             Text(item.labels.map(\.name).joined(separator: ", "))
                 .font(.caption).foregroundStyle(.secondary).lineLimit(2)
         }
-        ForEach(availableFields.filter { visibleFields.contains("field:" + $0.id) }) { field in
+        ForEach(availableFields.filter { visibleFields.contains(ProjectDisplayPreferences.cardFieldID($0)) }) { field in
             if let value = item.fieldValues[field.id] {
                 Text("\(field.name): \(fieldText(value))")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
