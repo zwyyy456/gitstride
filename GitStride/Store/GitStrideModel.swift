@@ -45,14 +45,6 @@ final class GitStrideModel {
     var followedProjectsErrorMessage: String? {
         projectStore.followedProjectsErrorMessage ?? projectStore.operationErrorMessage
     }
-    var attentionCount: Int {
-        let followedIDs = myWorkStore.attentionItemIDs(
-            in: followedProjects, currentUserLogin: projectStore.currentUserLogin
-        )
-        let reviewIDs = projectStore.personalWork[.reviewRequested]?.items.map(\.id) ?? []
-        return followedIDs.union(reviewIDs).count
-    }
-
     init() {
         let defaults = UserDefaults.standard
         let storedMethod = defaults.string(forKey: "githubAuthenticationMethod").flatMap(GitHubAuthenticationMethod.init(rawValue:))

@@ -56,13 +56,6 @@ final class MyWorkStore {
             .sorted { $0.updatedDate > $1.updatedDate }
     }
 
-    func attentionItemIDs(in projects: [Project], currentUserLogin: String?) -> Set<String> {
-        let filters: [MyWorkFilter] = [.reviewRequested, .ciFailed, .due]
-        return Set(filters.flatMap {
-            items(for: $0, in: projects, currentUserLogin: currentUserLogin).map { $0.item.contentId ?? $0.id }
-        })
-    }
-
     func setFilterVisible(_ filter: MyWorkFilter, visible: Bool) {
         if visible {
             guard filters.contains(filter) == false else { return }
