@@ -14,7 +14,8 @@ extension EnvironmentValues {
 
 @main
 struct GitStrideApp: App {
-    @State private var model = GitStrideModel()
+    @NSApplicationDelegateAdaptor(GitStrideAppDelegate.self) private var appDelegate
+    private var model: GitStrideModel { appDelegate.model }
     @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
     @State private var isShowingWelcome = false
     @State private var menuBarWindow: NSWindow?
@@ -95,15 +96,6 @@ struct GitStrideApp: App {
                         .offset(x: 5, y: -4)
                 }
             }
-                .task {
-                    await model.start()
-                    let actions = await NotificationService.shared.actions()
-                    for await action in actions {
-                        if let url = await model.handleNotificationAction(action) {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
         }
         .menuBarExtraStyle(.window)
 
@@ -346,5 +338,26 @@ struct MenuBarWindowFinder: NSViewRepresentable {
                 self.window = nsView.window
             }
         }
+    }
+}
+
+@MainActor
+private final class GitStrideAppDelegate: NSObject, NSApplicationDelegate {
+    let model = GitStrideModel()
+    private var notificationTask: Task<Void, Never>?
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        let actions = NotificationService.shared.actions()
+        notificationTask = Task {
+            await model.start()
+            for await action in actions {
+                guard !Task.isCancelled else { return }
+                if let url = await model.handleNotificationAction(action) { NSWorkspace.shared.open(url) }
+            }
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        notificationTask?.cancel()
     }
 }

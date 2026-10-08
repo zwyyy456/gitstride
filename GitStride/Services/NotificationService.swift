@@ -24,7 +24,7 @@ actor NotificationService {
 
     private init() {}
 
-    func actions() -> AsyncStream<ProjectNotificationAction> {
+    nonisolated func actions() -> AsyncStream<ProjectNotificationAction> {
         configureCategories()
         UNUserNotificationCenter.current().delegate = delegate
         return delegate.actions()
@@ -82,7 +82,7 @@ actor NotificationService {
         )
     }
 
-    private func configureCategories() {
+    private nonisolated func configureCategories() {
         let actions = [
             UNNotificationAction(identifier: "OPEN", title: String(localized: "Open"), options: [.foreground]),
             UNNotificationAction(identifier: "MOVE_DONE", title: String(localized: "Move to Done")),
@@ -139,13 +139,16 @@ actor NotificationService {
 }
 
 private final class ProjectNotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
-    private let lock = NSLock()
-    private var continuation: AsyncStream<ProjectNotificationAction>.Continuation?
+    private let channel = AsyncStream<ProjectNotificationAction>.makeStream()
 
-    func actions() -> AsyncStream<ProjectNotificationAction> {
-        AsyncStream { continuation in
-            lock.withLock { self.continuation = continuation }
-        }
+    func actions() -> AsyncStream<ProjectNotificationAction> { channel.stream }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 
     func userNotificationCenter(
@@ -173,6 +176,6 @@ private final class ProjectNotificationDelegate: NSObject, UNUserNotificationCen
             statusFieldID: payload["statusFieldID"] as? String,
             doneOptionID: payload["doneOptionID"] as? String
         )
-        _ = lock.withLock { continuation?.yield(action) }
+        channel.continuation.yield(action)
     }
 }

@@ -448,8 +448,10 @@ final class GitStrideModel {
                 try await notificationService.sendDigest(changes)
             case .rateLimited(let resetDescription):
                 monitoringStatus = resetDescription.map {
-                    String(localized: "Monitoring paused by GitHub rate limit. Try again \($0).")
+                    String(localized: "Monitoring paused by GitHub rate limit. Try again \($0.formatted()).")
                 } ?? String(localized: "Monitoring paused by GitHub rate limit.")
+            case .resumed:
+                monitoringStatus = String(localized: "Monitoring \(myWorkStore.followedProjects.count) projects.")
             case .failed(let message):
                 monitoringStatus = String(localized: "Monitoring error: \(message)")
             }

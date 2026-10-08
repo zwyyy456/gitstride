@@ -416,14 +416,31 @@ struct ProjectStoreTests {
         #expect(store.selectedProject?.items.isEmpty == true)
     }
 
-    @Test func monitorKeepsItsBaselineAcrossASupersededCycle() async throws {
+    @Test(.timeLimit(.minutes(1))) func stoppingMonitorCancelsItsRateLimitWait() async {
+        let monitor = ProjectMonitor()
+        let stream = await monitor.events(
+            currentUserLogin: "me",
+            policy: MonitoringPolicy(interval: .zero, quietStartHour: 0, quietEndHour: 0),
+            readSnapshots: { throw GitHubError.rateLimited(Date().addingTimeInterval(3600)) }
+        )
+        var iterator = stream.makeAsyncIterator()
+        guard case .rateLimited = await iterator.next() else {
+            Issue.record("Expected rate limiting before stopping")
+            await monitor.stop()
+            return
+        }
+        await monitor.stop()
+        #expect(await iterator.next() == nil)
+    }
+
+    @Test(arguments: [false, true]) func monitorKeepsItsBaselineAcrossASupersededCycle(rateLimited: Bool) async throws {
         var project = Self.kanbanProject()
         var item = Self.detailItem(updatedAt: "2026-09-01")
         item.status = "Todo"
         project.items = [item]
         var changed = project
         changed.items[0].status = "Review"
-        let source = MonitorSnapshotSource(cycles: [[project], nil, [changed]])
+        let source = MonitorSnapshotSource(cycles: [[project], nil, [changed]], rateLimitAfterFirstRead: rateLimited)
         let monitor = ProjectMonitor()
         let stream = await monitor.events(
             currentUserLogin: "me",
@@ -468,9 +485,17 @@ struct ProjectStoreTests {
 
 private actor MonitorSnapshotSource {
     private var cycles: [[Project]?]
-    init(cycles: [[Project]?]) { self.cycles = cycles }
+    private var rateLimitAfterFirstRead: Bool
+    init(cycles: [[Project]?], rateLimitAfterFirstRead: Bool = false) {
+        self.cycles = cycles
+        self.rateLimitAfterFirstRead = rateLimitAfterFirstRead
+    }
     func next() throws -> [Project]? {
-        guard !cycles.isEmpty else { throw GitHubError.rateLimited(nil) }
+        if rateLimitAfterFirstRead, cycles.count == 2 {
+            rateLimitAfterFirstRead = false
+            throw GitHubError.rateLimited(.distantPast)
+        }
+        guard !cycles.isEmpty else { throw CancellationError() }
         return cycles.removeFirst()
     }
 }

@@ -13,7 +13,7 @@ enum GitHubError: Error, LocalizedError, Equatable {
     case notAuthenticated
     case missingProjectScope
     case organizationAccess(String)
-    case rateLimited(String?)
+    case rateLimited(Date?)
     case invalidRepository
     case invalidItemURL
     case itemUnavailable
@@ -43,7 +43,7 @@ enum GitHubError: Error, LocalizedError, Equatable {
             return message
         case .rateLimited(let resetDescription):
             if let resetDescription {
-                return String(localized: "GitHub rate limit reached. Try again \(resetDescription).")
+                return String(localized: "GitHub rate limit reached. Try again \(resetDescription.formatted()).")
             }
             return String(localized: "GitHub rate limit reached. Try again later.")
         case .invalidRepository:

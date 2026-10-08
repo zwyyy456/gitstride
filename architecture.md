@@ -14,7 +14,7 @@
 
 ## App、Scene 与依赖方向
 
-- `GitStrideApp` 是 composition root，创建 app-lifetime 的 `GitStrideModel`，并装配 `MenuBarExtra`、工作区窗口、快速新增窗口和设置窗口。
+- `GitStrideApp` 是 composition root，通过 app delegate 持有 app-lifetime 的 `GitStrideModel`、启动任务与通知动作订阅，并装配 `MenuBarExtra`、工作区窗口、快速新增窗口和设置窗口。
 - 同一个 `GitStrideModel` 和当前连接的 `ProjectStore` 由各 scene 共享。`GitStrideModel` 在 GitHub 连接切换时失效旧 Store、清除旧缓存并装配新 Store；scene 出现和消失不重建连接。`MyWorkStore` 随当前账号激活对应的关注偏好。
 - App 层只负责 scene、窗口生命周期、依赖装配和平台 presentation。GitHub 查询、项目变更和筛选规则不进入 `GitStrideApp`。
 - 生产依赖方向为 `App -> Views -> Store -> Services / Models`。Services 不依赖 SwiftUI View、窗口或 scene。
@@ -48,6 +48,7 @@
 - 项目详情读取由 Store 按 Project ID 合并进行中的请求，不因单个窗口离开而取消其他窗口需要的读取；不同项目独立加载，连接失效或项目移除时取消相应请求。
 - 项目详情、手动刷新、关注刷新和监控读取都经过 `ProjectStore` 的统一快照提交入口。仅当前请求、有效关注 generation、未跨越相关 mutation 且项目仍被保留的结果可以提交；失败和取消只能结束自己所属的加载状态。mutation 期间失效的读取按项目合并补刷，普通读取失败不自动循环重试。
 - 监控的一轮读取被取代或不完整时，跳过该轮比较并保留上次基线；不得把被拒绝的结果作为空项目参与变化检测。
+- 通知 delegate 在应用完成启动前注册，动作缓冲至模型就绪后处理；订阅不依赖菜单栏视图出现。监控限流保留比较基线，按服务端恢复时间或退避等待后继续，停止监控必须取消等待。
 - 任务取消是正常控制流。新增循环、延迟、子进程或网络桥接时必须保留取消路径，不能用无界 detached task 绕过 owner 生命周期。
 - 加载标记、错误和 `lastUpdated` 必须描述实际完成的操作；失败不能被写成成功刷新，也不能在没有替代反馈时静默吞掉。
 - 不在 View 中直接执行 GitHub 子进程或 GraphQL 请求。View 通过 `ProjectStore` 或 `GitStrideModel` 的 intent 发起用户操作。

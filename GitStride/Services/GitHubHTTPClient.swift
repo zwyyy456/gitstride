@@ -47,16 +47,26 @@ enum GitHubHTTP {
         return request
     }
 
+    private static func retryDate(_ response: HTTPURLResponse) -> Date? {
+        if let value = response.value(forHTTPHeaderField: "Retry-After"), let seconds = TimeInterval(value) {
+            return Date().addingTimeInterval(max(0, seconds))
+        }
+        if let value = response.value(forHTTPHeaderField: "X-RateLimit-Reset"), let seconds = TimeInterval(value) {
+            return Date(timeIntervalSince1970: seconds)
+        }
+        return nil
+    }
+
     static func check(_ response: HTTPURLResponse) throws {
         switch response.statusCode {
         case 200..<300: return
         case 401: throw GitHubError.notAuthenticated
         case 403 where response.value(forHTTPHeaderField: "X-GitHub-SSO") != nil:
             throw GitHubError.organizationAccess(String(localized: "Authorize this connection for your organization’s SSO in GitHub."))
-        case 429: throw GitHubError.rateLimited(response.value(forHTTPHeaderField: "Retry-After"))
+        case 429: throw GitHubError.rateLimited(retryDate(response))
         case 403 where response.value(forHTTPHeaderField: "X-RateLimit-Remaining") == "0"
             || response.value(forHTTPHeaderField: "Retry-After") != nil:
-            throw GitHubError.rateLimited(nil)
+            throw GitHubError.rateLimited(retryDate(response))
         case 403: throw GitHubError.insufficientPermissions
         default: throw GitHubError.httpError(response.statusCode)
         }

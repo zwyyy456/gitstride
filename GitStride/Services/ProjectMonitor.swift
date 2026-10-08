@@ -15,6 +15,8 @@ actor ProjectMonitor {
             var previousStates: [String: MonitoredItemState]?
             var pendingChanges: [ProjectChange] = []
             var lastFailure: String?
+            var rateLimitDelay = Duration.seconds(60)
+            var wasRateLimited = false
 
             while Task.isCancelled == false {
                 do {
@@ -24,6 +26,11 @@ actor ProjectMonitor {
                     }
                     try Task.checkCancellation()
 
+                    if wasRateLimited {
+                        continuation.yield(.resumed)
+                        wasRateLimited = false
+                        rateLimitDelay = .seconds(60)
+                    }
                     let now = Date()
                     let currentStates = ProjectChangeDetector.states(
                         for: snapshots,
@@ -52,9 +59,14 @@ actor ProjectMonitor {
                     lastFailure = nil
                 } catch is CancellationError {
                     break
-                } catch GitHubError.rateLimited(let resetDescription) {
-                    continuation.yield(.rateLimited(resetDescription))
-                    break
+                } catch GitHubError.rateLimited(let retryAt) {
+                    let delay = retryAt.map { Duration.seconds(max(0, $0.timeIntervalSinceNow)) }
+                        ?? max(policy.interval, rateLimitDelay)
+                    continuation.yield(.rateLimited(retryAt))
+                    wasRateLimited = true
+                    rateLimitDelay = min(rateLimitDelay * 2, .seconds(3600))
+                    do { try await Task.sleep(for: delay) } catch { break }
+                    continue
                 } catch {
                     let message = error.localizedDescription
                     if message != lastFailure {
