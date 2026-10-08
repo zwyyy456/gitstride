@@ -77,6 +77,7 @@ export class AutomationRunner {
     ) {}
 
     async run(message: DeliveryMessage, attempt: number): Promise<RunnerDecision> {
+        const startedAt = Date.now();
         const automation = await this.loadAutomation(message);
         if (!automation || terminalDeliveryStates.has(automation.processing_state)) {
             return { action: "ack" };
@@ -169,6 +170,7 @@ export class AutomationRunner {
                 hasMissingItem ? "NOT_IN_PROJECT" : null
             );
             console.info("automation_delivery_completed", {
+                durationMs: Date.now() - startedAt,
                 attempt,
                 recoveredAfterRetry: attempt > 1,
                 assignmentCount,
@@ -184,7 +186,7 @@ export class AutomationRunner {
             return { action: "ack" };
         } catch (error) {
             return await this.handleFailure(message.deliveryID, automation, error, attempt, {
-                stage, assignmentCount, confirmedStatusWriteCount,
+                stage, assignmentCount, confirmedStatusWriteCount, durationMs: Date.now() - startedAt,
             });
         } finally {
             if (confirmedStatusWriteCount > 0) {
@@ -241,7 +243,7 @@ export class AutomationRunner {
         automation: AutomationRecord,
         error: unknown,
         attempt: number,
-        progress: { stage: string; assignmentCount: number; confirmedStatusWriteCount: number }
+        progress: { stage: string; assignmentCount: number; confirmedStatusWriteCount: number; durationMs: number }
     ): Promise<RunnerDecision> {
         const code = classifyError(error);
         const diagnostics = {

@@ -113,6 +113,14 @@ letter queue and marks every exhausted nonterminal delivery failed without
 overwriting a terminal result. Status writes remain idempotent across
 redelivery.
 
+For cost diagnosis, `automation_project_scan` records scanned and compatible
+Project counts, distinct repository count, item-page request attempts, and elapsed
+milliseconds. Counts include OAuth replay and item re-resolution within the call;
+they are not a count of all GitHub requests. Delivery completion and failure logs
+also include `durationMs`, excluding queue wait. Compare these with Queue backlog
+and delivery age before changing concurrency or adding metadata caching. These
+logs contain only counts and timings, never Project or Issue content.
+
 After at least one status mutation succeeds or the automation connection health
 changes, the consumer increments a revision in the automation's Durable Object and
 sends a typed, content-free invalidation over the authenticated `/api/events`

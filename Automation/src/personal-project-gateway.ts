@@ -73,6 +73,12 @@ interface ResolvedItem {
     itemNodeID: string;
 }
 
+interface ProjectScanMetrics {
+    scannedProjectCount: number;
+    compatibleProjectCount: number;
+    itemPageCount: number;
+}
+
 export class PersonalProjectGateway {
     private readonly projectsREST: GitHubProjectsRESTClient;
 
@@ -93,24 +99,35 @@ export class PersonalProjectGateway {
         assignments: IssueStatusAssignment[],
         onApplied: () => void
     ): Promise<Record<string, ApplyOutcome>> {
-        return this.accessTokens.withValidAccessToken(
-            project.oauthCredentialID,
-            async (accessToken) => {
-                try {
-                    return await this.applyWithToken(accessToken, project, assignments, onApplied);
-                } catch (error) {
-                    if (error instanceof SetupProjectError) throw mapProjectCatalogError(error);
-                    throw error;
+        const startedAt = Date.now();
+        const metrics: ProjectScanMetrics = { scannedProjectCount: 0, compatibleProjectCount: 0, itemPageCount: 0 };
+        try {
+            return await this.accessTokens.withValidAccessToken(
+                project.oauthCredentialID,
+                async (accessToken) => {
+                    try {
+                        return await this.applyWithToken(accessToken, project, assignments, onApplied, metrics);
+                    } catch (error) {
+                        if (error instanceof SetupProjectError) throw mapProjectCatalogError(error);
+                        throw error;
+                    }
                 }
-            }
-        );
+            );
+        } finally {
+            console.info("automation_project_scan", {
+                ...metrics,
+                repositoryCount: new Set(assignments.map(assignment => assignment.issueRepositoryNameWithOwner)).size,
+                durationMs: Date.now() - startedAt,
+            });
+        }
     }
 
     private async applyWithToken(
         accessToken: string,
         template: PersonalProjectConfiguration,
         assignments: IssueStatusAssignment[],
-        onApplied: () => void
+        onApplied: () => void,
+        metrics: ProjectScanMetrics
     ): Promise<Record<string, ApplyOutcome>> {
         const mapping = await this.loadMapping(accessToken, template);
         const projects = await this.projectCatalog.listProjects(
@@ -122,6 +139,7 @@ export class PersonalProjectGateway {
         );
 
         for (const project of projects) {
+            metrics.scannedProjectCount += 1;
             const fields = project.nodeID === template.projectNodeID
                 ? mapping.templateFields
                 : await this.projectCatalog.listStatusFields(
@@ -136,11 +154,13 @@ export class PersonalProjectGateway {
                 mapping
             );
             if (!resolution) continue;
+            metrics.compatibleProjectCount += 1;
             const projectOutcomes = await this.applyToProject(
                 accessToken,
                 resolution,
                 assignments,
-                onApplied
+                onApplied,
+                metrics
             );
             for (const [issueNodeID, outcome] of Object.entries(projectOutcomes)) {
                 if (outcome === "APPLIED") outcomes[issueNodeID] = "APPLIED";
@@ -191,7 +211,8 @@ export class PersonalProjectGateway {
         accessToken: string,
         resolution: ProjectConfigurationResolution,
         assignments: IssueStatusAssignment[],
-        onApplied: () => void
+        onApplied: () => void,
+        metrics: ProjectScanMetrics
     ): Promise<Record<string, ApplyOutcome>> {
         let project = resolution.configuration;
         const resolvedItems = new Map<string, string>();
@@ -202,7 +223,8 @@ export class PersonalProjectGateway {
                 accessToken,
                 project,
                 repository,
-                group.map((assignment) => assignment.issueNodeID)
+                group.map((assignment) => assignment.issueNodeID),
+                metrics
             );
             for (const item of resolution.found) {
                 resolvedItems.set(item.issueNodeID, item.itemNodeID);
@@ -245,7 +267,8 @@ export class PersonalProjectGateway {
                 accessToken,
                 project,
                 assignment,
-                itemNodeID
+                itemNodeID,
+                metrics
             );
             if (outcomes[assignment.issueNodeID] === "APPLIED") onApplied();
         }
@@ -256,7 +279,8 @@ export class PersonalProjectGateway {
         accessToken: string,
         project: PersonalProjectConfiguration,
         assignment: IssueStatusAssignment,
-        itemNodeID: string
+        itemNodeID: string,
+        metrics: ProjectScanMetrics
     ): Promise<ApplyOutcome> {
         const statusOptionID = project.statusOptionIDs[assignment.desiredStatus];
         try {
@@ -277,7 +301,8 @@ export class PersonalProjectGateway {
             accessToken,
             project,
             assignment.issueRepositoryNameWithOwner,
-            [assignment.issueNodeID]
+            [assignment.issueNodeID],
+            metrics
         );
         const replacement = resolution.found[0];
         if (!replacement) {
@@ -303,7 +328,8 @@ export class PersonalProjectGateway {
         accessToken: string,
         project: PersonalProjectConfiguration,
         issueRepositoryNameWithOwner: string,
-        issueNodeIDs: string[]
+        issueNodeIDs: string[],
+        metrics: ProjectScanMetrics
     ): Promise<{ found: ResolvedItem[]; missing: string[] }> {
         const unresolved = new Set(issueNodeIDs);
         const found: ResolvedItem[] = [];
@@ -311,6 +337,7 @@ export class PersonalProjectGateway {
         let url: string | null = projectItemsURL(project, issueRepositoryNameWithOwner);
 
         while (url && unresolved.size > 0) {
+            metrics.itemPageCount += 1;
             const response = await this.requestPage(url, accessToken);
             for (const item of response.items) {
                 if (!item.itemNodeID || !item.contentNodeID) {

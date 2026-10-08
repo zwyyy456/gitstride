@@ -103,7 +103,7 @@
 - 单个对象不可见或超出 installation 范围不得停用整个 automation；完整事实不可用时不推导该对象状态。账户级停用限于凭据、配置或连接整体故障。
 - 桌面 OAuth 和 CLI 凭据只服务交互式浏览与编辑；后台 automation 不读取或复制这两种本机凭据，桌面退出登录不停止后台 automation。
 - Worker 为完成自动化会瞬时接收 GitHub Project Item 响应，但应用层只传播必要 identity 字段，不持久化或记录私人 Issue 内容，也不保存 Issue 到 Project Item 的映射。
-- Webhook 与运行日志只能包含 delivery ID、automation ID、处理阶段、状态码、稳定错误码，尝试次数、重试延迟、已确认写入数量和错误来源分类，以及工作流诊断所需的关联数量、匿名 Issue/PR 状态分类和目标状态、Ready PR 策略；不得包含完整 payload、Issue 标题/正文或凭据。
+- Webhook 与运行日志只能包含 delivery ID、automation ID、处理阶段、状态码、稳定错误码，尝试次数、重试延迟、处理耗时、扫描项目数、兼容项目数、仓库数、条目请求页数、已确认写入数量和错误来源分类，以及工作流诊断所需的关联数量、匿名 Issue/PR 状态分类和目标状态、Ready PR 策略；不得包含完整 payload、Issue 标题/正文或凭据。
 
 ## 目录边界
 
