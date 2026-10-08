@@ -4,6 +4,75 @@ import Testing
 
 extension ProjectStoreTests {
     @Test(arguments: [false, true])
+    func itemRefreshUpdatesOnlyItsMembership(archived: Bool) async throws {
+        let updated = try Self.singleItemResponse(archived: archived)
+            .replacingOccurrences(of: "Todo", with: "Review")
+            .replacingOccurrences(of: "TODO", with: "REVIEW")
+        let runner = FixtureGitHubHTTPClient(responses: try Self.twoItemResponses() + [
+            Self.mutationFieldsResponse, updated
+        ] + (archived ? [] : [Self.itemDetailResponse(body: "Refreshed")]))
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+
+        try await store.refreshItem(reference)
+
+        #expect(store.item(for: reference)?.status == (archived ? nil : "Review"))
+        #expect(store.item(for: .init(projectID: "P1", itemID: "ITEM2"))?.status == "Todo")
+        #expect(store.selectedProject?.items.map(\.id) == (archived ? ["ITEM2"] : ["ITEM1", "ITEM2"]))
+        if !archived {
+            let item = try #require(store.item(for: reference))
+            guard case .loaded(let detail) = store.itemDetailState(for: item) else {
+                Issue.record("Expected refreshed item details")
+                return
+            }
+            #expect(detail.body == "Refreshed")
+        }
+        let requests = await runner.recordedRequests()
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItems }.count == 1)
+        #expect(requests.filter { $0.graphQLQuery == GraphQLQueries.projectItem && $0.hasVariable("id", "ITEM1") }.count == 1)
+    }
+
+    @Test func itemRefreshRejectsAReadOverlappingAStatusWrite() async throws {
+        let runner = SuspendingGitHubHTTPClient(steps: Self.mutationProjectResponses.map { .response($0) } + [
+            .response(Self.mutationFieldsResponse), .suspended("item-read", try Self.singleItemResponse()),
+            .response(Self.graphQLSuccessResponse),
+            .suspended("reconcile", Self.mutationFieldsResponse),
+            .response(Self.mutationItemsResponse.replacingOccurrences(of: "Todo", with: "Review")
+                .replacingOccurrences(of: "TODO", with: "REVIEW"))
+        ])
+        let (store, cleanup) = makeStore(runner: runner)
+        defer { cleanup() }
+        await store.loadProjects()
+        let reference = ItemInspectorReference(projectID: "P1", itemID: "ITEM1")
+        let project = try #require(store.selectedProject)
+        let item = try #require(store.item(for: reference))
+        let review = try #require(project.statusOptions.first { $0.id == "REVIEW" })
+        let refresh = Task { try await store.refreshItem(reference) }
+        try await runner.waitUntilSuspended("item-read")
+        try await store.moveItem(item, toStatus: review, in: project.id)
+        await runner.release("item-read")
+        try await refresh.value
+        try await runner.waitUntilSuspended("reconcile")
+        #expect(store.item(for: reference)?.status == "Review")
+        let release = Task { await runner.release("reconcile") }
+        await store.loadProjectDetails(id: project.id)
+        await release.value
+        #expect(store.item(for: reference)?.status == "Review")
+    }
+
+    private static func singleItemResponse(archived: Bool = false) throws -> String {
+        let json = try #require(JSONSerialization.jsonObject(with: Data(mutationItemsResponse.utf8)) as? [String: Any])
+        let data = try #require(json["data"] as? [String: Any])
+        let node = try #require(data["node"] as? [String: Any])
+        let items = try #require(node["items"] as? [String: Any])
+        var item = try #require((items["nodes"] as? [[String: Any]])?.first)
+        item["isArchived"] = archived
+        return String(decoding: try JSONSerialization.data(withJSONObject: ["data": ["node": item]]), as: UTF8.self)
+    }
+
+    @Test(arguments: [false, true])
     func batchCommitsOnlySuccessfulItemsBeforeFailure(archive: Bool) async throws {
         let runner = SuspendingGitHubHTTPClient(steps: try Self.twoItemResponses().map { .response($0) } + [
             .response(Self.graphQLSuccessResponse), .httpFailure(403)
@@ -502,6 +571,9 @@ extension ProjectStoreTests {
         }
         let user = Assignee(login: "octocat", avatarUrl: "", name: nil)
         try await store.addAssignee(to: item, in: project.id, user: user)
+        for _ in 0..<100 where !FileManager.default.fileExists(atPath: url.path) {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         let snapshot = try #require(try await cache.load())
         #expect(snapshot.projects.first?.items.first?.status == "Todo")
         #expect(snapshot.projects.first?.items.first?.assignees == [user])

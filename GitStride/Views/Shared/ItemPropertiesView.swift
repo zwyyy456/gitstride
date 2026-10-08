@@ -7,12 +7,11 @@ struct ItemPropertiesView: View {
     @State private var isWorking = false
 
     private var project: Project? { store.project(id: reference.projectID) }
-    private var item: ProjectItem? { store.item(for: reference) }
     private var canEdit: Bool { store.canEditProject(id: reference.projectID) }
 
     var body: some View {
         Form {
-            if let project, let item {
+            if let project, let item = project.items.first(where: { $0.id == reference.itemID }) {
                 fieldSection(project: project, item: item)
                 Section(
                     item.contentType == .issue

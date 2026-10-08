@@ -329,6 +329,7 @@ final class ProjectStore {
     private var pendingEditTasks: [String: Task<Void, Never>] = [:]
 
     private let gitHubService: GitHubService
+    @ObservationIgnored private var cacheSaveTask: Task<Void, Never>?
     private let projectCache: ProjectCache
     private let defaults: UserDefaults
 
@@ -405,9 +406,8 @@ final class ProjectStore {
 
     func project(id: String) -> Project? {
         guard var project = projectStates[id]?.snapshot else { return nil }
-        project.items += pendingCreations.values
-            .filter { $0.projectID == id }
-            .map(makePendingProjectItem)
+        let creations = pendingCreations.values.filter { $0.projectID == id }
+        if !creations.isEmpty { project.items += creations.map(makePendingProjectItem) }
         for edit in pendingContentEdits.values {
             for index in project.items.indices where project.items[index].contentId == edit.id {
                 project.items[index].title = edit.title
@@ -511,7 +511,7 @@ final class ProjectStore {
     }
 
     func canEditProject(id: String) -> Bool {
-        guard !deletingProjectIDs.contains(id), let project = project(id: id), project.viewerCanUpdate else { return false }
+        guard !deletingProjectIDs.contains(id), projectStates[id]?.snapshot?.viewerCanUpdate == true else { return false }
         return projectStates[id]?.source == .remote
     }
 
@@ -648,7 +648,7 @@ final class ProjectStore {
         refreshingItemReferences.insert(reference)
         defer { refreshingItemReferences.remove(reference) }
 
-        guard try await refreshProjectSnapshot(id: project.id) != nil else { return }
+        guard try await refreshProjectSnapshot(id: project.id, itemID: reference.itemID) != nil else { return }
 
         if let refreshedItem = item(for: reference) {
             await loadItemDetail(for: refreshedItem, forceRefresh: true)
@@ -664,7 +664,7 @@ final class ProjectStore {
         }
 
         try Task.checkCancellation()
-        await persistCache()
+        persistCache()
     }
 
     func milestoneState(for repository: String) -> RepositoryMilestonesState {
@@ -914,6 +914,8 @@ final class ProjectStore {
     }
 
     func invalidateSession() async throws {
+        cacheSaveTask?.cancel()
+        cacheSaveTask = nil
         isActive = false
         cancelPersonalWorkRequests()
         personalWorkNeedsRefresh = []
@@ -1338,10 +1340,21 @@ final class ProjectStore {
         lastUpdated = snapshot.savedAt
     }
 
-    private func persistCache() async {
+    private func persistCache() {
+        guard isActive, cacheSaveTask == nil else { return }
+        cacheSaveTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            guard let self else { return }
+            // New changes during the write schedule their own subsequent save.
+            self.cacheSaveTask = nil
+            await self.writeCache()
+        }
+    }
+
+    private func writeCache() async {
         guard isActive, let account = currentAccount,
               let owner = selectedOwner,
-              projects.isEmpty == false else { return }
+              !catalogProjectIDs.isEmpty else { return }
         do {
             try await projectCache.save(
                 ProjectCacheSnapshot(
@@ -1356,18 +1369,26 @@ final class ProjectStore {
                     selectedStatusFilter: selectedStatusFilter
                 )
             )
-            cachedAccountLogin = account.login
+            if isActive { cachedAccountLogin = account.login }
         } catch {
+            guard isActive, !Task.isCancelled else { return }
             operationErrorMessage = String(localized: "Project loaded, but the local cache could not be updated: \(error.localizedDescription)")
         }
     }
 
     @discardableResult
-    private func refreshProjectSnapshot(id: String, followedGeneration: Int? = nil) async throws -> Project? {
+    private func refreshProjectSnapshot(id: String, itemID: String? = nil, followedGeneration: Int? = nil) async throws -> Project? {
         guard let state = projectStates[id] else { return nil }
         guard !deletingProjectIDs.contains(id), state.mutations.isEmpty, pendingContentMutations.isEmpty else {
             projectStates[id]?.needsRefresh = true
             return nil
+        }
+        // A partial read cannot replace an initial load or an outstanding full reconciliation.
+        let refreshedItemID: String?
+        if state.source == .remote, case .idle = state.load, !state.needsRefresh {
+            refreshedItemID = itemID
+        } else {
+            refreshedItemID = nil
         }
         let ticket = ProjectReadTicket(
             projectID: id, requestID: UUID(), mutationRevision: state.mutationRevision,
@@ -1377,25 +1398,47 @@ final class ProjectStore {
         projectStates[id]?.load = .loading
         projectStates[id]?.needsRefresh = false
         do {
-            var snapshot = try await gitHubService.fetchProjectWithItems(id: id, owner: state.owner)
+            var snapshot: Project
+            if let refreshedItemID {
+                snapshot = try await gitHubService.fetchProjectMetadata(id: id, owner: state.owner)
+                let item = try await gitHubService.fetchProjectItem(id: refreshedItemID)
+                try Task.checkCancellation()
+                guard canCommit(ticket), let current = projectStates[id]?.snapshot else {
+                    discardRead(ticket)
+                    return nil
+                }
+                snapshot.items = current.items
+                if let index = snapshot.items.firstIndex(where: { $0.id == refreshedItemID }) {
+                    if let item { snapshot.items[index] = item }
+                    else { snapshot.items.remove(at: index) }
+                } else if let item {
+                    snapshot.items.append(item)
+                }
+            } else {
+                snapshot = try await gitHubService.fetchProjectWithItems(id: id, owner: state.owner)
+                try Task.checkCancellation()
+                guard canCommit(ticket) else {
+                    discardRead(ticket)
+                    return nil
+                }
+                snapshot = try await reconcilingCreatedItems(in: snapshot, projectID: id)
+            }
             try Task.checkCancellation()
             guard canCommit(ticket) else {
                 discardRead(ticket)
                 return nil
             }
-            snapshot = try await reconcilingCreatedItems(in: snapshot, projectID: id)
-            try Task.checkCancellation()
-            guard canCommit(ticket) else {
-                discardRead(ticket)
-                return nil
+            if let refreshedItemID {
+                projectStates[id]?.createdItemFieldsAwaitingObservation[refreshedItemID] = nil
+            } else {
+                projectStates[id]?.createdItemFieldsAwaitingObservation = [:]
             }
-            projectStates[id]?.createdItemFieldsAwaitingObservation = [:]
-            snapshot = mergingConfirmedContent(into: snapshot, projectID: id)
+            snapshot = mergingConfirmedContent(into: snapshot, projectID: id, itemID: refreshedItemID)
             projectStates[id]?.snapshot = snapshot
             projectStates[id]?.source = .remote
             projectStates[id]?.load = .idle
             lastUpdated = Date()
-            await persistCache()
+            persistCache()
             return canCommit(ticket) ? snapshot : nil
         } catch {
             guard canCommit(ticket) else { discardRead(ticket); return nil }
@@ -1513,12 +1556,13 @@ final class ProjectStore {
         return reconciled
     }
 
-    private func mergingConfirmedContent(into snapshot: Project, projectID: String) -> Project {
+    private func mergingConfirmedContent(into snapshot: Project, projectID: String, itemID: String? = nil) -> Project {
         guard let versions = projectStates[projectID]?.confirmedContentAwaitingObservation,
               !versions.isEmpty else { return snapshot }
         var merged = snapshot
         for (contentID, version) in versions {
-            guard let index = snapshot.items.firstIndex(where: { $0.contentId == contentID }) else { continue }
+            guard let index = snapshot.items.firstIndex(where: { $0.contentId == contentID }),
+                  itemID == nil || snapshot.items[index].id == itemID else { continue }
             if (snapshot.items[index].title == version.title &&
                 snapshot.items[index].updatedAt == version.updatedAt) ||
                 isNewerGitHubTimestamp(snapshot.items[index].updatedAt, than: version.updatedAt) {
@@ -1623,7 +1667,7 @@ final class ProjectStore {
                 item.fieldValues[fieldID] = .singleSelect(optionId: status.id, name: status.name)
             }
         }
-        await persistCache()
+        persistCache()
     }
 
     func deleteItem(_ item: ProjectItem, from projectID: String) async throws {
@@ -1635,7 +1679,7 @@ final class ProjectStore {
             self.projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
-        await persistCache()
+        persistCache()
     }
 
     func archiveItem(_ item: ProjectItem, in projectID: String) async throws {
@@ -1647,7 +1691,7 @@ final class ProjectStore {
             self.projectStates[projectID]?.createdItemFieldsAwaitingObservation[item.id] = nil
             self.invalidateContentDetails([item.contentId].compactMap { $0 })
         }
-        await persistCache()
+        persistCache()
     }
 
     func updateRoadmap(
@@ -1696,12 +1740,12 @@ final class ProjectStore {
                 }
             }
         } catch {
-            await persistCache()
+            persistCache()
             if error is CancellationError { throw error }
             if error is ProjectStoreError { throw error }
             throw RoadmapEditError.incompleteWrite(error.localizedDescription)
         }
-        await persistCache()
+        persistCache()
     }
 
     func setDefaultPriority(_ priority: ProjectPriority, on item: ProjectItem, in projectID: String) async throws {
@@ -1751,7 +1795,7 @@ final class ProjectStore {
                 }
             }
         }
-        await persistCache()
+        persistCache()
     }
 
     func moveItemToStatus(
@@ -1775,19 +1819,26 @@ final class ProjectStore {
     }
 
     func commonStatuses(for references: [ItemInspectorReference]) -> [String] {
-        guard let first = references.first, let project = project(id: first.projectID) else { return [] }
-        return project.statusOptions.map(\.name).filter { name in
-            references.allSatisfy { reference in
-                self.project(id: reference.projectID)?.statusOptions.contains { $0.name == name } == true
-            }
+        guard let first = references.first,
+              let project = projectStates[first.projectID]?.snapshot else { return [] }
+        let ordered = project.statusOptions.map(\.name)
+        var common = Set(ordered)
+        for id in Set(references.map(\.projectID)).subtracting([first.projectID]) {
+            guard let project = projectStates[id]?.snapshot else { return [] }
+            common.formIntersection(project.statusOptions.map(\.name))
         }
+        return ordered.filter { common.contains($0) }
     }
 
     func canEditItems(_ references: [ItemInspectorReference]) -> Bool {
-        isActive && !references.isEmpty && references.allSatisfy { reference in
-            canEditProject(id: reference.projectID) && item(for: reference) != nil
-                && pendingCreationState(for: reference.itemID) == nil
-                && pendingItemMutations[ItemMutationKey(projectID: reference.projectID, itemID: reference.itemID)] == nil
+        guard isActive, !references.isEmpty else { return false }
+        return Dictionary(grouping: references, by: \.projectID).allSatisfy { id, references in
+            guard canEditProject(id: id), let project = projectStates[id]?.snapshot else { return false }
+            let itemIDs = Set(project.items.map(\.id))
+            return references.allSatisfy { reference in
+                itemIDs.contains(reference.itemID) && pendingCreationState(for: reference.itemID) == nil
+                    && pendingItemMutations[ItemMutationKey(projectID: id, itemID: reference.itemID)] == nil
+            }
         }
     }
 
@@ -2171,7 +2222,7 @@ final class ProjectStore {
             }
             if case .completed = creation.phase, let item = creation.createdItem {
                 commitCreatedItem(item, projectID: creation.projectID)
-                await persistCache()
+                persistCache()
                 projectStates[creation.projectID]?.needsRefresh = true
                 scheduleReconciliation()
             }
@@ -2201,7 +2252,7 @@ final class ProjectStore {
         commitCreatedItem(ProjectItem(id: itemID, contentId: nil, contentType: .draftIssue,
                                       title: title, number: nil, url: nil, issueState: nil, prState: nil,
                                       status: nil, statusOptionId: nil, assignees: []), projectID: project.id)
-        await persistCache()
+        persistCache()
         projectStates[project.id]?.needsRefresh = true
         scheduleReconciliation()
     }
@@ -2223,7 +2274,7 @@ final class ProjectStore {
                                       title: candidate.title, number: candidate.number, url: candidate.url,
                                       issueState: nil, prState: nil, status: nil,
                                       statusOptionId: nil, assignees: []), projectID: project.id)
-        await persistCache()
+        persistCache()
         projectStates[project.id]?.needsRefresh = true
         scheduleReconciliation()
     }
@@ -2377,7 +2428,7 @@ final class ProjectStore {
                 throw error
             }
         }
-        await persistCache()
+        persistCache()
     }
 
     private func requiresReconciliation(_ error: Error) -> Bool {

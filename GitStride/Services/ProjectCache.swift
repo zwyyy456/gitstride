@@ -83,6 +83,10 @@ actor ProjectCache {
             withIntermediateDirectories: true
         )
         try encoder.encode(snapshot).write(to: fileURL, options: .atomic)
+        var cacheURL = fileURL
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try cacheURL.setResourceValues(values)
     }
 
     func removeProject(id: String) throws {
