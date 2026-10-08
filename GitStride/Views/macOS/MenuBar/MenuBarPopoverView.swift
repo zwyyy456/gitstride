@@ -146,9 +146,15 @@ struct MenuBarPopoverView: View {
                     Label("Settings…", systemImage: "gearshape")
                 }
 
-                Button(action: openCoffeePage) {
-                    Label("Buy Me a Coffee", systemImage: "cup.and.saucer.fill")
+                #if APP_STORE
+                Button {
+                    dismissMenuBar()
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "about")
+                } label: {
+                    Label("Support GitStride", systemImage: "cup.and.saucer.fill")
                 }
+                #endif
 
                 Divider()
 
@@ -189,11 +195,6 @@ struct MenuBarPopoverView: View {
             await store.refresh()
             isRefreshing = false
         }
-    }
-
-    private func openCoffeePage() {
-        guard let url = URL(string: "https://donate.stripe.com/aFa14ociW0pndDCa0K8bS00") else { return }
-        NSWorkspace.shared.open(url)
     }
 
     private func openQuickAdd(initialQuickEntry: String = "") {

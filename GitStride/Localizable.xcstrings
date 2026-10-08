@@ -1102,18 +1102,18 @@
         }
       }
     },
-    "All features are free. Support is optional and can be repeated." : {
+    "All features are free. Support is optional." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All features are free. Support is optional and can be repeated."
+            "value" : "All features are free. Support is optional."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "所有功能均可免费使用。支持开发完全自愿，也可以多次支持。"
+            "value" : "所有功能均可免费使用。支持开发完全自愿。"
           }
         }
       }
@@ -1783,6 +1783,22 @@
         }
       }
     },
+    "Available shortcuts depend on the active window and view. Shortcuts are shown for reference and can’t be edited here." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available shortcuts depend on the active window and view. Shortcuts are shown for reference and can’t be edited here."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可用快捷键取决于当前窗口和视图。此处仅展示快捷键，无法编辑。"
+          }
+        }
+      }
+    },
     "Awaiting first match" : {
       "localizations" : {
         "en" : {
@@ -2023,6 +2039,7 @@
       }
     },
     "Buy Me a Coffee" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5772,6 +5789,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "条目快捷键仅在文本输入框和编辑器之外生效。"
+          }
+        }
+      }
+    },
+    "Item shortcuts work outside text fields and editors. Select or open an item to act on it; available actions depend on the item and your permissions. C adds an item in an editable project view." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item shortcuts work outside text fields and editors. Select or open an item to act on it; available actions depend on the item and your permissions. C adds an item in an editable project view."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "条目快捷键仅在文本输入框和编辑器之外生效。选中或打开条目后可对其操作，可用操作取决于条目及你的权限。在可编辑的项目视图中，按 C 可添加条目。"
           }
         }
       }
@@ -11314,6 +11347,7 @@
       }
     },
     "Show or hide inspector" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11631,6 +11665,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "状态映射"
+          }
+        }
+      }
+    },
+    "Status navigation and refresh work outside text fields. To add an item, start the search text with > and press Return to open Add to Project when the current project is editable." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status navigation and refresh work outside text fields. To add an item, start the search text with > and press Return to open Add to Project when the current project is editable."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态切换和刷新快捷键仅在文本输入框之外生效。当前项目可编辑时，在搜索框中以 > 开头输入内容，再按回车打开“添加到项目”窗口。"
           }
         }
       }
@@ -12679,6 +12729,7 @@
       }
     },
     "Type > into the empty search field when a project is editable. Shortcuts are shown for reference and can’t be edited here." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

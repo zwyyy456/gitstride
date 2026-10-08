@@ -171,20 +171,34 @@ struct GeneralSettingsView: View {
 struct ShortcutsSettingsView: View {
     var body: some View {
         Form {
-            Section("In GitStride") {
-                KeyboardShortcutRow(keys: ["⇧", "⌘", "N"], description: String(localized: "Add to Project"))
+            Section {
+                ForEach([WorkspaceShortcut.palette, .find, .refresh, .refreshProjects, .newProject, .addItem, .inspector]) { shortcut in
+                    KeyboardShortcutRow(keys: [shortcut.label], description: shortcut.title)
+                }
                 KeyboardShortcutRow(keys: ["⌘", ","], description: String(localized: "Open Settings"))
-                KeyboardShortcutRow(keys: ["⌘", "R"], description: String(localized: "Refresh"))
-                KeyboardShortcutRow(keys: ["⌥", "⌘", "I"], description: String(localized: "Show or hide inspector"))
+            } header: {
+                Text("In GitStride")
+            } footer: {
+                Text("Available shortcuts depend on the active window and view. Shortcuts are shown for reference and can’t be edited here.")
+            }
+            Section {
+                ForEach([WorkspaceShortcut.createItem, .status, .assignees, .labels, .priority, .edit, .copyLink]) { shortcut in
+                    KeyboardShortcutRow(keys: [shortcut.label], description: shortcut.title)
+                }
+            } header: {
+                Text("Item Actions")
+            } footer: {
+                Text("Item shortcuts work outside text fields and editors. Select or open an item to act on it; available actions depend on the item and your permissions. C adds an item in an editable project view.")
             }
             Section {
                 KeyboardShortcutRow(keys: ["⌘", "←"], description: String(localized: "Previous status tab"))
                 KeyboardShortcutRow(keys: ["⌘", "→"], description: String(localized: "Next status tab"))
-                KeyboardShortcutRow(keys: [">"], description: String(localized: "Add to Project from search"))
+                KeyboardShortcutRow(keys: [WorkspaceShortcut.refresh.label], description: WorkspaceShortcut.refresh.title)
+                KeyboardShortcutRow(keys: [">", " … ", "↩"], description: String(localized: "Add to Project from search"))
             } header: {
                 Text("In the Menu Bar Popover")
             } footer: {
-                Text("Type > into the empty search field when a project is editable. Shortcuts are shown for reference and can’t be edited here.")
+                Text("Status navigation and refresh work outside text fields. To add an item, start the search text with > and press Return to open Add to Project when the current project is editable.")
             }
         }
         .formStyle(.grouped)
@@ -250,7 +264,7 @@ struct AboutView: View {
 
             #if APP_STORE
             VStack(spacing: 8) {
-                Text("All features are free. Support is optional and can be repeated.")
+                Text("All features are free. Support is optional.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
