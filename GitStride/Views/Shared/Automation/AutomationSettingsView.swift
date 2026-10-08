@@ -179,6 +179,10 @@ struct AutomationSetupSheet: View {
                     }
                 case .waitingForBrowser:
                     Section {
+                        if let code = setup.verificationCode {
+                            Text("Enter this code in your browser:")
+                            Text(code).font(.title.monospaced()).textSelection(.enabled)
+                        }
                         Text("Finish authorization in your browser, then return to GitStride.")
                         Button("Open Browser") {
                             if let url = setup.browserURL() { openURL(url) }

@@ -47,6 +47,20 @@ test("recovers an existing account only from a verified setup, preserving mappin
     }), testEnv);
     expect(managed.status).toBe(200);
     expect(await managed.json()).toMatchObject({ automations: [{ id: automationID, enabled: false }] });
+    await testEnv.DB.prepare("UPDATE project_automations SET health_state = 'ISSUE_REPOSITORY_NOT_ACCESSIBLE' WHERE id = ?")
+        .bind(automationID).run();
+    const resume = () => handleManagementRequest(new Request(`https://example.invalid/api/automations/${automationID}`, {
+        method: "PATCH", headers: { Authorization: `Bearer ${managementToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: true }),
+    }), testEnv);
+    expect((await resume()).status).toBe(409); // An empty installation still cannot run.
+    await testEnv.DB.prepare(`INSERT INTO installation_repositories
+        (installation_id, repository_id, repository_node_id, name_with_owner, updated_at)
+        VALUES (951, 1951, 'REPOSITORY-RECOVERY', 'owner/repository', ?)`)
+        .bind(new Date().toISOString()).run();
+    const resumed = await resume();
+    expect(resumed.status).toBe(200);
+    expect(await resumed.json()).toMatchObject({ automation: { enabled: true, healthState: "CONTENT_VISIBILITY_UNVERIFIED" } });
 });
 
 test("does not grant recovery access to a different account", async () => {
@@ -174,4 +188,33 @@ test("rolls back a management token when the account automation already exists",
 
     expect(token).toBeNull();
     expect(session?.state).toBe("CONFIGURATION_PENDING");
+});
+
+test("requires the app code and the same browser before accepting OAuth", async () => {
+    const runtime = { ...testEnv, PUBLIC_BASE_URL: "https://example.invalid", GITHUB_OAUTH_CLIENT_ID: "test-client" };
+    const created = await handleSetupRequest(new Request("https://example.invalid/api/setup/sessions", { method: "POST" }), runtime);
+    expect(created.status).toBe(201);
+    const session = await created.json<{ id: string; setupToken: string; verificationCode: string; authorizationURL: string }>();
+    const page = await handleSetupRequest(new Request(session.authorizationURL), runtime);
+    expect(page.status).toBe(200);
+    expect(await page.text()).not.toContain(session.verificationCode);
+    const cookie = page.headers.get("Set-Cookie")!.split(";")[0];
+    const browserToken = cookie.split("=")[1];
+    const submit = (code: string) => handleSetupRequest(new Request(session.authorizationURL, {
+        method: "POST", headers: { Cookie: cookie, Origin: "https://example.invalid" },
+        body: new URLSearchParams({ browserToken, verificationCode: code }),
+    }), runtime);
+    expect((await submit("wrong")).status).toBe(403);
+    expect((await handleSetupRequest(new Request(`https://example.invalid/api/setup/sessions/${session.id}/options`, {
+        headers: { Authorization: `Bearer ${session.setupToken}` },
+    }), runtime)).status).toBe(409);
+    const authorized = await submit(session.verificationCode);
+    expect(authorized.status).toBe(303);
+    expect((await submit(session.verificationCode)).status).toBe(409);
+    const state = new URL(authorized.headers.get("Location")!).searchParams.get("state");
+    // A valid state is insufficient without the browser that verified the code.
+    const callback = await handleSetupRequest(new Request(`https://example.invalid/oauth/callback?code=unused&state=${state}`), runtime);
+    expect(callback.status).toBe(403);
+    expect(await testEnv.DB.prepare("SELECT state FROM setup_sessions WHERE id = ?").bind(session.id).first())
+        .toEqual({ state: "OAUTH_PENDING" });
 });

@@ -97,6 +97,8 @@
 - Worker 确认至少一次 Project Status 写入或 automation 连接健康发生变化后，通过按 automation 隔离的 Durable Object WebSocket 只发送带单调 revision 的分类失效事件，不发送 Project 或 Issue 内容。App 收到任一事件后重新加载 automation 连接状态；Project 数据变化或初次连接事件还会刷新当前和 followed Project 快照，以补偿 App 未运行期间错过的事件。
 - Gateway 在每次确认 Status 写入后向 Runner 回执；Runner 在本轮调用中保留该事实，包括 OAuth 重试和后续目标失败的情况，并在处理 delivery 结果后发送项目数据失效通知。回执不替代原有错误分类、重试或停用流程。
 - 已存在的账户级 automation 通过完成 OAuth 与 installation 归属验证的 setup session 恢复本机管理权限；恢复保留原映射和启停状态，不创建重复 automation。管理 token 在本机 Keychain 保存后才提交，服务端只保存其哈希，重复提交不得重复授予凭据。
+- setup 必须验证 App 显示的短码、OAuth 回调所属浏览器及用户对账号的明确确认后，才开放配置或管理权限恢复。重新授权替换凭据并保留启停状态；旧凭据的异步结果不能修改新连接。OAuth 健康状态和 scope 提交与 token 保存同样校验凭据版本。
+- 单个对象不可见或超出 installation 范围不得停用整个 automation；完整事实不可用时不推导该对象状态。账户级停用限于凭据、配置或连接整体故障。
 - 桌面 OAuth 和 CLI 凭据只服务交互式浏览与编辑；后台 automation 不读取或复制这两种本机凭据，桌面退出登录不停止后台 automation。
 - Worker 为完成自动化会瞬时接收 GitHub Project Item 响应，但应用层只传播必要 identity 字段，不持久化或记录私人 Issue 内容，也不保存 Issue 到 Project Item 的映射。
 - Webhook 与运行日志只能包含 delivery ID、automation ID、处理阶段、状态码、稳定错误码，尝试次数、重试延迟、已确认写入数量和错误来源分类，以及工作流诊断所需的关联数量、匿名 Issue/PR 状态分类和目标状态、Ready PR 策略；不得包含完整 payload、Issue 标题/正文或凭据。

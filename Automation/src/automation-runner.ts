@@ -159,8 +159,8 @@ export class AutomationRunner {
                 await this.database.prepare(
                     `UPDATE project_automations
                      SET health_state = 'ACTIVE', updated_at = ?
-                     WHERE id = ? AND health_state = 'CONTENT_VISIBILITY_UNVERIFIED'`
-                ).bind(new Date().toISOString(), automation.automation_id).run();
+                     WHERE id = ? AND oauth_credential_id = ? AND health_state = 'CONTENT_VISIBILITY_UNVERIFIED'`
+                ).bind(new Date().toISOString(), automation.automation_id, automation.oauth_credential_id).run();
             }
             stage = "COMPLETE_DELIVERY";
             await this.finishDelivery(
@@ -274,23 +274,19 @@ export class AutomationRunner {
         }
 
         await this.finishDelivery(deliveryID, "FAILED", code);
-        await this.database.prepare(
-            `UPDATE project_automations
-             SET enabled = 0, health_state = ?, updated_at = ?
-             WHERE id = ?`
-        ).bind(code, new Date().toISOString(), automation.automation_id).run();
-        if (code === "OAUTH_REAUTH_REQUIRED" || code === "OAUTH_SCOPE_MISSING") {
+        const accountFailure = code === "OAUTH_REAUTH_REQUIRED" || code === "OAUTH_SCOPE_MISSING"
+            || code === "PROJECT_CONFIGURATION_INVALID" || code === "PROJECT_API_INCOMPATIBLE";
+        if (accountFailure) {
+            const version = error instanceof OAuthCredentialError ? error.credentialVersion ?? null : null;
             await this.database.prepare(
-                `UPDATE oauth_credentials
-                 SET health_state = ?, updated_at = ?
-                 WHERE id = ? AND health_state != 'REVOKED'`
-            ).bind(
-                code === "OAUTH_SCOPE_MISSING" ? "SCOPE_MISSING" : "REAUTHORIZATION_REQUIRED",
-                new Date().toISOString(),
-                automation.oauth_credential_id
-            ).run();
+                `UPDATE project_automations SET enabled = 0, health_state = ?, updated_at = ?
+                 WHERE id = ? AND oauth_credential_id = ?
+                   AND (? IS NULL OR EXISTS
+                     (SELECT 1 FROM oauth_credentials WHERE id = project_automations.oauth_credential_id
+                      AND credential_version = ?))`
+            ).bind(code, new Date().toISOString(), automation.automation_id, automation.oauth_credential_id, version, version).run();
         }
-        await this.publishChange(deliveryID, automation.automation_id, "automation_changed");
+        if (accountFailure) await this.publishChange(deliveryID, automation.automation_id, "automation_changed");
         console.info("automation_delivery_failed", {
             ...diagnostics,
             deliveryID,

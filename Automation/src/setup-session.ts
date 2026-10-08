@@ -2,11 +2,12 @@ import type { Env } from "./index";
 
 const setupLifetimeMilliseconds = 30 * 60 * 1000;
 
-export type SetupState = "OAUTH_PENDING" | "INSTALLATION_PENDING" | "CONFIGURATION_PENDING" | "RECOVERY_PENDING" | "COMPLETE";
+export type SetupState = "VERIFICATION_PENDING" | "CONFIRMATION_PENDING" | "OAUTH_PENDING" | "INSTALLATION_PENDING" | "CONFIGURATION_PENDING" | "RECOVERY_PENDING" | "COMPLETE";
 
 export interface SetupSessionRecord {
     id: string;
     setup_token_hash: string;
+    browser_token_hash?: string;
     user_id: string | null;
     oauth_credential_id: string | null;
     installation_id: number | null;
@@ -22,13 +23,14 @@ export interface SetupSessionRecord {
 export async function createSetupSession(_request: Request, env: Env): Promise<Response> {
     const id = crypto.randomUUID();
     const setupToken = randomToken();
+    const verificationCode = Array.from(crypto.getRandomValues(new Uint8Array(4)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + setupLifetimeMilliseconds).toISOString();
     await env.DB.prepare(
         `INSERT INTO setup_sessions (
             id, setup_token_hash, user_id, management_token_id, purpose,
-            state, expires_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, 'OAUTH_PENDING', ?, ?, ?)`
+            state, expires_at, created_at, updated_at, verification_code_hash
+         ) VALUES (?, ?, ?, ?, ?, 'VERIFICATION_PENDING', ?, ?, ?, ?)`
     ).bind(
         id,
         await hashToken(setupToken),
@@ -37,11 +39,13 @@ export async function createSetupSession(_request: Request, env: Env): Promise<R
         "INITIAL",
         expiresAt,
         now.toISOString(),
-        now.toISOString()
+        now.toISOString(),
+        await hashToken(verificationCode)
     ).run();
     return Response.json({
         id,
         setupToken,
+        verificationCode,
         authorizationURL: `${publicBaseURL(env)}/setup/${id}/oauth`,
         expiresAt,
     }, { status: 201 });
@@ -55,25 +59,27 @@ export async function createReauthorizationSession(
 ): Promise<Response> {
     const id = crypto.randomUUID();
     const setupToken = randomToken();
+    const verificationCode = Array.from(crypto.getRandomValues(new Uint8Array(4)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + setupLifetimeMilliseconds).toISOString();
     const result = await env.DB.prepare(
         `INSERT INTO setup_sessions (
             id, setup_token_hash, user_id, oauth_credential_id, installation_id,
-            state, expires_at, created_at, updated_at, purpose, automation_id
+            state, expires_at, created_at, updated_at, purpose, automation_id, verification_code_hash
          )
-         SELECT ?, ?, ?, oauth_credential_id, ?, 'OAUTH_PENDING', ?, ?, ?,
-                'REAUTHORIZE', id
+         SELECT ?, ?, ?, oauth_credential_id, ?, 'VERIFICATION_PENDING', ?, ?, ?,
+                'REAUTHORIZE', id, ?
          FROM project_automations
          WHERE id = ? AND user_id = ?`
     ).bind(
         id, await hashToken(setupToken), userID, installationID,
-        expiresAt, now.toISOString(), now.toISOString(), automationID, userID
+        expiresAt, now.toISOString(), now.toISOString(), await hashToken(verificationCode), automationID, userID
     ).run();
     if (result.meta.changes !== 1) throw new SetupRequestError(404, "AUTOMATION_NOT_FOUND");
     return Response.json({
         id,
         setupToken,
+        verificationCode,
         authorizationURL: `${publicBaseURL(env)}/setup/${id}/oauth`,
         expiresAt,
     }, { status: 201 });
@@ -104,7 +110,7 @@ export async function authenticateSetupSession(
 export async function loadSession(database: D1Database, sessionID: string): Promise<SetupSessionRecord> {
     const session = await database.prepare(
         `SELECT id, setup_token_hash, user_id, oauth_credential_id, installation_id,
-                state, expires_at, purpose, automation_id, management_token_id
+                state, expires_at, purpose, automation_id, management_token_id, browser_token_hash
          FROM setup_sessions WHERE id = ?`
     ).bind(sessionID).first<SetupSessionRecord>();
     if (!session) throw new SetupRequestError(404, "SETUP_NOT_FOUND");

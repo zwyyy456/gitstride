@@ -46,6 +46,16 @@ describe("AutomationRunner", () => {
         );
     });
 
+    test("an indeterminate item fails only its delivery", async () => {
+        const database = new RunnerDatabase();
+        const gateway = new StubGateway({});
+        gateway.error = new PersonalProjectError("VISIBILITY_INDETERMINATE");
+        const runner = new AutomationRunner(database.binding, new StubTruthReader([issueTruth()]), gateway, new StubNotifier());
+        expect(await runner.run(message, 1)).toEqual({ action: "ack" });
+        expect(database.deliveryState).toBe("FAILED");
+        expect(database.enabled).toBe(1);
+    });
+
     test("keeps confirmed writes when OAuth repeats the operation and the retry fails", async () => {
         const database = new RunnerDatabase();
         const notifier = new StubNotifier();

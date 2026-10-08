@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Enter this code in your browser:" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在浏览器中输入此验证码："
+          }
+        }
+      }
+    },
     "" : {
       "shouldTranslate" : false
     },

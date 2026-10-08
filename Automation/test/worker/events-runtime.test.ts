@@ -49,7 +49,21 @@ test("streams project invalidations only to an authenticated automation connecti
         type: "automation_changed",
         revision: 2,
     });
-    socket?.close(1000, "test complete");
+    const disconnected = new Promise<void>(resolve => socket!.addEventListener("close", () => resolve(), { once: true }));
+    socket!.close(1000, "reconnect");
+    await disconnected;
+    await testEnv.AUTOMATION_EVENTS.getByName(automationID).publish("project_data_changed");
+    const reconnected = await SELF.fetch("https://example.invalid/api/events", {
+        headers: { Authorization: `Bearer ${managementToken}`, Upgrade: "websocket" },
+    });
+    const currentSocket = reconnected.webSocket!;
+    currentSocket.accept();
+    await expect(nextWebSocketMessage(currentSocket)).resolves.toEqual({ type: "ready", revision: 3 });
+    const closed = new Promise<number>(resolve => currentSocket.addEventListener("close", event => resolve(event.code), { once: true }));
+    await testEnv.DB.prepare("UPDATE management_tokens SET revoked_at = ? WHERE user_id = ?")
+        .bind(new Date().toISOString(), setup.user_id).run();
+    await testEnv.AUTOMATION_EVENTS.getByName(automationID).publish("project_data_changed");
+    expect(await closed).toBe(1008);
 });
 
 test.each([

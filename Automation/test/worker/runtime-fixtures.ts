@@ -38,6 +38,7 @@ export async function nextWebSocketMessage(socket: WebSocket): Promise<unknown> 
 export function environmentWith(queue: Queue<DeliveryMessage>): Env {
     return {
         DB: testEnv.DB,
+        SETUP_RATE_LIMITER: testEnv.SETUP_RATE_LIMITER,
         AUTOMATION_QUEUE: queue,
         AUTOMATION_EVENTS: testEnv.AUTOMATION_EVENTS,
         GITHUB_API_VERSION: "2026-03-10",

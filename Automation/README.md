@@ -194,6 +194,16 @@ gitstride-automation` and `wrangler queues list` to inspect the existing resourc
 instead of creating them again. The configured Durable Object is provisioned
 by the Worker deployment migration.
 
+The setup flow requires the device code displayed by the updated GitStride client,
+then an explicit browser confirmation of the GitHub account. Deploy the updated
+client with this Worker; older clients cannot display the required code. Migration
+0011 expires unfinished setup sessions, so those users must start setup again.
+Existing automations and management tokens are preserved.
+
+For an installation that has not yet applied migration 0006, pause webhook intake
+and drain pending deliveries before upgrading: that historical migration rebuilds
+the delivery table. Keep the existing migrations unchanged for deployed databases.
+
 Apply the schema before serving setup or webhook traffic. Cloudflare records a
 backup when applying remote D1 migrations:
 

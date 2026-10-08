@@ -36,7 +36,10 @@ export async function handleManagementRequest(request: Request, env: Env): Promi
             return await updateAutomation(request, identity.userID, match[1], env.DB);
         }
         if (request.method === "DELETE" && !match[2]) {
-            return await deleteAutomation(identity.userID, match[1], env.DB);
+            const response = await deleteAutomation(identity.userID, match[1], env.DB);
+            try { await env.AUTOMATION_EVENTS.getByName(match[1]).closeConnections(); }
+            catch { console.warn("automation_events_disconnect_failed", { automationID: match[1] }); }
+            return response;
         }
         if (request.method === "POST" && match[2] === "reauthorization") {
             return await beginReauthorization(identity.userID, match[1], env);
@@ -108,13 +111,17 @@ async function updateAutomation(
         throw new ManagementRequestError(409, "AUTOMATION_NOT_READY");
     }
     const now = new Date().toISOString();
+    const healthState = body.enabled && (automation.health_state === "ISSUE_REPOSITORY_NOT_ACCESSIBLE"
+        || automation.health_state === "VISIBILITY_INDETERMINATE")
+        ? "CONTENT_VISIBILITY_UNVERIFIED" : automation.health_state;
     await database.prepare(
-        "UPDATE project_automations SET enabled = ?, updated_at = ? WHERE id = ? AND user_id = ?"
-    ).bind(body.enabled ? 1 : 0, now, automationID, userID).run();
+        "UPDATE project_automations SET enabled = ?, health_state = ?, updated_at = ? WHERE id = ? AND user_id = ?"
+    ).bind(body.enabled ? 1 : 0, healthState, now, automationID, userID).run();
     return Response.json({
         automation: publicAutomation({
             ...automation,
             enabled: body.enabled ? 1 : 0,
+            health_state: healthState,
             updated_at: now,
         }),
     });
@@ -234,7 +241,9 @@ function canEnable(automation: AutomationRecord): boolean {
         && automation.credential_health_state === "ACTIVE"
         && automation.repository_count > 0
         && (automation.health_state === "ACTIVE"
-            || automation.health_state === "CONTENT_VISIBILITY_UNVERIFIED");
+            || automation.health_state === "CONTENT_VISIBILITY_UNVERIFIED"
+            || automation.health_state === "ISSUE_REPOSITORY_NOT_ACCESSIBLE"
+            || automation.health_state === "VISIBILITY_INDETERMINATE");
 }
 
 function publicAutomation(automation: AutomationRecord): Record<string, unknown> {

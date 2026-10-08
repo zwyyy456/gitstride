@@ -8,7 +8,7 @@ export type OAuthCredentialErrorCode =
     | "TRANSIENT_GITHUB_FAILURE";
 
 export class OAuthCredentialError extends Error {
-    constructor(readonly code: OAuthCredentialErrorCode) {
+    constructor(readonly code: OAuthCredentialErrorCode, readonly credentialVersion?: number) {
         super(code);
     }
 }
@@ -83,13 +83,17 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
             }
         }
 
-        const refreshed = await this.refreshCredential(credential);
+        const current = await this.loadCredential(credentialID);
+        await this.requireActiveCredential(current);
+        const refreshed = current.credential_version !== credential.credential_version
+            ? { record: current, accessToken: await decryptCredentialToken(current.id, "access", current.encrypted_access_token, this.configuration.encryptionKey) }
+            : await this.refreshCredential(current);
         try {
             return await operation(refreshed.accessToken);
         } catch (error) {
             if (isUnauthorized(error)) {
-                await this.setHealthState(credential.id, "REVOKED");
-                throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED");
+                await this.setHealthState(refreshed.record, "REVOKED");
+                throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED", refreshed.record.credential_version);
             }
             throw error;
         }
@@ -118,15 +122,15 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
 
     private async requireActiveCredential(credential: CredentialRecord): Promise<void> {
         if (credential.health_state === "SCOPE_MISSING") {
-            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING");
+            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING", credential.credential_version);
         }
         if (credential.health_state !== "ACTIVE") {
-            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED");
+            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED", credential.credential_version);
         }
         const scopes = decodeScopes(credential.granted_scopes);
         if (!scopes.includes("project")) {
-            await this.setHealthState(credential.id, "SCOPE_MISSING");
-            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING");
+            await this.setHealthState(credential, "SCOPE_MISSING");
+            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING", credential.credential_version);
         }
     }
 
@@ -134,8 +138,8 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
         credential: CredentialRecord
     ): Promise<{ record: CredentialRecord; accessToken: string }> {
         if (this.isExpired(credential.refresh_token_expires_at)) {
-            await this.setHealthState(credential.id, "REAUTHORIZATION_REQUIRED");
-            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED");
+            await this.setHealthState(credential, "REAUTHORIZATION_REQUIRED");
+            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED", credential.credential_version);
         }
         const refreshToken = await decryptCredentialToken(
             credential.id,
@@ -149,7 +153,8 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
         } catch (error) {
             if (error instanceof OAuthCredentialError
                 && error.code === "OAUTH_REAUTH_REQUIRED") {
-                await this.setHealthState(credential.id, "REAUTHORIZATION_REQUIRED");
+                await this.setHealthState(credential, "REAUTHORIZATION_REQUIRED");
+                throw new OAuthCredentialError(error.code, credential.credential_version);
             }
             throw error;
         }
@@ -167,9 +172,9 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
         const validatedScopes = await this.validateIdentityAndScopes(
             refreshed.accessToken,
             credential.github_user_node_id,
-            credential.id
+            record
         );
-        await this.saveValidatedScopes(credential.id, validatedScopes);
+        await this.saveValidatedScopes(record, validatedScopes);
         record.granted_scopes = JSON.stringify(validatedScopes);
         return {
             accessToken: refreshed.accessToken,
@@ -230,7 +235,7 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
     private async validateIdentityAndScopes(
         accessToken: string,
         expectedUserNodeID: string,
-        credentialID: string
+        credential: CredentialRecord
     ): Promise<string[]> {
         let response: Response;
         try {
@@ -246,8 +251,8 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
             throw new OAuthCredentialError("TRANSIENT_GITHUB_FAILURE");
         }
         if (response.status === 401) {
-            await this.setHealthState(credentialID, "REVOKED");
-            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED");
+            await this.setHealthState(credential, "REVOKED");
+            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED", credential.credential_version);
         }
         if (!response.ok) {
             throw new OAuthCredentialError("TRANSIENT_GITHUB_FAILURE");
@@ -255,8 +260,8 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
 
         const scopes = parseScopeHeader(response.headers.get("X-OAuth-Scopes"));
         if (!scopes.includes("project")) {
-            await this.setHealthState(credentialID, "SCOPE_MISSING");
-            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING");
+            await this.setHealthState(credential, "SCOPE_MISSING");
+            throw new OAuthCredentialError("OAUTH_SCOPE_MISSING", credential.credential_version);
         }
         let body: unknown;
         try {
@@ -265,8 +270,8 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
             throw new OAuthCredentialError("TRANSIENT_GITHUB_FAILURE");
         }
         if (!isRecord(body) || body.node_id !== expectedUserNodeID) {
-            await this.setHealthState(credentialID, "REAUTHORIZATION_REQUIRED");
-            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED");
+            await this.setHealthState(credential, "REAUTHORIZATION_REQUIRED");
+            throw new OAuthCredentialError("OAUTH_REAUTH_REQUIRED", credential.credential_version);
         }
         return scopes;
     }
@@ -297,7 +302,7 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
                  credential_version = credential_version + 1,
                  health_state = 'ACTIVE',
                  updated_at = ?
-             WHERE id = ? AND credential_version = ?`
+             WHERE id = ? AND credential_version = ? AND health_state = 'ACTIVE'`
         ).bind(
             encryptedAccessToken,
             encryptedRefreshToken,
@@ -318,24 +323,27 @@ export class OAuthCredentialProvider implements AccessTokenProvider {
     }
 
     private async setHealthState(
-        credentialID: string,
+        credential: CredentialRecord,
         state: CredentialRecord["health_state"]
     ): Promise<void> {
-        await this.database.prepare(
-            "UPDATE oauth_credentials SET health_state = ?, updated_at = ? WHERE id = ?"
-        ).bind(state, new Date(this.now()).toISOString(), credentialID).run();
+        const result = await this.database.prepare(
+            `UPDATE oauth_credentials SET health_state = ?, updated_at = ?
+             WHERE id = ? AND credential_version = ? AND health_state = 'ACTIVE'`
+        ).bind(state, new Date(this.now()).toISOString(), credential.id, credential.credential_version).run();
+        if (result.meta.changes !== 1) throw new OAuthCredentialError("TRANSIENT_GITHUB_FAILURE");
     }
 
-    private async saveValidatedScopes(credentialID: string, scopes: string[]): Promise<void> {
-        await this.database.prepare(
+    private async saveValidatedScopes(credential: CredentialRecord, scopes: string[]): Promise<void> {
+        const result = await this.database.prepare(
             `UPDATE oauth_credentials
-             SET granted_scopes = ?, health_state = 'ACTIVE', updated_at = ?
-             WHERE id = ?`
+             SET granted_scopes = ?, updated_at = ?
+             WHERE id = ? AND credential_version = ? AND health_state = 'ACTIVE'`
         ).bind(
             JSON.stringify(scopes),
             new Date(this.now()).toISOString(),
-            credentialID
+            credential.id, credential.credential_version
         ).run();
+        if (result.meta.changes !== 1) throw new OAuthCredentialError("TRANSIENT_GITHUB_FAILURE");
     }
 
     private expiresWithinBuffer(value: string): boolean {

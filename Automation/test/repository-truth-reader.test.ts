@@ -65,9 +65,7 @@ describe("RepositoryTruthReader", () => {
         await expect(reader.loadWorkflowTruth(
             { id: 7, repositoryNodeIDs: new Set(["REPOSITORY_101"]) },
             { repositoryNodeID: "SOURCE_REPOSITORY", number: 42 }
-        )).rejects.toMatchObject({
-            code: "ISSUE_REPOSITORY_NOT_ACCESSIBLE",
-        });
+        )).resolves.toEqual([]);
     });
 });
 

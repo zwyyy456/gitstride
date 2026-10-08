@@ -24,7 +24,7 @@ struct AutomationSetupModelTests {
             switch (request.httpMethod, path) {
             case ("POST", "/api/setup/sessions"):
                 return response(request, status: 201, body: """
-                    {"id":"setup","setupToken":"setup-token","authorizationURL":"https://example.invalid/setup/setup/oauth","expiresAt":"2099-01-01T00:00:00Z"}
+                    {"id":"setup","setupToken":"setup-token","verificationCode":"AB12CD34","authorizationURL":"https://example.invalid/setup/setup/oauth","expiresAt":"2099-01-01T00:00:00Z"}
                     """)
             case ("GET", "/api/setup/sessions/setup"):
                 return response(request, body: """
@@ -111,7 +111,7 @@ struct AutomationSetupModelTests {
             switch (request.httpMethod, request.url?.path) {
             case ("POST", "/api/setup/sessions"):
                 return response(request, body: """
-                    {"id":"setup","setupToken":"setup-token","authorizationURL":"https://example.invalid/authorize"}
+                    {"id":"setup","setupToken":"setup-token","verificationCode":"AB12CD34","authorizationURL":"https://example.invalid/authorize"}
                     """)
             case ("GET", "/api/setup/sessions/setup"):
                 return response(request, body: "{\"state\":\"\(initialState)\"}")
@@ -175,7 +175,7 @@ struct AutomationSetupModelTests {
                     """)
             case ("POST", "/api/automations/automation/reauthorization"):
                 return response(request, status: 201, body: """
-                    {"id":"reauthorization","setupToken":"setup-token","authorizationURL":"https://example.invalid/setup/reauthorization/oauth","expiresAt":"2099-01-01T00:00:00Z"}
+                    {"id":"reauthorization","setupToken":"setup-token","verificationCode":"AB12CD34","authorizationURL":"https://example.invalid/setup/reauthorization/oauth","expiresAt":"2099-01-01T00:00:00Z"}
                     """)
             case ("GET", "/api/setup/sessions/reauthorization"):
                 return response(request, body: """

@@ -26,6 +26,7 @@ final class AutomationSetupModel {
 
     private(set) var phase: Phase
     private(set) var errorMessage: String?
+    private(set) var verificationCode: String?
     private(set) var setupSessionID: String?
     private(set) var projects: [AutomationService.Project] = []
     private(set) var statusFields: [AutomationService.StatusField] = []
@@ -125,6 +126,7 @@ final class AutomationSetupModel {
             let session = try await service.createSetupSession()
             setupSessionID = session.id
             setupToken = session.setupToken
+            verificationCode = session.verificationCode
             authorizationURL = session.authorizationURL
             phase = .waitingForBrowser
             return session.authorizationURL
@@ -151,7 +153,7 @@ final class AutomationSetupModel {
                 )
                 guard self.setupSessionID == sessionID, !Task.isCancelled else { return }
                 switch status.state {
-                case "OAUTH_PENDING", "INSTALLATION_PENDING":
+                case "VERIFICATION_PENDING", "OAUTH_PENDING", "CONFIRMATION_PENDING", "INSTALLATION_PENDING":
                     phase = .waitingForBrowser
                 case "RECOVERY_PENDING":
                     phase = .existingConnection
@@ -285,6 +287,7 @@ final class AutomationSetupModel {
             )
             setupSessionID = session.id
             setupToken = session.setupToken
+            verificationCode = session.verificationCode
             authorizationURL = session.authorizationURL
             setupIntent = .reauthorize
             phase = .waitingForBrowser
@@ -480,6 +483,7 @@ final class AutomationSetupModel {
     private func clearSetupSession() {
         setupSessionID = nil
         setupToken = nil
+        verificationCode = nil
         authorizationURL = nil
         projects = []
         statusFields = []

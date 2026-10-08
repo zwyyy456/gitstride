@@ -50,7 +50,8 @@ export class RepositoryTruthReader {
             const truth: IssueWorkflowTruth[] = [];
             for (const issue of issues) {
                 if (!installation.repositoryNodeIDs.has(issue.repositoryNodeID)) {
-                    throw new RepositoryTruthError("ISSUE_REPOSITORY_NOT_ACCESSIBLE");
+                    console.info("automation_issue_skipped", { errorCode: "ISSUE_REPOSITORY_NOT_ACCESSIBLE" });
+                    continue;
                 }
                 truth.push({
                     issueNodeID: issue.nodeID,

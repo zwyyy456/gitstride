@@ -120,6 +120,8 @@ struct AutomationConnectionList: View {
     private func canResume(_ automation: AutomationService.Automation) -> Bool {
         automation.healthState == "ACTIVE"
             || automation.healthState == "CONTENT_VISIBILITY_UNVERIFIED"
+            || automation.healthState == "ISSUE_REPOSITORY_NOT_ACCESSIBLE"
+            || automation.healthState == "VISIBILITY_INDETERMINATE"
     }
 
     private func lastDeliveryText(_ delivery: AutomationService.DeliveryStatus) -> String {

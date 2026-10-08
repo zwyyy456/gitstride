@@ -4,6 +4,7 @@ actor AutomationService {
     struct SetupSession: Decodable, Sendable {
         let id: String
         let setupToken: String
+        let verificationCode: String
         let authorizationURL: URL
     }
 
@@ -249,6 +250,27 @@ actor AutomationService {
         return AsyncThrowingStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             let receiveTask = Task {
                 socket.resume()
+                let heartbeat = Task {
+                    do {
+                        while !Task.isCancelled {
+                            try await Task.sleep(for: .seconds(30))
+                            let timeout = Task {
+                                do { try await Task.sleep(for: .seconds(10)) } catch { return }
+                                socket.cancel(with: .goingAway, reason: nil)
+                            }
+                            defer { timeout.cancel() }
+                            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                                socket.sendPing { error in
+                                    if let error { continuation.resume(throwing: error) }
+                                    else { continuation.resume() }
+                                }
+                            }
+                        }
+                    } catch {
+                        socket.cancel(with: .goingAway, reason: nil)
+                    }
+                }
+                defer { heartbeat.cancel() }
                 do {
                     while Task.isCancelled == false {
                         let message = try await socket.receive()

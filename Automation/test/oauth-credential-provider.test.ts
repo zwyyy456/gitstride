@@ -96,6 +96,19 @@ describe("OAuthCredentialProvider", () => {
         expect(database.record.health_state).toBe("SCOPE_MISSING");
     });
 
+    test("a stale refresh failure cannot revoke a newly authorized credential", async () => {
+        const database = await databaseWithCredential({ access_token_expires_at: new Date(now).toISOString() });
+        vi.stubGlobal("fetch", vi.fn(async () => {
+            database.record.credential_version = 2;
+            database.record.health_state = "ACTIVE";
+            return new Response(null, { status: 401 });
+        }));
+        await expect(makeProvider(database.binding).withValidAccessToken("credential-1", async () => "unused"))
+            .rejects.toMatchObject({ code: "TRANSIENT_GITHUB_FAILURE" });
+        expect(database.record.health_state).toBe("ACTIVE");
+        expect(database.record.credential_version).toBe(2);
+    });
+
     test("fails closed when the stored project scope is missing", async () => {
         const database = await databaseWithCredential({ granted_scopes: "[]" });
         const provider = makeProvider(database.binding);
@@ -145,12 +158,14 @@ async function databaseWithCredential(overrides: Record<string, unknown> = {}): 
                     return statement;
                 },
                 async first() {
-                    return sql.includes("SELECT credential.id") ? record : null;
+                    return sql.includes("SELECT credential.id") ? { ...record } : null;
                 },
                 async run() {
                     if (sql.includes("SET health_state = ?")) {
+                        if (record.credential_version !== values[3] || record.health_state !== "ACTIVE") return { meta: { changes: 0 } };
                         record.health_state = values[0];
                     } else if (sql.includes("SET granted_scopes = ?")) {
+                        if (record.credential_version !== values[3] || record.health_state !== "ACTIVE") return { meta: { changes: 0 } };
                         record.granted_scopes = values[0];
                         record.health_state = "ACTIVE";
                     } else if (sql.includes("credential_version = credential_version + 1")) {

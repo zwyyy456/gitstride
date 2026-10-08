@@ -29,9 +29,14 @@ export class AutomationEvents extends DurableObject<Env> {
         const pair = new WebSocketPair();
         const [client, server] = Object.values(pair);
         this.ctx.acceptWebSocket(server);
+        server.serializeAttachment({ tokenID: request.headers.get("X-GitStride-Token-ID") });
         const revision = await this.ctx.storage.get<number>("revision") ?? 0;
         server.send(JSON.stringify(eventMessage("ready", revision)));
         return new Response(null, { status: 101, webSocket: client });
+    }
+
+    async closeConnections(): Promise<void> {
+        for (const socket of this.ctx.getWebSockets()) socket.close(1008, "Automation disconnected");
     }
 
     async publish(type: AutomationChangeEventType): Promise<void> {
@@ -39,6 +44,10 @@ export class AutomationEvents extends DurableObject<Env> {
         await this.ctx.storage.put("revision", revision);
         const message = JSON.stringify(eventMessage(type, revision));
         for (const socket of this.ctx.getWebSockets()) {
+            const { tokenID } = socket.deserializeAttachment() as { tokenID: string };
+            const credential = await this.env.DB.prepare("SELECT id FROM management_tokens WHERE id = ? AND revoked_at IS NULL")
+                .bind(tokenID).first();
+            if (!credential) { socket.close(1008, "Management access revoked"); continue; }
             try {
                 socket.send(message);
             } catch {
@@ -84,7 +93,9 @@ export async function handleAutomationEventsRequest(
         if (!automation) {
             return Response.json({ error: "AUTOMATION_NOT_FOUND" }, { status: 404 });
         }
-        return env.AUTOMATION_EVENTS.getByName(automation.id).fetch(request);
+        const authorizedRequest = new Request(request);
+        authorizedRequest.headers.set("X-GitStride-Token-ID", identity.tokenID);
+        return env.AUTOMATION_EVENTS.getByName(automation.id).fetch(authorizedRequest);
     } catch (error) {
         if (error instanceof ManagementAuthenticationError) {
             return Response.json({ error: error.message }, { status: 401 });

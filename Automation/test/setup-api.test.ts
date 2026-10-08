@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { handleSetupRequest } from "../src/setup-api";
+import { hashToken } from "../src/setup-session";
 import type { Env } from "../src/index";
 
 afterEach(() => {
@@ -25,7 +26,7 @@ describe("setup session", () => {
         } as unknown as D1Database;
         const response = await handleSetupRequest(
             new Request("https://automation.example/api/setup/sessions", { method: "POST" }),
-            { DB: database, PUBLIC_BASE_URL: "https://automation.example" } as Env
+            { DB: database, SETUP_RATE_LIMITER: { limit: async () => ({ success: true }) }, PUBLIC_BASE_URL: "https://automation.example" } as unknown as Env
         );
         const body = await response.json<{
             id: string;
@@ -43,10 +44,11 @@ describe("setup session", () => {
         expect(values[1]).toMatch(/^[A-Za-z0-9_-]{43}$/);
     });
 
-    test("redirects an authorized user to GitHub App installation with the setup cookie", async () => {
+    test("requires account confirmation before granting setup access", async () => {
         const session = {
             id: "setup-session",
             setup_token_hash: "setup-token-hash",
+            browser_token_hash: await hashToken("browser-secret"),
             user_id: null,
             oauth_credential_id: null,
             installation_id: null,
@@ -97,7 +99,7 @@ describe("setup session", () => {
         vi.stubGlobal("fetch", fetchMock);
 
         const response = await handleSetupRequest(
-            new Request("https://automation.example/oauth/callback?code=code&state=state"),
+            new Request("https://automation.example/oauth/callback?code=code&state=state", { headers: { Cookie: "gb_browser=browser-secret" } }),
             {
                 DB: database,
                 GITHUB_API_VERSION: "2026-03-10",
@@ -111,17 +113,16 @@ describe("setup session", () => {
             } as Env
         );
 
-        expect(response.status).toBe(302);
-        expect(response.headers.get("Location")).toBe(
-            "https://github.com/apps/gitstride-automation/installations/new"
-        );
-        expect(response.headers.get("Set-Cookie")).toContain("gb_setup=setup-session");
+        expect(response.status).toBe(200);
+        expect(await response.text()).toContain("Allow this device");
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     test("reuses an existing personal installation after OAuth", async () => {
         const session: {
             id: string;
             setup_token_hash: string;
+            browser_token_hash: string;
             user_id: string | null;
             oauth_credential_id: string | null;
             installation_id: number | null;
@@ -133,6 +134,7 @@ describe("setup session", () => {
         } = {
             id: "existing-installation-session",
             setup_token_hash: "setup-token-hash",
+            browser_token_hash: await hashToken("browser-secret"),
             user_id: null,
             oauth_credential_id: null,
             installation_id: null,
@@ -155,12 +157,14 @@ describe("setup session", () => {
                     async first() {
                         if (sql.includes("FROM setup_sessions")) return session;
                         if (sql.includes("SELECT id FROM users")) return null;
+                        if (sql.includes("SELECT github_login")) return { github_login: "owner" };
                         if (sql.includes("SELECT github_user_database_id")) {
                             return { github_user_database_id: 1 };
                         }
                         throw new Error(`Unexpected first query: ${sql}`);
                     },
                     async run() {
+                        if (sql.includes("SET state = 'INSTALLATION_PENDING'")) session.state = "INSTALLATION_PENDING";
                         if (sql.includes("UPDATE setup_sessions")
                             && sql.includes("SET installation_id")) {
                             installationUpdate = values;
@@ -175,7 +179,7 @@ describe("setup session", () => {
                 if (batchCount === 1) {
                     session.user_id = "user-id";
                     session.oauth_credential_id = "credential-id";
-                    session.state = "INSTALLATION_PENDING";
+                    session.state = "CONFIRMATION_PENDING";
                 }
                 return statements.map(() => ({ meta: { changes: 1 } }));
             },
@@ -215,8 +219,8 @@ describe("setup session", () => {
             }));
         vi.stubGlobal("fetch", fetchMock);
 
-        const response = await handleSetupRequest(
-            new Request("https://automation.example/oauth/callback?code=code&state=state"),
+        const consent = await handleSetupRequest(
+            new Request("https://automation.example/oauth/callback?code=code&state=state", { headers: { Cookie: "gb_browser=browser-secret" } }),
             {
                 DB: database,
                 GITHUB_API_VERSION: "2026-03-10",
@@ -230,7 +234,15 @@ describe("setup session", () => {
             } as Env
         );
 
-        expect(response.status).toBe(302);
+        expect(consent.status).toBe(200);
+        const response = await handleSetupRequest(new Request(
+            "https://automation.example/setup/existing-installation-session/confirm", {
+                method: "POST", headers: { Origin: "https://automation.example", Cookie: "gb_browser=browser-secret" },
+                body: new URLSearchParams({ browserToken: "browser-secret" }),
+            }
+        ), { DB: database, GITHUB_APP_ID: "12345", GITHUB_APP_PRIVATE_KEY: await privateKeyPEM(),
+             GITHUB_API_VERSION: "2026-03-10", PUBLIC_BASE_URL: "https://automation.example" } as Env);
+        expect(response.status).toBe(303);
         expect(response.headers.get("Location")).toBe(
             "https://automation.example/setup/github-app?installation_id=9"
         );
@@ -243,7 +255,7 @@ describe("setup session", () => {
 
         const callbackResponse = await handleSetupRequest(new Request(
             response.headers.get("Location")!,
-            { headers: { Cookie: response.headers.get("Set-Cookie")! } }
+            { headers: { Cookie: `gb_browser=browser-secret; ${response.headers.get("Set-Cookie")!}` } }
         ), {
             DB: database,
             GITHUB_API_VERSION: "2026-03-10",
@@ -265,7 +277,7 @@ describe("setup session", () => {
         );
 
         expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toEqual({ error: "INVALID_OAUTH_CALLBACK" });
+        await expect(response.text()).resolves.toContain("Connection not completed");
     });
 
     test("accepts a legacy completion retry without a review selection", async () => {

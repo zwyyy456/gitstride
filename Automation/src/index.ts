@@ -20,6 +20,7 @@ import { receiveGitHubWebhook, WebhookRequestError } from "./webhook-receiver";
 
 export interface Env {
     DB: D1Database;
+    SETUP_RATE_LIMITER: RateLimit;
     AUTOMATION_QUEUE: Queue<DeliveryMessage>;
     AUTOMATION_EVENTS: DurableObjectNamespace<AutomationEvents>;
     GITHUB_API_VERSION: string;
@@ -58,7 +59,7 @@ export default {
         }
         if (url.pathname.startsWith("/api/setup/")
             || url.pathname === "/api/setup/sessions"
-            || /^\/setup\/[^/]+\/oauth$/.test(url.pathname)
+            || /^\/setup\/[^/]+\/(oauth|confirm)$/.test(url.pathname)
             || url.pathname === "/oauth/callback"
             || url.pathname === "/setup/github-app") {
             return handleSetupRequest(request, env);
