@@ -443,6 +443,8 @@ enum GraphQLQueries {
                     updatedAt
                     author { login avatarUrl }
                     viewerCanUpdate
+                    viewerCanAssign
+                    viewerCanLabel
                     viewerCanSetMilestone
                     repository { nameWithOwner }
                     milestone {
@@ -497,6 +499,8 @@ enum GraphQLQueries {
                     state isDraft mergeable mergeStateStatus reviewDecision
                     statusCheckRollup { state }
                     viewerCanUpdate
+                    viewerCanAssign
+                    viewerCanLabel
                     id
                     title
                     body

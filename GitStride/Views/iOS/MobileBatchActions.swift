@@ -52,7 +52,11 @@ struct MobileBatchActions: View {
                 try await store.performBatch(status.map(ProjectStore.BatchAction.moveToStatus) ?? .archive, on: targets) { reference in
                     selection.remove(reference)
                 }
-            } catch { errorMessage = error.localizedDescription }
+            } catch {
+                let remaining = targets.filter { selection.contains($0) }.count
+                let completed = targets.count - remaining
+                errorMessage = String(localized: "\(completed) completed; \(remaining) remaining. \(error.localizedDescription)")
+            }
         }
     }
 }

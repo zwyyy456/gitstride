@@ -11,6 +11,26 @@
         }
       }
     },
+    "%lld completed; %lld remaining. %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成 %1$lld 项，剩余 %2$lld 项。%3$@"
+          }
+        }
+      }
+    },
+    "Multiple project fields match %@. Rename the duplicate fields in GitHub." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多个项目字段与 %@ 匹配，请在 GitHub 中重命名重复字段。"
+          }
+        }
+      }
+    },
     "" : {
       "shouldTranslate" : false
     },

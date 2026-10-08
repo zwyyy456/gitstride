@@ -803,7 +803,7 @@ final class ProjectStore {
     func setMilestone(_ milestone: RepositoryMilestone?, on item: ProjectItem) async throws {
         guard let contentID = item.contentId,
               case .loaded(let detail) = itemDetailState(for: item),
-              let metadata = detail.issueMetadata, metadata.viewerCanSetMilestone else { return }
+              let metadata = detail.issueMetadata, metadata.viewerCanSetMilestone else { throw GitHubError.insufficientPermissions }
 
         try await performContentMutation([contentID], operation: {
             try await self.gitHubService.updateIssueMilestone(issueID: contentID, milestoneID: milestone?.id)
@@ -1801,7 +1801,9 @@ final class ProjectStore {
             case .moveToStatus(let name):
                 guard let option = project(id: reference.projectID)?.statusOptions.first(where: { $0.name == name })
                 else { throw ProjectStoreError.itemUnavailable }
-                try await moveItem(item, toStatus: option, in: reference.projectID)
+                if item.statusOptionId != option.id {
+                    try await moveItem(item, toStatus: option, in: reference.projectID)
+                }
             case .archive:
                 try await archiveItem(item, in: reference.projectID)
             }
@@ -1809,24 +1811,20 @@ final class ProjectStore {
         }
     }
 
-    func moveItems(
-        _ items: [ProjectItem],
-        to status: StatusOption,
-        in projectID: String
-    ) async throws {
-        for item in items where item.status != status.name {
-            try await moveItem(item, toStatus: status, in: projectID)
-        }
-    }
-
-    func archiveItems(_ items: [ProjectItem], in projectID: String) async throws {
-        for item in items {
-            try await archiveItem(item, in: projectID)
-        }
-    }
-
     func searchUsers(query: String) async throws -> [Assignee] {
         try await gitHubService.searchUsers(query: query)
+    }
+
+    func canSetAssignees(on item: ProjectItem, in projectID: String) -> Bool {
+        guard isActive, projectStates[projectID]?.source == .remote,
+              case .loaded(let detail) = itemDetailState(for: item) else { return false }
+        return detail.viewerCanAssign
+    }
+
+    func canSetLabels(on item: ProjectItem, in projectID: String) -> Bool {
+        guard isActive, projectStates[projectID]?.source == .remote,
+              case .loaded(let detail) = itemDetailState(for: item) else { return false }
+        return detail.viewerCanLabel
     }
 
     func addAssignee(to item: ProjectItem, in projectID: String, user: Assignee) async throws {
@@ -1841,7 +1839,7 @@ final class ProjectStore {
         _ user: Assignee, assigned: Bool, on item: ProjectItem, in projectID: String
     ) async throws {
         guard let contentID = item.contentId, let url = item.url,
-              canEditProject(id: projectID) else { return }
+              isActive, projectStates[projectID]?.source == .remote else { throw GitHubError.insufficientPermissions }
         try await performContentMutation([contentID], operation: {
             if assigned {
                 try await self.gitHubService.addAssignee(issueUrl: url, userLogin: user.login)
@@ -1875,7 +1873,7 @@ final class ProjectStore {
         _ name: String, assigned: Bool, on item: ProjectItem, in projectID: String
     ) async throws {
         guard let contentID = item.contentId, let url = item.url,
-              canEditProject(id: projectID) else { return }
+              isActive, projectStates[projectID]?.source == .remote else { throw GitHubError.insufficientPermissions }
         try await performContentMutation([contentID], operation: {
             if assigned {
                 return try await self.gitHubService.addLabel(issueUrl: url, label: name)
@@ -1910,9 +1908,7 @@ final class ProjectStore {
         var resolvedFields: [(ProjectField, ProjectFieldValue)] = []
         var backlogFieldToPrepare: ProjectField?
         for (name, value) in requestedFields {
-            guard let field = project.fields.first(where: {
-                $0.kind == .singleSelect && $0.name.caseInsensitiveCompare(name) == .orderedSame
-            }) else {
+            guard let field = try ProjectField.singleSelectField(named: name, in: project.fields) else {
                 throw ProjectStoreError.missingFieldOption(field: name, option: value)
             }
             guard let option = field.options.first(where: {

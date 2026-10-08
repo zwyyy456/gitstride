@@ -41,6 +41,16 @@ struct ProjectField: Identifiable, Codable, Hashable {
     let options: [ProjectFieldOption]
     let iterations: [ProjectIteration]
 
+    static func singleSelectField(named name: String, in fields: [ProjectField]) throws -> ProjectField? {
+        let candidates = fields.filter { $0.kind == .singleSelect }
+        if let exact = candidates.first(where: { $0.name == name }) { return exact }
+        let matches = candidates.filter { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        guard matches.count <= 1 else {
+            throw GitHubError.graphQLError(String(localized: "Multiple project fields match \(name). Rename the duplicate fields in GitHub."))
+        }
+        return matches.first
+    }
+
     var isEditable: Bool {
         kind != .unsupported
     }

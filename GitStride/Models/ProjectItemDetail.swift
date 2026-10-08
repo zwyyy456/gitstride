@@ -11,6 +11,8 @@ struct ProjectItemDetail: Identifiable, Hashable, Sendable {
     var issueMetadata: IssueMetadata?
     var state: String? = nil
     var pullRequestSignals: EngineeringSignals? = nil
+    var viewerCanAssign = false
+    var viewerCanLabel = false
 }
 
 struct ItemAuthor: Hashable, Sendable {

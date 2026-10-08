@@ -20,6 +20,8 @@ extension GitHubResponse {
             let author: Actor?
             let creator: Actor?
             let viewerCanUpdate: Bool?
+            let viewerCanAssign: Bool?
+            let viewerCanLabel: Bool?
             let viewerCanSetMilestone: Bool?
             let repository: RepositoryNode?
             let milestone: MilestoneNode?
@@ -38,7 +40,7 @@ extension GitHubResponse {
                 case updatedAt
                 case author
                 case creator
-                case viewerCanUpdate
+                case viewerCanUpdate, viewerCanAssign, viewerCanLabel
                 case viewerCanSetMilestone
                 case repository
                 case milestone

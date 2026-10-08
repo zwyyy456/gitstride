@@ -677,10 +677,14 @@ struct KanbanBoardView: View {
         operationErrorMessage = nil
         Task {
             do {
-                try await store.moveItems(items, to: status, in: projectID)
-                selectedItemIDs.removeAll()
+                let references = items.map { ItemInspectorReference(projectID: projectID, itemID: $0.id) }
+                try await store.performBatch(.moveToStatus(status.name), on: references) { reference in
+                    selectedItemIDs.remove(reference.itemID)
+                }
             } catch {
-                report(error)
+                let remaining = items.filter { selectedItemIDs.contains($0.id) }.count
+                let completed = items.count - remaining
+                operationErrorMessage = String(localized: "\(completed) completed; \(remaining) remaining. \(error.localizedDescription)")
             }
             isBulkWorking = false
         }
@@ -693,10 +697,14 @@ struct KanbanBoardView: View {
         operationErrorMessage = nil
         Task {
             do {
-                try await store.archiveItems(items, in: projectID)
-                selectedItemIDs.removeAll()
+                let references = items.map { ItemInspectorReference(projectID: projectID, itemID: $0.id) }
+                try await store.performBatch(.archive, on: references) { reference in
+                    selectedItemIDs.remove(reference.itemID)
+                }
             } catch {
-                report(error)
+                let remaining = items.filter { selectedItemIDs.contains($0.id) }.count
+                let completed = items.count - remaining
+                operationErrorMessage = String(localized: "\(completed) completed; \(remaining) remaining. \(error.localizedDescription)")
             }
             isBulkWorking = false
         }

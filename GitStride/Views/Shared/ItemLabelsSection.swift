@@ -6,7 +6,7 @@ struct ItemLabelsSection: View {
     @State private var localError: String?
     @State private var isSaving = false
     let projectID: String
-    private var canEdit: Bool { store.canEditProject(id: projectID) }
+    private var canEdit: Bool { store.canSetLabels(on: item, in: projectID) }
     @State private var labelName = ""
     @State private var showsLabelPicker = false
 

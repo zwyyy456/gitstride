@@ -6,7 +6,7 @@ struct ItemAssigneesSection: View {
     @State private var localError: String?
     @State private var isSaving = false
     let projectID: String
-    private var canEdit: Bool { store.canEditProject(id: projectID) }
+    private var canEdit: Bool { store.canSetAssignees(on: item, in: projectID) }
     @State private var userQuery = ""
     @State private var userResults: [Assignee] = []
     @State private var isSearchingUsers = false

@@ -143,7 +143,7 @@ actor GitHubService {
     func inspectSession() async -> GitHubSessionState {
         do {
             let payload: GitHubResponse.SessionPayload = try await request(
-                GraphQLQueries.sessionProbe,
+                GraphQLQueries.sessionProbe, allowsAuthenticationRetry: true,
                 as: GitHubResponse.SessionPayload.self
             )
             return .ready(GitHubAccount(id: payload.viewer.id, login: payload.viewer.login))
@@ -168,7 +168,7 @@ actor GitHubService {
         repeat {
             try Task.checkCancellation()
             let payload: GitHubResponse.OwnersPayload = try await request(
-                GraphQLQueries.owners,
+                GraphQLQueries.owners, allowsAuthenticationRetry: true,
                 variables: cursorVariables(after),
                 as: GitHubResponse.OwnersPayload.self
             )
@@ -201,7 +201,7 @@ actor GitHubService {
 
     func deleteProject(id: String) async throws {
         let _: GitHubResponse.DeleteProjectPayload = try await request(
-            GraphQLQueries.deleteProject,
+            GraphQLQueries.deleteProject, allowsAuthenticationRetry: false,
             variables: ["projectId": id],
             as: GitHubResponse.DeleteProjectPayload.self
         )
@@ -211,7 +211,7 @@ actor GitHubService {
         var variables = ["ownerId": owner.id, "title": title]
         variables["repositoryId"] = repositoryID
         let payload: GitHubResponse.CreateProjectPayload = try await request(
-            GraphQLQueries.createProject,
+            GraphQLQueries.createProject, allowsAuthenticationRetry: false,
             variables: variables,
             as: GitHubResponse.CreateProjectPayload.self
         )
@@ -231,7 +231,7 @@ actor GitHubService {
             var variables = cursorVariables(after)
             variables["login"] = owner.login
             let payload: GitHubResponse.OwnerRepositoriesPayload = try await request(
-                GraphQLQueries.ownerRepositories, variables: variables,
+                GraphQLQueries.ownerRepositories, allowsAuthenticationRetry: true, variables: variables,
                 as: GitHubResponse.OwnerRepositoriesPayload.self
             )
             guard let connection = payload.repositoryOwner?.repositories else {
@@ -247,7 +247,7 @@ actor GitHubService {
 
     func linkProjectRepository(projectID: String, repositoryID: String) async throws {
         let _: GitHubResponse.LinkProjectRepositoryPayload = try await request(
-            GraphQLQueries.linkProjectRepository,
+            GraphQLQueries.linkProjectRepository, allowsAuthenticationRetry: false,
             variables: ["projectId": projectID, "repositoryId": repositoryID],
             as: GitHubResponse.LinkProjectRepositoryPayload.self
         )
@@ -268,7 +268,7 @@ actor GitHubService {
             }
 
             let payload: GitHubResponse.ProjectsPayload = try await request(
-                query,
+                query, allowsAuthenticationRetry: true,
                 variables: variables,
                 as: GitHubResponse.ProjectsPayload.self
             )
@@ -300,7 +300,7 @@ actor GitHubService {
 
         let fields = projectData.fields.compactMap(makeProjectField)
 
-        let statusField = fields.first { $0.name == "Status" && $0.kind == .singleSelect }
+        let statusField = try ProjectField.singleSelectField(named: "Status", in: fields)
             .map { field in
                 StatusField(
                     id: field.id,
@@ -327,7 +327,7 @@ actor GitHubService {
 
     func fetchItemDetail(contentID: String) async throws -> ProjectItemDetail {
         let payload: GitHubResponse.ItemDetailPayload = try await request(
-            GraphQLQueries.itemDetail,
+            GraphQLQueries.itemDetail, allowsAuthenticationRetry: true,
             variables: ["id": contentID],
             as: GitHubResponse.ItemDetailPayload.self
         )
@@ -383,7 +383,9 @@ actor GitHubService {
                 mergeStateStatus: node.mergeStateStatus,
                 reviewDecision: node.reviewDecision.flatMap(PullRequestReviewDecision.init),
                 checkStatus: node.statusCheckRollup?.state.flatMap(CheckStatus.init)
-            ) : nil
+            ) : nil,
+            viewerCanAssign: node.viewerCanAssign ?? false,
+            viewerCanLabel: node.viewerCanLabel ?? false
         )
     }
 
@@ -396,7 +398,7 @@ actor GitHubService {
         case .redacted: throw GitHubError.itemUnavailable
         }
         let payload: GitHubResponse.UpdateItemContentPayload = try await request(
-            query,
+            query, allowsAuthenticationRetry: false,
             variables: ["id": contentID, "title": title, "body": body],
             as: GitHubResponse.UpdateItemContentPayload.self
         )
@@ -444,7 +446,7 @@ actor GitHubService {
             variables["owner"] = components[0]
             variables["name"] = components[1]
             let payload: GitHubResponse.RepositoryMilestonesPayload = try await request(
-                GraphQLQueries.repositoryMilestones,
+                GraphQLQueries.repositoryMilestones, allowsAuthenticationRetry: true,
                 variables: variables,
                 as: GitHubResponse.RepositoryMilestonesPayload.self
             )
@@ -468,7 +470,7 @@ actor GitHubService {
             query = GraphQLQueries.clearIssueMilestone
         }
         let _: GitHubResponse.EmptyPayload = try await request(
-            query,
+            query, allowsAuthenticationRetry: false,
             variables: variables,
             as: GitHubResponse.EmptyPayload.self
         )
@@ -480,7 +482,7 @@ actor GitHubService {
         replacingParent: Bool
     ) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            replacingParent ? GraphQLQueries.replaceSubIssueParent : GraphQLQueries.addSubIssue,
+            replacingParent ? GraphQLQueries.replaceSubIssueParent : GraphQLQueries.addSubIssue, allowsAuthenticationRetry: false,
             variables: ["issueId": parentIssueID, "subIssueId": subIssueID],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -488,7 +490,7 @@ actor GitHubService {
 
     func removeSubIssue(parentIssueID: String, subIssueID: String) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.removeSubIssue,
+            GraphQLQueries.removeSubIssue, allowsAuthenticationRetry: false,
             variables: ["issueId": parentIssueID, "subIssueId": subIssueID],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -496,7 +498,7 @@ actor GitHubService {
 
     func addBlockedBy(issueID: String, blockingIssueID: String) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.addBlockedBy,
+            GraphQLQueries.addBlockedBy, allowsAuthenticationRetry: false,
             variables: ["issueId": issueID, "blockingIssueId": blockingIssueID],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -504,7 +506,7 @@ actor GitHubService {
 
     func removeBlockedBy(issueID: String, blockingIssueID: String) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.removeBlockedBy,
+            GraphQLQueries.removeBlockedBy, allowsAuthenticationRetry: false,
             variables: ["issueId": issueID, "blockingIssueId": blockingIssueID],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -517,7 +519,7 @@ actor GitHubService {
         optionId: String
     ) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.updateItemStatus,
+            GraphQLQueries.updateItemStatus, allowsAuthenticationRetry: false,
             variables: [
                 "projectId": projectId,
                 "itemId": itemId,
@@ -536,7 +538,7 @@ actor GitHubService {
     ) async throws {
         guard let value else {
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.clearItemField,
+                GraphQLQueries.clearItemField, allowsAuthenticationRetry: false,
                 variables: ["projectId": projectId, "itemId": itemId, "fieldId": fieldId],
                 as: GitHubResponse.EmptyPayload.self
             )
@@ -547,32 +549,32 @@ actor GitHubService {
         switch value {
         case .singleSelect(let optionId, _):
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.updateItemStatus,
+                GraphQLQueries.updateItemStatus, allowsAuthenticationRetry: false,
                 variables: variables.merging(["optionId": optionId]) { _, new in new },
                 as: GitHubResponse.EmptyPayload.self
             )
         case .iteration(let id, _):
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.updateIterationField,
+                GraphQLQueries.updateIterationField, allowsAuthenticationRetry: false,
                 variables: variables.merging(["iterationId": id]) { _, new in new },
                 as: GitHubResponse.EmptyPayload.self
             )
         case .date(let date):
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.updateDateField,
+                GraphQLQueries.updateDateField, allowsAuthenticationRetry: false,
                 variables: variables.merging(["date": date]) { _, new in new },
                 as: GitHubResponse.EmptyPayload.self
             )
         case .number(let number):
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.updateNumberField,
+                GraphQLQueries.updateNumberField, allowsAuthenticationRetry: false,
                 variables: variables,
                 numberVariables: ["number": number],
                 as: GitHubResponse.EmptyPayload.self
             )
         case .text(let text):
             let _: GitHubResponse.EmptyPayload = try await request(
-                GraphQLQueries.updateTextField,
+                GraphQLQueries.updateTextField, allowsAuthenticationRetry: false,
                 variables: variables.merging(["text": text]) { _, new in new },
                 as: GitHubResponse.EmptyPayload.self
             )
@@ -581,7 +583,7 @@ actor GitHubService {
 
     func archiveItem(projectId: String, itemId: String) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.archiveItem,
+            GraphQLQueries.archiveItem, allowsAuthenticationRetry: false,
             variables: ["projectId": projectId, "itemId": itemId],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -589,7 +591,7 @@ actor GitHubService {
 
     func deleteItem(projectId: String, itemId: String) async throws {
         let _: GitHubResponse.EmptyPayload = try await request(
-            GraphQLQueries.deleteItem,
+            GraphQLQueries.deleteItem, allowsAuthenticationRetry: false,
             variables: ["projectId": projectId, "itemId": itemId],
             as: GitHubResponse.EmptyPayload.self
         )
@@ -597,7 +599,7 @@ actor GitHubService {
 
     func searchUsers(query: String) async throws -> [Assignee] {
         let payload: GitHubResponse.UserSearchPayload = try await request(
-            GraphQLQueries.searchUsers,
+            GraphQLQueries.searchUsers, allowsAuthenticationRetry: true,
             variables: ["query": query],
             as: GitHubResponse.UserSearchPayload.self
         )
@@ -627,7 +629,7 @@ actor GitHubService {
             variables["owner"] = address.owner
             variables["name"] = address.repository
             let payload: GitHubResponse.IssueRepositoryPayload = try await request(
-                GraphQLQueries.issueRepository, variables: variables,
+                GraphQLQueries.issueRepository, allowsAuthenticationRetry: true, variables: variables,
                 as: GitHubResponse.IssueRepositoryPayload.self)
             guard let repository = payload.repository else {
                 throw GitHubError.graphQLError(String(localized: "Repository not found or no longer accessible."))
@@ -665,7 +667,7 @@ actor GitHubService {
 
     func createDraftIssue(projectId: String, title: String, body: String) async throws -> String {
         let payload: GitHubResponse.DraftIssuePayload = try await request(
-            GraphQLQueries.addDraftIssue,
+            GraphQLQueries.addDraftIssue, allowsAuthenticationRetry: false,
             variables: ["projectId": projectId, "title": title, "body": body],
             as: GitHubResponse.DraftIssuePayload.self
         )
@@ -687,7 +689,7 @@ actor GitHubService {
             ["name": $0.rawValue, "color": $0.color, "description": ""]
         }
         let payload: GitHubResponse.CreateProjectFieldPayload = try await request(
-            GraphQLQueries.createPriorityField, variables: ["projectId": projectID],
+            GraphQLQueries.createPriorityField, allowsAuthenticationRetry: false, variables: ["projectId": projectID],
             objectArrayVariables: ["options": options], as: GitHubResponse.CreateProjectFieldPayload.self)
         guard let node = payload.createProjectV2Field.projectV2Field,
               let field = makeProjectField(from: node),
@@ -715,7 +717,7 @@ actor GitHubService {
             return field
         }
         let payload: GitHubResponse.CreateProjectFieldPayload = try await request(
-            GraphQLQueries.createDateField, variables: ["projectId": projectID, "name": name],
+            GraphQLQueries.createDateField, allowsAuthenticationRetry: false, variables: ["projectId": projectID, "name": name],
             as: GitHubResponse.CreateProjectFieldPayload.self)
         guard let node = payload.createProjectV2Field.projectV2Field, let field = makeProjectField(from: node),
               field.kind == .date, field.name.caseInsensitiveCompare(name) == .orderedSame else {
@@ -726,7 +728,7 @@ actor GitHubService {
 
     func ensureProjectStatusOption(fieldID: String, name: String, color: String) async throws -> [ProjectFieldOption] {
         let payload: GitHubResponse.StatusFieldOptionsPayload = try await request(
-            GraphQLQueries.statusFieldOptions,
+            GraphQLQueries.statusFieldOptions, allowsAuthenticationRetry: true,
             variables: ["fieldID": fieldID],
             as: GitHubResponse.StatusFieldOptionsPayload.self
         )
@@ -739,7 +741,7 @@ actor GitHubService {
             ["id": option.id, "name": option.name, "color": option.color, "description": option.description]
         } + [["name": name, "color": color, "description": ""]]
         let updated: GitHubResponse.UpdateStatusFieldOptionsPayload = try await request(
-            GraphQLQueries.updateStatusFieldOptions,
+            GraphQLQueries.updateStatusFieldOptions, allowsAuthenticationRetry: false,
             variables: ["fieldID": fieldID],
             objectArrayVariables: ["options": options],
             as: GitHubResponse.UpdateStatusFieldOptionsPayload.self
@@ -777,7 +779,7 @@ actor GitHubService {
                 variables["owner"] = parts[0]
                 variables["name"] = parts[1]
                 let payload: GitHubResponse.IssueRepositoryPayload = try await request(
-                    GraphQLQueries.issueRepository, variables: variables,
+                    GraphQLQueries.issueRepository, allowsAuthenticationRetry: true, variables: variables,
                     as: GitHubResponse.IssueRepositoryPayload.self
                 )
                 guard let remoteRepository = payload.repository else {
@@ -801,7 +803,7 @@ actor GitHubService {
                     label = existing
                 } else {
                     let payload: GitHubResponse.CreateLabelPayload = try await request(
-                        GraphQLQueries.createLabel,
+                        GraphQLQueries.createLabel, allowsAuthenticationRetry: false,
                         variables: ["repositoryId": repositoryID, "name": name],
                         as: GitHubResponse.CreateLabelPayload.self
                     )
@@ -827,7 +829,7 @@ actor GitHubService {
         }
 
         let payload: GitHubResponse.CreateIssuePayload = try await request(
-            GraphQLQueries.createIssue,
+            GraphQLQueries.createIssue, allowsAuthenticationRetry: false,
             variables: ["repositoryId": repositoryID, "title": title, "body": body],
             arrayVariables: ["labelIds": labelIDs, "assigneeIds": resolvedAssigneeIDs,
                              "projectV2Ids": projectID.map { [$0] } ?? []],
@@ -858,7 +860,7 @@ actor GitHubService {
         for login in Set(assignees).sorted() {
             try Task.checkCancellation()
             let payload: GitHubResponse.IssueAssigneePayload = try await request(
-                GraphQLQueries.issueAssignee, variables: ["login": login],
+                GraphQLQueries.issueAssignee, allowsAuthenticationRetry: true, variables: ["login": login],
                 as: GitHubResponse.IssueAssigneePayload.self
             )
             guard let user = payload.user else {
@@ -881,7 +883,7 @@ actor GitHubService {
             var variables = cursorVariables(after)
             variables["searchQuery"] = query
             let payload: GitHubResponse.PersonalWorkPayload = try await request(
-                GraphQLQueries.personalWork, variables: variables, as: GitHubResponse.PersonalWorkPayload.self
+                GraphQLQueries.personalWork, allowsAuthenticationRetry: true, variables: variables, as: GitHubResponse.PersonalWorkPayload.self
             )
             totalCount = payload.search.issueCount
             fetchedCount += payload.search.nodes.count
@@ -910,7 +912,7 @@ actor GitHubService {
         guard query.isEmpty == false else { return [] }
 
         let payload: GitHubResponse.ItemSearchPayload = try await request(
-            GraphQLQueries.searchItems,
+            GraphQLQueries.searchItems, allowsAuthenticationRetry: true,
             variables: ["searchQuery": query],
             as: GitHubResponse.ItemSearchPayload.self
         )
@@ -935,7 +937,7 @@ actor GitHubService {
     func resolveItem(url: String) async throws -> GitHubItemCandidate {
         guard GitHubItemAddress(url) != nil else { throw GitHubError.invalidItemURL }
         let payload: GitHubItemResourcePayload = try await request(
-            GraphQLQueries.itemAtURL,
+            GraphQLQueries.itemAtURL, allowsAuthenticationRetry: true,
             variables: ["url": url],
             as: GitHubItemResourcePayload.self
         )
@@ -951,7 +953,7 @@ actor GitHubService {
 
     func addExistingItem(projectId: String, contentId: String) async throws -> String {
         let payload: GitHubResponse.AddProjectItemPayload = try await request(
-            GraphQLQueries.addItemToProject,
+            GraphQLQueries.addItemToProject, allowsAuthenticationRetry: false,
             variables: ["projectId": projectId, "contentId": contentId],
             as: GitHubResponse.AddProjectItemPayload.self
         )
@@ -960,7 +962,7 @@ actor GitHubService {
 
     func projectItemID(issueID: String, projectID: String) async throws -> String? {
         let payload: GitHubResponse.IssueProjectItemsPayload = try await request(
-            GraphQLQueries.issueProjectItems,
+            GraphQLQueries.issueProjectItems, allowsAuthenticationRetry: true,
             variables: ["issueId": issueID],
             as: GitHubResponse.IssueProjectItemsPayload.self
         )
@@ -981,7 +983,7 @@ actor GitHubService {
             variables["id"] = projectID
             variables["repositoryAfter"] = repositoryAfter
             let payload: GitHubResponse.ProjectFieldsPayload = try await request(
-                GraphQLQueries.projectFields,
+                GraphQLQueries.projectFields, allowsAuthenticationRetry: true,
                 variables: variables,
                 as: GitHubResponse.ProjectFieldsPayload.self
             )
@@ -1014,7 +1016,7 @@ actor GitHubService {
 
     func fetchProjectItem(id: String) async throws -> ProjectItem? {
         do {
-            let payload = try await request(GraphQLQueries.projectItem, variables: ["id": id],
+            let payload = try await request(GraphQLQueries.projectItem, allowsAuthenticationRetry: true, variables: ["id": id],
                                             as: GitHubResponse.ProjectItemPayload.self)
             guard let node = payload.node, !node.isArchived else { return nil }
             return makeProjectItem(from: node.item)
@@ -1032,7 +1034,7 @@ actor GitHubService {
             var variables = cursorVariables(after)
             variables["id"] = projectID
             let payload: GitHubResponse.ProjectItemsPayload = try await request(
-                GraphQLQueries.projectItems,
+                GraphQLQueries.projectItems, allowsAuthenticationRetry: true,
                 variables: variables,
                 as: GitHubResponse.ProjectItemsPayload.self
             )
@@ -1191,6 +1193,7 @@ actor GitHubService {
 
     private func request<Payload: Decodable>(
         _ query: String,
+        allowsAuthenticationRetry: Bool,
         variables: [String: String] = [:],
         numberVariables: [String: Double] = [:],
         arrayVariables: [String: [String]] = [:],
@@ -1203,7 +1206,7 @@ actor GitHubService {
         for (key, value) in objectArrayVariables { values[key] = value }
         let body = try JSONSerialization.data(withJSONObject: ["query": query, "variables": values])
         let data = try await send(url: URL(string: "https://api.github.com/graphql")!, method: "POST",
-                                  body: body, allowsAuthenticationRetry: !query.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("mutation"))
+                                  body: body, allowsAuthenticationRetry: allowsAuthenticationRetry)
         do {
             let issues = try decoder.decode(GitHubResponse.GraphQLErrorResponse.self, from: data)
             if let errors = issues.errors, !errors.isEmpty { throw classifyGraphQLErrors(errors) }
