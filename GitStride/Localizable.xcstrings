@@ -1,36 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Enter this code in your browser:" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请在浏览器中输入此验证码："
-          }
-        }
-      }
-    },
-    "%lld completed; %lld remaining. %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已完成 %1$lld 项，剩余 %2$lld 项。%3$@"
-          }
-        }
-      }
-    },
-    "Multiple project fields match %@. Rename the duplicate fields in GitHub." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "多个项目字段与 %@ 匹配，请在 GitHub 中重命名重复字段。"
-          }
-        }
-      }
-    },
     "" : {
       "shouldTranslate" : false
     },
@@ -368,6 +338,16 @@
         }
       }
     },
+    "%lld completed; %lld remaining. %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已完成 %1$lld 项，剩余 %2$lld 项。%3$@"
+          }
+        }
+      }
+    },
     "%lld items in %@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -650,9 +630,6 @@
           }
         }
       }
-    },
-    "9+" : {
-      "shouldTranslate" : false
     },
     "15 minutes" : {
       "localizations" : {
@@ -4418,6 +4395,16 @@
         }
       }
     },
+    "Enter this code in your browser:" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在浏览器中输入此验证码："
+          }
+        }
+      }
+    },
     "Example: Fix login @me #bug" : {
       "localizations" : {
         "en" : {
@@ -7027,6 +7014,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上移"
+          }
+        }
+      }
+    },
+    "Multiple project fields match %@. Rename the duplicate fields in GitHub." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多个项目字段与 %@ 匹配，请在 GitHub 中重命名重复字段。"
           }
         }
       }
