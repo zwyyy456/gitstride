@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F21C183F5B7C48DDA388BA01 /* Services/AutomationHeartbeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F21C183F5B7C48DDA388BA02 /* Services/AutomationHeartbeatTests.swift */; };
         D18000000000000000000001 /* ProjectUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18000000000000000000003 /* ProjectUsage.swift */; };
         D18000000000000000000002 /* ProjectUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18000000000000000000003 /* ProjectUsage.swift */; };
         F17000000000000000000001 /* ProjectIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F17000000000000000000003 /* ProjectIcon.swift */; };
@@ -238,6 +239,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F21C183F5B7C48DDA388BA02 /* Services/AutomationHeartbeatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/AutomationHeartbeatTests.swift; sourceTree = "<group>"; };
         D18000000000000000000003 /* ProjectUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectUsage.swift; sourceTree = "<group>"; };
         F17000000000000000000003 /* ProjectIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectIcon.swift; sourceTree = "<group>"; };
         C92000000000000000000003 /* PersonalWorkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalWorkView.swift; sourceTree = "<group>"; };
@@ -639,6 +641,7 @@
 				62F8302DE36A45B8A30CC33A /* Models/IssueRelationKindTests.swift */,
 				A1000023 /* Services/GitHubServiceTests.swift */,
 				A1000059 /* Store/AutomationSetupModelTests.swift */,
+				F21C183F5B7C48DDA388BA02 /* Services/AutomationHeartbeatTests.swift */,
 				D10000000000000000000004 /* Services/AutomationServicePreferencesTests.swift */,
 				B9000004 /* Views/ProjectTableTests.swift */,
 				398DD85FB0E8473C854E9007 /* Views/ProjectRoadmapTests.swift */,
@@ -979,6 +982,7 @@
 				8BF8F992CB6A45E59C592ECB /* Models/IssueRelationKindTests.swift in Sources */,
 				A0000023 /* Services/GitHubServiceTests.swift in Sources */,
 				A0000059 /* Store/AutomationSetupModelTests.swift in Sources */,
+				F21C183F5B7C48DDA388BA01 /* Services/AutomationHeartbeatTests.swift in Sources */,
 				D10000000000000000000003 /* Services/AutomationServicePreferencesTests.swift in Sources */,
 				B9000003 /* Views/ProjectTableTests.swift in Sources */,
 				D68E5C472E44461FB6567339 /* Views/ProjectRoadmapTests.swift in Sources */,

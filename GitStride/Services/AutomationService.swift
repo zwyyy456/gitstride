@@ -254,17 +254,7 @@ actor AutomationService {
                     do {
                         while !Task.isCancelled {
                             try await Task.sleep(for: .seconds(30))
-                            let timeout = Task {
-                                do { try await Task.sleep(for: .seconds(10)) } catch { return }
-                                socket.cancel(with: .goingAway, reason: nil)
-                            }
-                            defer { timeout.cancel() }
-                            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                                socket.sendPing { error in
-                                    if let error { continuation.resume(throwing: error) }
-                                    else { continuation.resume() }
-                                }
-                            }
+                            try await Self.sendHeartbeat { socket.sendPing(pongReceiveHandler: $0) }
                         }
                     } catch {
                         socket.cancel(with: .goingAway, reason: nil)
@@ -308,6 +298,26 @@ actor AutomationService {
                 socket.cancel(with: .goingAway, reason: nil)
             }
         }
+    }
+
+    nonisolated static func sendHeartbeat(
+        sendPing: @Sendable (@escaping @Sendable (Error?) -> Void) -> Void,
+        timeout: Duration = .seconds(10)
+    ) async throws {
+        try Task.checkCancellation()
+        // finish is thread-safe and idempotent: a late or repeated pong callback
+        // must not resume the same checked continuation twice.
+        let (completion, continuation) = AsyncThrowingStream<Void, Error>.makeStream()
+        let timeoutTask = Task {
+            do { try await Task.sleep(for: timeout) } catch { return }
+            continuation.finish(throwing: URLError(.timedOut))
+        }
+        defer { timeoutTask.cancel() }
+        sendPing { error in
+            continuation.finish(throwing: error)
+        }
+        for try await _ in completion {}
+        try Task.checkCancellation()
     }
 
     private func send<ResponseBody: Decodable>(
