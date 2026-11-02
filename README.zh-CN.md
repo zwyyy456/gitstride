@@ -52,7 +52,7 @@ xcodebuild -project GitStride.xcodeproj -scheme GitStride \
 
 `GITSTRIDE_OAUTH_CLIENT_ID` 是桌面 OAuth App 的公开 Client ID。如果你要发行自己的版本，请注册 OAuth App、启用 Device Flow，并在两个 App target 中设置对应的 Client ID。不要嵌入 Client Secret。`GitStrideAppStore` scheme 仅支持 OAuth 登录，不包含 Sparkle；该构建目标不代表应用已在 Mac App Store 上架。
 
-更多信息见 [验证命令](docs-index.md#5-常用验证命令)、[工程架构](architecture.md) 和 [发布指南（英文）](docs/releasing.md)。Worker 开发另外需要 Node.js 22 或更新版本，参见 [Automation/README.md](Automation/README.md)。
+更多信息见 [验证命令](docs-index.md#4-常用验证命令)、[工程架构](architecture.md) 和 [发布指南（英文）](docs/releasing.md)。Worker 开发另外需要 Node.js 22 或更新版本，参见 [Automation/README.md](Automation/README.md)。
 
 ## 项目来源与许可证
 
