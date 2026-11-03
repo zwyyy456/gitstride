@@ -24,12 +24,6 @@ struct MenuBarPopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerView
-            Button("Show Command Palette…") {
-                openKanbanBoard()
-                requestsCommandPalette = true
-            }
-            .buttonStyle(.borderless)
-            .padding(.bottom, 6)
 
             OperationErrorBanner(
                 message: operationErrorMessage ?? store.operationErrorMessage,
@@ -140,6 +134,11 @@ struct MenuBarPopoverView: View {
             }
 
             RefreshButton(isRefreshing: $isRefreshing, action: refresh)
+
+            HeaderButton(icon: "command", help: String(localized: "Show Command Palette…")) {
+                openKanbanBoard()
+                requestsCommandPalette = true
+            }
 
             Menu {
                 Button(action: openSettings) {
