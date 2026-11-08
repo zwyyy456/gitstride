@@ -3,6 +3,33 @@
     <channel>
         <title>GitStride</title>
         <item>
+            <title>1.0.5</title>
+            <pubDate>Sun, 08 Nov 2026 20:10:15 +0800</pubDate>
+            <link>https://gitstride.hyperseek.tech</link>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<!doctype html><html><head><meta charset="utf-8"><title>GitStride 1.0.5</title></head><body><h1>GitStride 1.0.5</h1><p>macOS 14+ · Build 8</p>
+<h2>中文更新说明</h2><ul>
+<li>改善自动刷新连接：增加 WebSocket 心跳与超时处理，帮助连接失效后恢复事件接收。</li>
+<li>新增账号级个人待办，将个人工作与关注项目分开查看。</li>
+<li>优化项目和条目刷新，减少重复读取、计算与缓存写入。</li>
+<li>修复窗口导航和新增表单目标项目的状态干扰，完善编辑权限与批量操作结果。</li>
+<li>改善监控启动通知和 GitHub 限流后的恢复，修正 PR 可合并状态判断。</li>
+<li>精简菜单栏显示，将命令面板入口移到标题栏；支持详情页按 Esc 返回，并更新快捷键说明及本地化。</li>
+</ul>
+<h2>English release notes</h2><ul>
+<li>Improve automatic refresh with WebSocket heartbeats and timeout handling to recover event delivery after a connection becomes unresponsive.</li>
+<li>Add account-wide personal work, separate from followed projects.</li>
+<li>Optimize project and item refreshes to reduce duplicate reads, computation, and cache writes.</li>
+<li>Fix cross-window navigation and new-item project selection, and improve editing permissions and batch-operation results.</li>
+<li>Preserve startup notifications, resume monitoring after GitHub rate limits, and correct pull-request mergeability checks.</li>
+<li>Simplify the menu bar, move command-palette access to the header, support Escape to return from item details, and refine shortcut guidance and localization.</li>
+</ul>
+<p>本次安装包仅适用于 macOS；自动化服务单独部署。</p></body></html>]]></description>
+            <enclosure url="https://github.com/zwyyy456/GitStride/releases/download/v1.0.5/GitStride-1.0.5.zip" length="14466923" type="application/octet-stream" sparkle:edSignature="3jZseVVH2Y+fjN6H6N7lr5++hNIcc5JaHJou7icyAxE2kgtKPjvpDYQ5P6KL/gvExckvQmwQTyEw80SaWdG7BQ=="/>
+        </item>
+        <item>
             <title>1.0.4</title>
             <pubDate>Fri, 02 Oct 2026 16:03:06 +0800</pubDate>
             <link>https://gitstride.hyperseek.tech</link>
