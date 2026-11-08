@@ -1240,7 +1240,7 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/App/macOS/GitStride.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1270,7 +1270,7 @@
 				CODE_SIGN_ENTITLEMENTS = GitStride/App/macOS/GitStride.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1332,7 +1332,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = GitStride/App/macOS/GitStrideAppStore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				"COMBINE_HIDPI_IMAGES[sdk=macosx*]" = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
@@ -1381,7 +1381,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = GitStride/App/macOS/GitStrideAppStore.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				"COMBINE_HIDPI_IMAGES[sdk=macosx*]" = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEAD_CODE_STRIPPING = YES;
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;

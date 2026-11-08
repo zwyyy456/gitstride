@@ -22,6 +22,8 @@
 	<string>$(GITSTRIDE_AUTOMATION_BASE_URL)</string>
 	<key>GitStrideOAuthClientID</key>
 	<string>$(GITSTRIDE_OAUTH_CLIENT_ID)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSMinimumSystemVersion</key>
