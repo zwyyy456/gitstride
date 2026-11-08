@@ -61,3 +61,7 @@ See [validation commands](docs-index.md#4-常用验证命令), [architecture](ar
 GitStride originated from [yogesharc/GitBoard](https://github.com/yogesharc/GitBoard) and is now independently maintained and substantially reworked by [zwyyy456](https://github.com/zwyyy456). The original copyright notice is preserved alongside the current maintainer's notice.
 
 Released under the [MIT License](LICENSE). The license is also included in the app bundle. GitStride is not affiliated with GitHub, Inc.
+
+## Thanks
+
+[LinuxDo](https://linux.do)

@@ -62,4 +62,7 @@ GitStride 起源于 [yogesharc/GitBoard](https://github.com/yogesharc/GitBoard)�
 
 ## iOS 开发版
 
-`GitStrideAppStore` target 和 scheme 同时支持原生 macOS 与 iOS / iPadOS 17+，在 Xcode 中选择对应的运行设备即可。功能范围与构建方式见 [iOS 开发与使用](docs/ios.md)。此开发目标不代表已在 App Store 上架。
+`GitStrideAppStore` target 和 scheme 同时支持原生 macOS 与 iOS / iPadOS 17+，在 Xcode 中选择对应的运行设备即可。功能范围与构建方式见 [iOS 开发与使用](docs/ios.md)。iOS 版将于近期正式上架 App Store。
+
+## 致谢
+[LinuxDo](https://linux.do)
