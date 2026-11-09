@@ -91,9 +91,9 @@ Each target Project resolves its own field node ID by exact name. Status options
 prefer an exact name and then retry with case ignored while preserving whitespace
 and every other character. Projects without the mapped field, In Progress, or
 Done options are not matching targets. Setup records the user's Ready-PR policy
-without modifying any Project. With `Move to In review`, a Project that contains
-the exact closing Issue reuses exact `In review`, then a case-insensitive match,
-or appends `In review` in Orange while preserving every existing option ID. The
+without modifying any Project. With `Move to In Review`, a Project that contains
+the exact closing Issue reuses exact `In Review`, then a case-insensitive match,
+or appends `In Review` in Orange while preserving every existing option ID. The
 append occurs only when that Project first needs an In Review write. With
 `Keep in In progress`, Ready PRs use that Project's In Progress and no option is
 added. Listing or selecting a Project never mutates it, and automation never adds
@@ -258,7 +258,7 @@ original Status is restored.
 | --- | --- | --- |
 | Account repository scope | Grant the installation two repositories, complete setup once, then deliver a pull request event from the second repository | The second repository is accepted without Add Automation; a repository outside the installation is ignored |
 | Multi-Project matching | Add one closing Issue to two personal Projects with compatible Status names | Both exact Project items are updated using each Project's own field and option IDs |
-| Ready policy: create | Enable `Move to In review`, then make a closing PR Ready for an Issue in a Project without that option | That matching Project preserves existing options and gains one Orange `In review`; an existing case variant is reused, and unrelated Projects are unchanged |
+| Ready policy: create | Enable `Move to In Review`, then make a closing PR Ready for an Issue in a Project without that option | That matching Project preserves existing options and gains one Orange `In Review`; an existing case variant is reused, and unrelated Projects are unchanged |
 | Ready policy: fallback | Enable `Keep in In progress`, then make a closing PR Ready | The matching item remains In Progress and no Status option is added |
 | Live app refresh | Keep GitStride open on an affected Project and change a closing PR state | The Worker WebSocket emits a new revision and the displayed item refreshes without a manual reload |
 | REST pagination | Place the target private Issue after the first Project item page and trigger its pull request | The Link chain is fully followed and the target item is found |

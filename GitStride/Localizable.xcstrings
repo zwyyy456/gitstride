@@ -6122,18 +6122,18 @@
         }
       }
     },
-    "Linked Issues move to In review. This status is added to a Project when first needed." : {
+    "Linked Issues move to In Review. This status is added to a Project when first needed." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Linked Issues move to In review. This status is added to a Project when first needed."
+            "value" : "Linked Issues move to In Review. This status is added to a Project when first needed."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关联 Issue 将移至 In review 状态。项目首次需要此状态时会自动添加。"
+            "value" : "关联 Issue 将移至 In Review 状态。项目首次需要此状态时会自动添加。"
           }
         }
       }
@@ -6986,18 +6986,18 @@
         }
       }
     },
-    "Move to In review" : {
+    "Move to In Review" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Move to In review"
+            "value" : "Move to In Review"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移至 In review"
+            "value" : "移至 In Review"
           }
         }
       }

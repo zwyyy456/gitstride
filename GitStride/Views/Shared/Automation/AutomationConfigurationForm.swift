@@ -51,7 +51,7 @@ struct AutomationConfigurationForm: View {
 
         Section {
             Picker("When a pull request is ready", selection: $setup.reviewStatusPolicy) {
-                Text("Move to In review")
+                Text("Move to In Review")
                     .tag(AutomationService.ReviewStatusPolicy.ensureInReview)
                 Text("Keep in In progress")
                     .tag(AutomationService.ReviewStatusPolicy.useInProgress)
@@ -67,7 +67,7 @@ struct AutomationConfigurationForm: View {
     private var reviewPolicyDescription: String {
         switch setup.reviewStatusPolicy {
         case .ensureInReview:
-            String(localized: "Linked Issues move to In review. This status is added to a Project when first needed.")
+            String(localized: "Linked Issues move to In Review. This status is added to a Project when first needed.")
         case .useInProgress:
             String(localized: "Linked Issues stay in the selected In progress status. No review status is added.")
         }

@@ -200,7 +200,7 @@ export class PersonalProjectGateway {
                 IN_PROGRESS: inProgress.name,
                 IN_REVIEW: template.reviewStatusPolicy === "USE_CONFIGURED_OPTION"
                     ? configuredReview!.name
-                    : "In review",
+                    : "In Review",
                 DONE: done.name,
             },
             templateFields: fields,
@@ -243,7 +243,7 @@ export class PersonalProjectGateway {
             const inReview = await this.projectCatalog.ensureStatusOption(
                 accessToken,
                 project.statusFieldNodeID,
-                "In review"
+                "In Review"
             );
             project = {
                 ...project,

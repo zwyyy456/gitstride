@@ -69,33 +69,33 @@ describe("SetupProjectClient", () => {
             .rejects.toMatchObject({ code: "PROJECT_WRITE_FORBIDDEN" });
     });
 
-    test("prefers an exact In review option and otherwise ignores only case", async () => {
+    test("prefers an exact In Review option and otherwise ignores only case", async () => {
         const request = vi.fn()
             .mockResolvedValueOnce({
                 node: {
                     id: "FIELD",
                     options: [
-                        option("CASE", "In Review"),
-                        option("EXACT", "In review"),
+                        option("CASE", "In review"),
+                        option("EXACT", "In Review"),
                     ],
                 },
             })
             .mockResolvedValueOnce({
                 node: {
                     id: "FIELD",
-                    options: [option("CASE", "In Review")],
+                    options: [option("CASE", "In review")],
                 },
             });
         const client = new SetupProjectClient({ request }, "2026-03-10");
 
-        await expect(client.ensureStatusOption("oauth", "FIELD", "In review"))
-            .resolves.toMatchObject({ id: "EXACT", name: "In review" });
-        await expect(client.ensureStatusOption("oauth", "FIELD", "IN REVIEW"))
-            .resolves.toMatchObject({ id: "CASE", name: "In Review" });
+        await expect(client.ensureStatusOption("oauth", "FIELD", "In Review"))
+            .resolves.toMatchObject({ id: "EXACT", name: "In Review" });
+        await expect(client.ensureStatusOption("oauth", "FIELD", "In Review"))
+            .resolves.toMatchObject({ id: "CASE", name: "In review" });
         expect(request).toHaveBeenCalledTimes(2);
     });
 
-    test("adds In review without treating a whitespace difference as a match", async () => {
+    test("adds In Review without treating a whitespace difference as a match", async () => {
         const request = vi.fn()
             .mockResolvedValueOnce({
                 node: {
@@ -113,21 +113,21 @@ describe("SetupProjectClient", () => {
                         options: [
                             option("TODO", "Todo", "GREEN", "Not started"),
                             option("SPACED", "In  review"),
-                            option("REVIEW", "In review", "ORANGE"),
+                            option("REVIEW", "In Review", "ORANGE"),
                         ],
                     },
                 },
             });
         const client = new SetupProjectClient({ request }, "2026-03-10");
 
-        await expect(client.ensureStatusOption("oauth", "FIELD", "In review"))
-            .resolves.toMatchObject({ id: "REVIEW", name: "In review" });
+        await expect(client.ensureStatusOption("oauth", "FIELD", "In Review"))
+            .resolves.toMatchObject({ id: "REVIEW", name: "In Review" });
         expect(request.mock.calls[1]?.[2]).toEqual({
             fieldID: "FIELD",
             options: [
                 option("TODO", "Todo", "GREEN", "Not started"),
                 option("SPACED", "In  review"),
-                { name: "In review", color: "ORANGE", description: "" },
+                { name: "In Review", color: "ORANGE", description: "" },
             ],
         });
     });

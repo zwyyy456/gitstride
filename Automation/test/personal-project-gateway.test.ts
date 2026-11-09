@@ -112,7 +112,7 @@ describe("PersonalProjectGateway", () => {
         ]);
     });
 
-    test("adds In review only to a Project containing a matching ready Issue", async () => {
+    test("adds In Review only to a Project containing a matching ready Issue", async () => {
         vi.stubGlobal("fetch", vi.fn()
             .mockResolvedValueOnce(projectResponse([item("ITEM_1", "ISSUE")]))
             .mockResolvedValueOnce(projectResponse([])));
@@ -166,7 +166,7 @@ describe("PersonalProjectGateway", () => {
         ], vi.fn())).resolves.toEqual({ ISSUE: "APPLIED" });
         expect(ensureCalls).toEqual([{
             fieldNodeID: "STATUS_FIELD_1",
-            optionName: "In review",
+            optionName: "In Review",
         }]);
         expect(writer.updates).toEqual([
             { itemNodeID: "ITEM_1", optionID: "CREATED_REVIEW" },
