@@ -71,6 +71,7 @@ struct TableDisplayOptions: View {
                 sortColumn = ""
             }
         }
+        .menuIndicator(.hidden)
         .help("Group, sort, and choose visible fields")
     }
 

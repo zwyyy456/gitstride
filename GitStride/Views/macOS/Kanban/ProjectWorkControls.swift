@@ -234,7 +234,9 @@ struct BoardDisplayOptions: View {
             }
             Divider()
             Button("Reset Card Fields") { fields = ProjectDisplayPreferences.defaultCardFields }
-        }.help("Choose board columns and card fields")
+        }
+        .menuIndicator(.hidden)
+        .help("Choose board columns and card fields")
     }
 
     private func fieldToggle(_ title: String, id: String) -> some View {
