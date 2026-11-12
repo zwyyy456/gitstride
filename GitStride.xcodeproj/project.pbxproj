@@ -166,7 +166,7 @@
 		A0000057 /* StatusOptionPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000057 /* StatusOptionPicker.swift */; };
 		A0000058 /* AutomationConnectionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000058 /* AutomationConnectionList.swift */; };
 		A0000059 /* Store/AutomationSetupModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000059 /* Store/AutomationSetupModelTests.swift */; };
-		A36DCFAD1E5D4A818A0B4804 /* MobileProjectsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74346FB996EE40F380399580 /* MobileProjectsView.swift */; platformFilter = ios; };
+		A36DCFAD1E5D4A818A0B4804 /* MobileWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74346FB996EE40F380399580 /* MobileWorkspaceView.swift */; platformFilter = ios; };
 		A778862D424B42F6B424FCE4 /* MobileRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA481E7964A145C396016722 /* MobileRootView.swift */; platformFilter = ios; };
 		ABD3A3B8EA1143E196327B2A /* ProjectRoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E183CFC982974D319536FEBD /* ProjectRoadmapView.swift */; };
 		AEBDC9863277477A8619EF7D /* MobileProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFA70EA2BE643C18FAECB70 /* MobileProjectView.swift */; platformFilter = ios; };
@@ -266,7 +266,7 @@
 		6B2D2B3535CE45C9A72F5DF4 /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		6BE86DAE172A4F919768058D /* Views/ProjectWorkPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ProjectWorkPreferencesTests.swift; sourceTree = "<group>"; };
 		6D3C988229604621932BFB6D /* CommandSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandSearch.swift; sourceTree = "<group>"; };
-		74346FB996EE40F380399580 /* MobileProjectsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileProjectsView.swift; sourceTree = "<group>"; };
+		74346FB996EE40F380399580 /* MobileWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileWorkspaceView.swift; sourceTree = "<group>"; };
 		77D827C9808D48FD9437123A /* GitHubItemResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubItemResponse.swift; sourceTree = "<group>"; };
 		7953C376615F42CC99EF0A8E /* GitStrideiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitStrideiOSApp.swift; sourceTree = "<group>"; };
 		87BFE2EF3051402A84FE3594 /* ProjectRoadmap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRoadmap.swift; sourceTree = "<group>"; };
@@ -705,7 +705,7 @@
 				00360ADAD2AA483B9D405B79 /* MobileMyWorkView.swift */,
 				6944EA08DAB94119A5F0964E /* MobileProjectManagement.swift */,
 				6AFA70EA2BE643C18FAECB70 /* MobileProjectView.swift */,
-				74346FB996EE40F380399580 /* MobileProjectsView.swift */,
+				74346FB996EE40F380399580 /* MobileWorkspaceView.swift */,
 				DA481E7964A145C396016722 /* MobileRootView.swift */,
 			);
 			path = iOS;
@@ -997,7 +997,7 @@
 				E1430000 /* ItemEditingSession.swift in Sources */,
 				B33882E864B343F2A699BCD6 /* MobileItemRow.swift in Sources */,
 				2CE45295F42B4B278F11735C /* MobileMyWorkView.swift in Sources */,
-				A36DCFAD1E5D4A818A0B4804 /* MobileProjectsView.swift in Sources */,
+				A36DCFAD1E5D4A818A0B4804 /* MobileWorkspaceView.swift in Sources */,
 				DA0000000000000000000004 /* GitHubSettingsView.swift in Sources */,
 				BE0000000000000000000001 /* WelcomeView.swift in Sources */,
 				DA0000000000000000000003 /* GitHubAuthentication.swift in Sources */,

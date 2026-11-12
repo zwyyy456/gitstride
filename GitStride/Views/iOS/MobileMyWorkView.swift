@@ -2,7 +2,8 @@ import SwiftUI
 
 struct MobileFollowedWorkView: View {
     @Bindable var model: GitStrideModel
-    @State private var filter: MyWorkFilter = .allOpen
+    @Binding var filter: MyWorkFilter
+    var showsScopePicker = true
     @State private var groupByProject = true
     let browseProjects: () -> Void
     @State private var search = ""
@@ -28,7 +29,7 @@ struct MobileFollowedWorkView: View {
             }
     }
 
-    private var hasActiveFilter: Bool { filter != .allOpen || !search.isEmpty }
+    private var hasActiveFilter: Bool { (showsScopePicker && filter != .allOpen) || !search.isEmpty }
 
     var body: some View {
         Group {
@@ -46,10 +47,16 @@ struct MobileFollowedWorkView: View {
                     .mobileSearch(text: $search)
             }
         }
-        .navigationTitle(String(localized: "Following Tab", defaultValue: "Following"))
+        .navigationTitle(showsScopePicker ? String(localized: "Following Tab", defaultValue: "Following") : filter.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !projectIDs.isEmpty {
+                if !showsScopePicker {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Refresh", systemImage: "arrow.clockwise", action: refresh)
+                            .disabled(model.projectStore.isLoadingFollowedProjects)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     if selecting {
                         Button("Done") {
@@ -58,10 +65,12 @@ struct MobileFollowedWorkView: View {
                         }
                     } else {
                         Menu {
-                            Section {
-                                Picker("Scope", selection: $filter) {
-                                    ForEach(MyWorkFilter.followedCases) {
-                                        Label($0.title, systemImage: $0.icon).tag($0)
+                            if showsScopePicker {
+                                Section {
+                                    Picker("Scope", selection: $filter) {
+                                        ForEach(MyWorkFilter.followedCases) {
+                                            Label($0.title, systemImage: $0.icon).tag($0)
+                                        }
                                     }
                                 }
                             }
@@ -171,13 +180,13 @@ struct MobileFollowedWorkView: View {
             }
         } else {
             ContentUnavailableView(
-                "No open items", systemImage: "checkmark.circle",
-                description: Text("Your followed projects have no open items."))
+                "Nothing in \(filter.title)", systemImage: filter.icon,
+                description: Text("No items match the current filters."))
         }
     }
 
     private func clearFilters() {
-        filter = .allOpen
+        if showsScopePicker { filter = .allOpen }
         search = ""
     }
 

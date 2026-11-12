@@ -4,6 +4,7 @@ struct PersonalWorkView: View {
     @Bindable var store: ProjectStore
     #if os(iOS)
     @Binding var filter: MyWorkFilter
+    var showsScopePicker = true
     #else
     let filter: MyWorkFilter
     #endif
@@ -85,29 +86,39 @@ struct PersonalWorkView: View {
         #endif
         .toolbar {
             #if os(iOS)
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Section("Scope") {
-                        Picker("Scope", selection: $filter) {
-                            Text("Assigned to Me").tag(MyWorkFilter.assigned)
-                            Text("My PRs").tag(MyWorkFilter.authored)
-                            Text("Review Requested").tag(MyWorkFilter.reviewRequested)
-                        }
-                        .pickerStyle(.inline)
-                    }
-                    if filter != .assigned {
-                        Section("PR Status") {
-                            Picker("PR Status", selection: $status) {
-                                ForEach(PullRequestWorkStatus.allCases) { Text($0.title).tag($0) }
-                            }
-                            .pickerStyle(.inline)
-                        }
-                    }
-                } label: {
-                    Label("Filter", systemImage: filter != .assigned && status != .all
-                          ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+            if !showsScopePicker {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Refresh My Work", systemImage: "arrow.clockwise", action: refresh)
+                        .disabled(isLoading)
                 }
-                .accessibilityValue(filter.title)
+            }
+            if showsScopePicker || filter != .assigned {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        if showsScopePicker {
+                            Section("Scope") {
+                                Picker("Scope", selection: $filter) {
+                                    Text("Assigned to Me").tag(MyWorkFilter.assigned)
+                                    Text("My PRs").tag(MyWorkFilter.authored)
+                                    Text("Review Requested").tag(MyWorkFilter.reviewRequested)
+                                }
+                                .pickerStyle(.inline)
+                            }
+                        }
+                        if filter != .assigned {
+                            Section("PR Status") {
+                                Picker("PR Status", selection: $status) {
+                                    ForEach(PullRequestWorkStatus.allCases) { Text($0.title).tag($0) }
+                                }
+                                .pickerStyle(.inline)
+                            }
+                        }
+                    } label: {
+                        Label("Filter", systemImage: filter != .assigned && status != .all
+                              ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .accessibilityValue(filter.title)
+                }
             }
             #else
             if filter != .assigned {

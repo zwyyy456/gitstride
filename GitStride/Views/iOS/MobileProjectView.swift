@@ -3,6 +3,7 @@ import SwiftUI
 struct MobileProjectView: View {
     @Bindable var model: GitStrideModel
     let projectID: String
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var search = ""
     @State private var supportsBoard = false
     @State private var groupByStatus = true
@@ -30,6 +31,13 @@ struct MobileProjectView: View {
     private var layout: ProjectLayout {
         supportsBoard ? (savedView?.layout ?? preferences.layout(projectID: projectID, defaultLayout: .table)) : .table
     }
+    private var usesWorkspaceToolbar: Bool { supportsBoard && !dynamicTypeSize.isAccessibilitySize }
+    private var layoutSelection: Binding<ProjectLayout> {
+        Binding(get: { layout }, set: { value in
+            change { try preferences.setLayout(value, projectID: projectID, viewID: selectedViewID) }
+        })
+    }
+
     private var items: [ProjectItem] {
         filter.apply(to: project?.items ?? [], currentUserLogin: store.currentUserLogin)
             .matching(search, currentUserLogin: store.currentUserLogin)
@@ -71,6 +79,26 @@ struct MobileProjectView: View {
         .mobileSearch(text: $search)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
+                if usesWorkspaceToolbar {
+                    Button("Refresh", systemImage: "arrow.clockwise") {
+                        Task { await store.loadProjectDetails(id: projectID) }
+                    }
+                    .disabled(project == nil)
+                    Picker("Layout", selection: layoutSelection) {
+                        Text("List").tag(ProjectLayout.table)
+                        Text("Board").tag(ProjectLayout.board)
+                    }
+                    .pickerStyle(.menu)
+                    Button("Filter", systemImage: filter.isActive
+                           ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle") {
+                        showingFilters = true
+                    }
+                    .accessibilityValue(filter.isActive ? String(localized: "Filters active") : String(localized: "No filters"))
+                    Menu("Display Options", systemImage: "slider.horizontal.3") {
+                        displayActions
+                    }
+                    .menuIndicator(.hidden)
+                }
                 Button {
                     showingAdd = true
                 } label: {
@@ -386,34 +414,40 @@ struct MobileProjectView: View {
         }
     }
 
+    @ViewBuilder
+    private var displayActions: some View {
+        Toggle("Group by Status", isOn: $groupByStatus)
+        Button("Show Fields") { showingDisplay = true }
+    }
+
     private var workspaceMenu: some View {
         Menu {
             Section("Views") { savedViewActions }
-            Section("Filter") {
-                Button("Filter") { showingFilters = true }
-                if filter.isActive || !search.isEmpty {
-                    Button("Clear Filters") { filter = ProjectWorkFilter(); search = "" }
-                }
-            }
-            Section("Display Options") {
-                Toggle("Group by Status", isOn: $groupByStatus)
-                if supportsBoard {
-                    Picker("Layout", selection: Binding(
-                        get: { layout },
-                        set: { value in change { try preferences.setLayout(value, projectID: projectID, viewID: selectedViewID) } }
-                    )) {
-                        Text("List").tag(ProjectLayout.table)
-                        Text("Board").tag(ProjectLayout.board)
+            if !usesWorkspaceToolbar {
+                Section("Filter") {
+                    Button("Filter") { showingFilters = true }
+                    if filter.isActive || !search.isEmpty {
+                        Button("Clear Filters") { filter = ProjectWorkFilter(); search = "" }
                     }
                 }
-                Button("Show Fields") { showingDisplay = true }
+                Section("Display Options") {
+                    if supportsBoard {
+                        Picker("Layout", selection: layoutSelection) {
+                            Text("List").tag(ProjectLayout.table)
+                            Text("Board").tag(ProjectLayout.board)
+                        }
+                    }
+                    displayActions
+                }
             }
             Section("Project Actions") {
                 Button(selecting ? String(localized: "Done") : String(localized: "Select")) {
                     selecting.toggle()
                     selection.removeAll()
                 }
-                Button("Refresh") { Task { await store.loadProjectDetails(id: projectID) } }
+                if !usesWorkspaceToolbar {
+                    Button("Refresh") { Task { await store.loadProjectDetails(id: projectID) } }
+                }
                 if let project {
                     Button(
                         model.myWorkStore.isFollowing(projectID)
@@ -427,8 +461,9 @@ struct MobileProjectView: View {
                     .disabled(!store.canManageProject(id: projectID))
             }
         } label: {
-            Label("More Actions", systemImage: "ellipsis.circle")
+            Label("More Actions", systemImage: "ellipsis")
         }
+        .menuIndicator(.hidden)
     }
 
     private func deliverySummary(_ project: Project) -> some View {
