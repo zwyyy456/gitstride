@@ -71,6 +71,7 @@ struct TableDisplayOptions: View {
                 sortColumn = ""
             }
         }
+        .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .help("Group, sort, and choose visible fields")
     }

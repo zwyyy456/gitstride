@@ -293,6 +293,7 @@ struct KanbanBoardView: View {
                 Menu("Saved Views", systemImage: "ellipsis") {
                     workControls(project).savedViewMenuContents
                 }
+                .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .help("Saved Views")
             }

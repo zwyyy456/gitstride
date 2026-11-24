@@ -235,6 +235,7 @@ struct BoardDisplayOptions: View {
             Divider()
             Button("Reset Card Fields") { fields = ProjectDisplayPreferences.defaultCardFields }
         }
+        .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .help("Choose board columns and card fields")
     }
